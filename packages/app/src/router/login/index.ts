@@ -1,13 +1,13 @@
 const routes=[
   {
     path:'/',
-    component:()=>import('src/layouts/layoutNavigator.vue'),
+    component:()=>import('src/layouts/layoutBeforeLoginNavigator.vue'),
     children:[
       // ログイントップ
       {
-        // name: 'AFCLogin',
-        // path: '/AFCLogin',
-        // component: () => import('src/pages/AFCLogin/AFCLogin.vue'),
+        name: 'RMLogin',
+        path: '/RMLogin',
+        component: () => import('src/pages/RMLogin/RMLogin.vue'),
       }
     ]
   }
