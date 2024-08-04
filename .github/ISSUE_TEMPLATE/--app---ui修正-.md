@@ -1,7 +1,7 @@
 ---
 name: "【 app - ui修正】"
 about: 文字が被っている、形が違うなど
-title: ''
+title: "【 app - ui修正】"
 labels: ''
 assignees: ''
 

@@ -1,7 +1,7 @@
 ---
 name: "【 app - component 】"
 about: コンポーネント名
-title: ''
+title: "【 app - component 】"
 labels: ''
 assignees: ''
 
