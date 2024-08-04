@@ -81,21 +81,21 @@ module.exports = configure(function (ctx) {
       // https://v2.quasar.dev/quasar-cli-webpack/handling-webpack
       // "chain" is a webpack-chain object https://github.com/neutrinojs/webpack-chain
       // chainWebpack (/* chain */) {}
-      extendViteConf(viteConf) {
-        // Viteの設定をカスタマイズする場合、ここでフィーチャーフラグを設定する
-        Object.assign(viteConf.define, {
-          VUE_OPTIONS_API: true,
-          VUE_PROD_DEVTOOLS: false,
-          VUE_PROD_HYDRATION_MISMATCH_DETAILS: false,
-        });
-        Object.assign(viteConf.build, {
-          rollupOptions: {
-            external: ['path2d'],
-          },
-        });
-      },
-      // viteVuePluginOptions: {},
-      vitePlugins: [handlingPreloadErrorPlugin()],
+      // extendViteConf(viteConf) {
+      //   // Viteの設定をカスタマイズする場合、ここでフィーチャーフラグを設定する
+      //   Object.assign(viteConf.define, {
+      //     VUE_OPTIONS_API: true,
+      //     VUE_PROD_DEVTOOLS: false,
+      //     VUE_PROD_HYDRATION_MISMATCH_DETAILS: false,
+      //   });
+      //   Object.assign(viteConf.build, {
+      //     rollupOptions: {
+      //       external: ['path2d'],
+      //     },
+      //   });
+      // },
+      // // viteVuePluginOptions: {},
+      // vitePlugins: [handlingPreloadErrorPlugin()],
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-devServer
