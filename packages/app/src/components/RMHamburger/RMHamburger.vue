@@ -1,25 +1,22 @@
 <script lang="ts" setup>
-import { computed, PropType, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import { activeMenu } from './RMHamburger';
+import { computed, PropType, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { activeMenu } from './RMHamburger'
 
 /** メニュー項目の型定義 */
-type Menu = { name: string; url: string }[];
+type Menu = { name: string; url: string }[]
 /** プロパティ定義 */
 const props = defineProps({
   menu: { type: Object as PropType<Menu>, required: true },
-});
+})
 /** ハンバーガーopen,closeのv-model（スマホ用の場合のみ必須） */
-const isOpen = defineModel<boolean>('isOpen');
+const isOpen = defineModel<boolean>('isOpen')
 /** isOpen trueになった時に長さが揃うようにcomputed */
-const bar = computed(() => (isOpen.value ? '75%' : '52%'));
+const bar = computed(() => (isOpen.value ? '75%' : '52%'))
 
-/** ログアウトボタンの表示非表示 */
-const showLogout = ref<boolean>(false);
-
-const router = useRouter();
+const router = useRouter()
 /** emits定義 */
-const emits = defineEmits(['menuClick', 'logout']);
+const emits = defineEmits(['menuClick', 'logout'])
 
 /**
  * ルートが変わったときに、現在のページと一致するメニューにアンダーラインを引く
@@ -29,12 +26,11 @@ watch(
   () => router.currentRoute.value.meta.pageTitle,
   (newRouteName) => {
     if (props.menu !== undefined) {
-      console.log('sdfsdfsdf', newRouteName);
-      activeMenu.value = String(newRouteName);
+      activeMenu.value = String(newRouteName)
     }
   },
   { immediate: true }
-);
+)
 /**
  * スマートフォン用メニュークリック時の処理
  * @param {Object} menu - クリックされたメニュー
@@ -42,10 +38,10 @@ watch(
  * @param {string} menu.url - メニューURL
  */
 const spHandleClick = (menu: { name: string; url: string }) => {
-  activeMenu.value = menu.name;
-  menu.name === 'ログアウト' ? emits('logout') : emits('menuClick', menu);
-  isOpen.value = false;
-};
+  activeMenu.value = menu.name
+  menu.name === 'ログアウト' ? emits('logout') : emits('menuClick', menu)
+  isOpen.value = false
+}
 /**
  * PC用メニュークリック時の処理
  * @param {Object} menu - クリックされたメニュー
@@ -53,8 +49,8 @@ const spHandleClick = (menu: { name: string; url: string }) => {
  * @param {string} menu.url - メニューURL
  */
 const pcHandleClick = (menu: { name: string; url: string }) => {
-  menu.name === 'ログアウト' ? emits('logout') : emits('menuClick', menu);
-};
+  menu.name === 'ログアウト' ? emits('logout') : emits('menuClick', menu)
+}
 </script>
 
 <template>
@@ -99,22 +95,9 @@ const pcHandleClick = (menu: { name: string; url: string }) => {
       v-for="menu in menu"
       :key="menu.name"
       @click="pcHandleClick(menu)"
-      @mouseover="menu.name === 'アカウント設定' ? (showLogout = true) : null"
-      @mouseleave="menu.name === 'アカウント設定' ? (showLogout = false) : null"
     >
-      <div
-        v-if="menu.name !== 'ログアウト'"
-        :class="{ _menu_hover: menu.name === 'アカウント設定' }"
-      >
+      <div>
         {{ menu.name }}
-      </div>
-      <div class="_logout_btn" v-if="menu.name === 'アカウント設定'">
-        <div
-          v-if="showLogout && menu.name === 'アカウント設定'"
-          @click.stop="pcHandleClick({ name: 'ログアウト', url: '' })"
-        >
-          ログアウト
-        </div>
       </div>
     </div>
   </div>
@@ -135,7 +118,7 @@ const pcHandleClick = (menu: { name: string; url: string }) => {
   position: absolute
   right: 5px
   height: 2px
-  background-color: $primary
+  background-color: white
 ._hamburger_menu_btn span:nth-of-type(1)
   top: 5px
   width: 75%
@@ -162,7 +145,7 @@ const pcHandleClick = (menu: { name: string; url: string }) => {
   bottom: -2px
   left: 8%
   font-size: 12px
-  color: $primary
+  color: white
   text-align: center
 /* メニューのスタイル */
 ._menu_open
@@ -221,7 +204,7 @@ const pcHandleClick = (menu: { name: string; url: string }) => {
     gap: 30px
   ._pc_menu_container
     font-size: 14px
-    color: $primary
+    color: white
     cursor: pointer
   ._menu_hover:hover + ._logout_btn
     display: block

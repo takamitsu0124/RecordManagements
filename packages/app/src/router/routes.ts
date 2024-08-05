@@ -1,5 +1,8 @@
-import { RouteRecordRaw } from 'vue-router';
+import { RouteRecordRaw } from 'vue-router'
 import login from './login'
+import home from './home'
+import guild from './guild'
+import register from './register'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -7,11 +10,14 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
       ...login,
+      ...home,
+      ...guild,
+      ...register,
       {
-        name:'RMComponent',
-        path:'/RMComponent',
-        component:()=>import('pages/RMComponent/RMComponent.vue')
-      }
+        name: 'RMComponent',
+        path: '/RMComponent',
+        component: () => import('pages/RMComponent/RMComponent.vue'),
+      },
     ],
   },
 
@@ -21,6 +27,6 @@ const routes: RouteRecordRaw[] = [
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),
   },
-];
+]
 
-export default routes;
+export default routes
