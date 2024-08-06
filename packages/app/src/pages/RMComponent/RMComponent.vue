@@ -6,6 +6,7 @@ import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
+import { usePopupFun } from 'src/components/RMPopup/RMPopupFun'
 
 const router = useRouter()
 
@@ -32,6 +33,22 @@ const spinnerStart = () => {
     )
   })
 }
+
+const popupStart = () => {
+  usePopupFun({
+    question: 'ログアウトします。<br />よろしいですか？',
+    rightText: 'はい',
+    leftText: 'いいえ',
+    rightColor: 'primary',
+    leftColor: 'black',
+    onLeftButtonClick: () => {
+      console.log('キャンセル')
+    },
+    onRightButtonClick: () => {
+      console.log('完了')
+    },
+  })
+}
 </script>
 
 <template>
@@ -44,6 +61,7 @@ const spinnerStart = () => {
     />
     <div class="page_container">
       <q-btn label="スピナーテスト" @click="spinnerStart" />
+      <q-btn label="ポップアップテスト" @click="popupStart" />
     </div>
   </div>
 </template>
