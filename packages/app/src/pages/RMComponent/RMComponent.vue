@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { menu } from '../../layouts/index'
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 // import RMHamburger from 'src/components/RMHamburger/RMHamburger.vue'
 import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import { useRouter } from 'vue-router'
@@ -20,9 +20,12 @@ const menuClick = (menu: { name: string; url: string }) => {
 
 const spinnerStart = () => {
   useSpinner(async () => {
-    await nextTick(() => {
-      console.log('test')
-    })
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        console.log('test')
+        resolve('')
+      }, 5000)
+    )
   })
 }
 </script>
@@ -45,5 +48,4 @@ const spinnerStart = () => {
 .page_container
   margin-top: 60px
   height: 100svh
-  background: #707070
 </style>
