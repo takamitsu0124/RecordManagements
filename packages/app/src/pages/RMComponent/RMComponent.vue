@@ -4,6 +4,7 @@ import { ref } from 'vue'
 // import RMHamburger from 'src/components/RMHamburger/RMHamburger.vue'
 import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import { useRouter } from 'vue-router'
+import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 
 const router = useRouter()
 
@@ -16,6 +17,17 @@ const logout = () => {
 const menuClick = (menu: { name: string; url: string }) => {
   router.push({ path: menu.url })
 }
+
+const spinnerStart = () => {
+  useSpinner(async () => {
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        console.log('test')
+        resolve('')
+      }, 5000)
+    )
+  })
+}
 </script>
 
 <template>
@@ -26,9 +38,14 @@ const menuClick = (menu: { name: string; url: string }) => {
       @logout="logout"
       @menuClick="menuClick"
     />
+    <div class="page_container">
+      <q-btn label="スピナーテスト" @click="spinnerStart" />
+    </div>
   </div>
 </template>
 
 <style lang="sass" scoped>
-// $
+.page_container
+  margin-top: 60px
+  height: 100svh
 </style>
