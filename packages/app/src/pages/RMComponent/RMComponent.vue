@@ -5,6 +5,7 @@ import { ref } from 'vue'
 import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
+import { useToast } from 'src/components/RMToast/RMToast'
 
 const router = useRouter()
 
@@ -22,8 +23,11 @@ const spinnerStart = () => {
   useSpinner(async () => {
     await new Promise((resolve) =>
       setTimeout(() => {
-        console.log('test')
         resolve('')
+        useToast({
+          toastTitle: 'テスト',
+          toastMovingTime: 3,
+        })
       }, 5000)
     )
   })
