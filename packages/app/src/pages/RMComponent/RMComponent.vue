@@ -3,6 +3,7 @@ import { menu } from '../../layouts/index'
 import { ref } from 'vue'
 // import RMHamburger from 'src/components/RMHamburger/RMHamburger.vue'
 import RMHeader from 'src/components/RMHeader/RMHeader.vue'
+import RMCard from 'src/components/RMCard/RMCard.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
@@ -62,6 +63,9 @@ const popupStart = () => {
     <div class="page_container">
       <q-btn label="スピナーテスト" @click="spinnerStart" />
       <q-btn label="ポップアップテスト" @click="popupStart" />
+      <RMCard :cardShape="'square'" :shadowDirection="'allSide'" class="_test">
+        カードテスト
+      </RMCard>
     </div>
   </div>
 </template>
@@ -70,4 +74,7 @@ const popupStart = () => {
 .page_container
   margin-top: 60px
   height: 100svh
+._test
+  margin: 30px 15px 0 15px
+  height: 40px
 </style>
