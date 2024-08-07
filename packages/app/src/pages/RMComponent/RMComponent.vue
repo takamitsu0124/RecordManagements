@@ -4,6 +4,8 @@ import { ref } from 'vue'
 // import RMHamburger from 'src/components/RMHamburger/RMHamburger.vue'
 import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import RMCard from 'src/components/RMCard/RMCard.vue'
+import RMDrawer from 'src/components/RMDrawer/RMDrawer.vue'
+import RMUnderDrawer from 'src/components/RMUnderDrawer/RMUnderDrawer.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
@@ -12,6 +14,9 @@ import { usePopupFun } from 'src/components/RMPopup/RMPopupFun'
 const router = useRouter()
 
 const isOpen = ref<boolean>(false)
+const drawerOpen = ref<boolean>(false)
+const underDrawerOpen = ref<boolean>(false)
+const drawerHeight = ref<string>(`${window.innerHeight - 50}px`)
 
 const logout = () => {
   console.log('logout')
@@ -66,6 +71,22 @@ const popupStart = () => {
       <RMCard :cardShape="'square'" :shadowDirection="'allSide'" class="_test">
         カードテスト
       </RMCard>
+      <q-btn label="ドロワーオープン" @click="drawerOpen = !drawerOpen" />
+      <RMDrawer v-model="drawerOpen" :drawerHeight="drawerHeight">
+        <div v-for="n in 20" :key="n + 1">{{ n }}</div>
+      </RMDrawer>
+      <q-btn
+        label="アンダードロワーオープン"
+        @click="underDrawerOpen = !underDrawerOpen"
+      />
+      <RMUnderDrawer
+        v-model="underDrawerOpen"
+        :drawerHeight="1000"
+        scroll
+        isdrawerArea
+      >
+        <div v-for="n in 20" :key="n + 1">{{ n }}</div>
+      </RMUnderDrawer>
     </div>
   </div>
 </template>
