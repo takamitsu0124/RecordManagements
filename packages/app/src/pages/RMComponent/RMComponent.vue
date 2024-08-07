@@ -81,7 +81,7 @@ const popupStart = () => {
       />
       <RMUnderDrawer
         v-model="underDrawerOpen"
-        :drawerHeight="1000"
+        :drawerHeight="600"
         scroll
         isdrawerArea
       >
