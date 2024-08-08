@@ -7,6 +7,7 @@ import RMCard from 'src/components/RMCard/RMCard.vue'
 import RMDrawer from 'src/components/RMDrawer/RMDrawer.vue'
 import RMUnderDrawer from 'src/components/RMUnderDrawer/RMUnderDrawer.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
+import RMButton from 'src/components/RMButton/RMButton.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
@@ -90,6 +91,11 @@ const popupStart = () => {
         <div v-for="n in 20" :key="n + 1">{{ n }}</div>
       </RMUnderDrawer>
       <RMInput v-model="inputModel" shadow date />
+      <RMButton
+        :buttonType="'standard'"
+        :buttonShape="'round'"
+        :letter="'テスト'"
+      />
     </div>
   </div>
 </template>
