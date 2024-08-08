@@ -6,6 +6,7 @@ import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import RMCard from 'src/components/RMCard/RMCard.vue'
 import RMDrawer from 'src/components/RMDrawer/RMDrawer.vue'
 import RMUnderDrawer from 'src/components/RMUnderDrawer/RMUnderDrawer.vue'
+import RMInput from 'src/components/RMInput/RMInput.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
@@ -17,6 +18,7 @@ const isOpen = ref<boolean>(false)
 const drawerOpen = ref<boolean>(false)
 const underDrawerOpen = ref<boolean>(false)
 const drawerHeight = ref<string>(`${window.innerHeight - 50}px`)
+const inputModel = ref<string>('')
 
 const logout = () => {
   console.log('logout')
@@ -87,6 +89,7 @@ const popupStart = () => {
       >
         <div v-for="n in 20" :key="n + 1">{{ n }}</div>
       </RMUnderDrawer>
+      <RMInput v-model="inputModel" shadow date />
     </div>
   </div>
 </template>
