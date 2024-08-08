@@ -9,6 +9,7 @@ import RMUnderDrawer from 'src/components/RMUnderDrawer/RMUnderDrawer.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMTab from 'src/components/RMTab/RMTab.vue'
+import RMLogo from 'src/components/RMLogo/RMLogo.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
@@ -99,6 +100,7 @@ const popupStart = () => {
         :letter="'テスト'"
       />
       <RMTab v-model="tabModel" />
+      <RMLogo margin_top="20px" margin_bottom="10px" />
     </div>
   </div>
 </template>
