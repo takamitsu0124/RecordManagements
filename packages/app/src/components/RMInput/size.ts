@@ -1,0 +1,11 @@
+export type SizeTypes =
+  | 'xs'
+  | 'XS'
+  | 's'
+  | 'S'
+  | 'm'
+  | 'M'
+  | 'l'
+  | 'L'
+  | 'xl'
+  | 'XL'
