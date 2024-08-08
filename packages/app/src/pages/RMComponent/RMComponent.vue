@@ -8,6 +8,7 @@ import RMDrawer from 'src/components/RMDrawer/RMDrawer.vue'
 import RMUnderDrawer from 'src/components/RMUnderDrawer/RMUnderDrawer.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
+import RMTab from 'src/components/RMTab/RMTab.vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
@@ -20,6 +21,7 @@ const drawerOpen = ref<boolean>(false)
 const underDrawerOpen = ref<boolean>(false)
 const drawerHeight = ref<string>(`${window.innerHeight - 50}px`)
 const inputModel = ref<string>('')
+const tabModel = ref<string>('')
 
 const logout = () => {
   console.log('logout')
@@ -96,6 +98,7 @@ const popupStart = () => {
         :buttonShape="'round'"
         :letter="'テスト'"
       />
+      <RMTab v-model="tabModel" />
     </div>
   </div>
 </template>
