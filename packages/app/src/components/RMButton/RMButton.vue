@@ -19,13 +19,13 @@ const props = defineProps({
   /** ボタンの高さ */
   buttonHeight: { type: String, default: '50px' },
   /** ボタン文字*/
-  letter: { type: String, default: 'ページ遷移します' },
+  label: { type: String, default: 'ページ遷移します' },
   /** 形
    * @true 丸みをつける
    */
   buttonShape: { type: String as PropType<'round' | 'square' | 'ellipse'> },
   /**背景カラー*/
-  bgColor: { type: String, default: 'primary' },
+  bgColor: { type: String, default: '#707070' },
   /**ボタン文字カラー*/
   letterColor: { type: String, default: 'white' },
   /** 文字サイズ */
@@ -105,10 +105,10 @@ const medalGarbageColor = () => {
     :class="[
       '_AFC_buttons',
       changeButtonShape(),
-      `bg-${bgColor}`,
       `text-${letterColor}`,
       { disable: props.isDisable },
     ]"
+    :style="{ background: `${bgColor}` }"
   >
     <!-- ボタンタイプ削除 -->
     <img
@@ -182,7 +182,7 @@ const medalGarbageColor = () => {
           buttonType === 'standard' ||
           buttonType === 'withIcon'
         "
-        v-html="letter"
+        v-html="label"
       ></div>
     </div>
   </div>

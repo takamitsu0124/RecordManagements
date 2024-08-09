@@ -1,0 +1,16 @@
+{
+  "name": "@rm/db",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@codelic/datagen": "^1.0.7",
+    "firebase": "^10.12.5",
+    "magnetar": "^1.2.7"
+  }
+}
