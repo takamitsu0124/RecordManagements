@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "default": "recordmanagements-756bf"
+  },
+  "targets": {
+    "recordmanagements-756bf": {
+      "hosting": {
+        "app": [
+          "RecordManagements"
+        ]
+      }
+    }
+  },
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}
