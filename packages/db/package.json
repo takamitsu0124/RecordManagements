@@ -1,7 +1,7 @@
 {
   "name": "@rm/db",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "./src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,6 +10,10 @@
   "description": "",
   "dependencies": {
     "@codelic/datagen": "^1.0.7",
+    "@magnetarjs/plugin-firestore": "^1.2.7",
+    "@magnetarjs/plugin-vue3": "^1.2.7",
+    "@magnetarjs/utils": "^1.2.7",
+    "copy-anything": "^4.0.2",
     "firebase": "^10.12.5",
     "magnetar": "^1.2.7"
   }

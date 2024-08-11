@@ -3,10 +3,10 @@ import { ref } from 'vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import { useRouter } from 'vue-router'
-import { mailLogin } from '@codelic/afc-utils'
+import { mailLogin } from '@rm/utils'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
-import { auth } from '@codelic/afc-db'
+import { auth } from '@rm/db'
 
 const router = useRouter()
 const email = ref('')
@@ -20,13 +20,13 @@ const bgImgPath = ref(
 const signIn = async () => {
   // 処理中はスピナーを表示
   await useSpinner(async () => {
-    await mailLogin(auth, email.value, password.value, router, '/AFCTop')
+    await mailLogin(auth, email.value, password.value, router, '/RMHome')
       .then(() => {
         useToast({
           toastTitle: 'ログインしました',
           toastMovingTime: 3,
         })
-        return router.push('/top')
+        return router.push('/RMHome')
       })
       .catch((error) => {
         console.log('ログインエラー', error.code)
@@ -65,34 +65,41 @@ const signIn = async () => {
 }
 </script>
 <template>
-  <div class="_out_login">
-    <div class="_login">
-      <div class="_loginForm">
+  <div class="_login_outer_container">
+    <div class="_login_inner_container">
+      <div class="_login_form">
         <div class="_logo"><img src="~/assets/logo.png" /></div>
-        <div class="_title">長期住宅管理</div>
-        <div class="_divForInput">
+        <div class="_title">RecordManagement</div>
+        <div class="_botton_area">
           <RMInput
-            class="_loginInput"
+            class="_login_input"
             v-model="email"
             type="text"
             label="ログインID"
+            placeholder="sample@gmail.com"
+            :error2="!!errorMessage"
+            shadow
           />
         </div>
-        <div class="_divForInput">
+        <div class="_botton_area">
           <RMInput
-            class="_loginInput"
+            class="_login_input"
             v-model="password"
             type="password"
             label="パスワード"
+            placeholder="aa12345678"
+            :error2="!!errorMessage"
+            shadow
           />
         </div>
-        <p class="_caution">{{ errorMessage }}</p>
+        <div class="_caution">{{ errorMessage }}</div>
         <div class="_divForBtn">
           <RMButton
             class="_loginBtn"
             height="50px"
             width="100%"
-            buttonText="ログイン"
+            label="ログイン"
+            bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
             @click="
               () => {
                 signIn()
@@ -105,9 +112,9 @@ const signIn = async () => {
   </div>
 </template>
 <style lang="sass" scoped>
-._out_login
+._login_outer_container
   background: v-bind(bgImgPath)
-  background-size: 100%
+  background-size: cover
   display: block
   position: fixed
   left: 0
@@ -115,45 +122,61 @@ const signIn = async () => {
   bottom: 0
   top: 0
 
-._login
-  padding: 35px
+._login_inner_container
+  padding: 10px
   position: fixed
   left: 0
   bottom: 35px
   width: 100%
 
+._login_form
+  width: 100%
+  padding: 20px
+> div
+  margin: 10px 0 !important
+
 ._logo
-  width: 33%
-  margin-bottom: 25px
+  width: 55%
+  margin: 0 auto
   img
     width: 100%
 
 ._caution
   width: 100%
-  color: var(--c-warning)
+  color: #d20000
+  font-weight: bold
   text-align: center
 
 ._title
   font-size: 40px
-  color: var(--c-primary)
+  color: #333333
   font-weight: 900
   text-shadow: 0 3px 6px rgba(0,0,0,0.16)
-  padding-bottom: 60px
+  padding-bottom: 35px
 @media screen and (max-height: 768px)
   ._loginBtn
     width: 100%
     margin-top: 10px
-  ._loginForm
-    padding: 30px
-    > div
-      margin: 10px 0 !important
+  ._login_form
+    padding: 20px
+  > div
+    margin: 10px 0 !important
+  ._title
+    font-size: 30px
+    text-align: center
+  ._logo
+    width: 180px
+    margin: 0 auto
+    display: block
+    position: absolute
+    bottom: 100%
+    left: 50%
+    transform: translateX(-50%)
+  ._botton_area
+    margin-bottom: 20px
 
-
-._divForInput
-  margin-bottom: 20px
-
-._divForBtn
-  margin-top: 57px
+  ._divForBtn
+    margin-top: 57px
 
 @media screen and (min-width: 768px)
   ._title
@@ -164,10 +187,10 @@ const signIn = async () => {
     width: 180px
     display: block
     position: relative
-    left: calc(50% - 250px)
+    left: 6%
     transform: translateX(-50%)
 
-  ._loginBtn,._loginInput
+  ._loginBtn,._login_input
     width: 300px
     font-size: 16px
     margin: 0 auto

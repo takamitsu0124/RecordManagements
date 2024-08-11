@@ -4,6 +4,7 @@
   "scripts": {
     "dev:app": "npm run dev -w app",
     "build:app": "npm run build -w app",
+    "deploy:app": "npm run build -w app && firebase use recordmanagements-756bf && firebase deploy --only hosting:app",
     "dev:vapp": "npm run dev -w vite-project",
     "build:vapp": "npm run build -w vite-project"
   },
@@ -11,7 +12,11 @@
   "workspaces": [
     "packages/*"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "@rm/db": "^1.0.0",
+    "@rm/types": "^1.0.0",
+    "@rm/utils": "^1.0.0"
+  },
   "devDependencies": {
     "lerna": "^8.1.7"
   }

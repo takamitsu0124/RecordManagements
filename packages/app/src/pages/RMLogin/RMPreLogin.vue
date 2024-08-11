@@ -34,13 +34,14 @@ const router = useRouter()
             class="_selectBtn"
             @click="
               () => {
-                router.push('/RMPhoneLogin')
+                // router.push('/RMPhoneLogin')
               }
             "
             label="電話番号でログイン"
             :buttonShape="'ellipse'"
             :buttonType="'standard'"
             bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
+            :disabled="true"
           />
         </div>
       </div>
@@ -73,17 +74,18 @@ const router = useRouter()
 
 ._caution
   width: 100%
-  color: var(--c-warning)
+  color: #d20000
   text-align: center
 
 ._selectBtn
   width: 100% !important
   height: 50px !important
   margin-bottom: 50px !important
+  user-select: none
 
 ._title
   font-size: 31px
-  color: var(--c-primary)
+  color: #333333
   font-weight: 900
   text-shadow: 0 3px 6px rgba(0,0,0,0.16)
   padding-bottom: 60px
