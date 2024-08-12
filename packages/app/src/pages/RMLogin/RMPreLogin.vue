@@ -29,7 +29,7 @@ const router = useRouter()
             bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
           />
         </div>
-        <div class="_botton_area">
+        <div class="_botton_area" v-show="false">
           <RMButton
             class="_selectBtn"
             @click="
