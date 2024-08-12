@@ -44,11 +44,26 @@ const router = useRouter()
             :disabled="true"
           />
         </div>
+        <div class="_botton_area">
+          <RMButton
+            class="_selectBtn"
+            @click="
+              () => {
+                // router.push('/RMPhoneLogin')
+              }
+            "
+            label="新規登録"
+            :buttonShape="'ellipse'"
+            :buttonType="'standard'"
+            bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
+          />
+        </div>
       </div>
     </div>
   </div>
 </template>
 <style lang="sass" scoped>
+// APP
 ._login_outer_container
   background: v-bind(bgImgPath)
   background-size: cover
@@ -80,7 +95,7 @@ const router = useRouter()
 ._selectBtn
   width: 100% !important
   height: 50px !important
-  margin-bottom: 50px !important
+  margin-bottom: 40px !important
   user-select: none
 
 ._title
@@ -88,7 +103,7 @@ const router = useRouter()
   color: #333333
   font-weight: 900
   text-shadow: 0 3px 6px rgba(0,0,0,0.16)
-  padding-bottom: 60px
+  padding-bottom: 40px
 ._loginBtn
   width: 100%
   margin-top: 10px
@@ -103,7 +118,7 @@ const router = useRouter()
 
 ._divForBtn
   margin-top: 57px
-
+// PC
 @media screen and (min-width: 768px)
   ._login_form
     padding: 20px
