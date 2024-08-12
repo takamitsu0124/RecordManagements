@@ -22,7 +22,7 @@ export type User = {
     phone: string
   }
   /** 誕生日 */
-  birthDate: Date | null
+  birthDateAt: Date | null
   /** 最終ログイン日 */
   lastLoginDateAt: Date | null
   /** ロール */
@@ -114,7 +114,7 @@ export function defaultUser(): User {
       email: '',
       phone: ''
     },
-    birthDate: null,
+    birthDateAt: null,
     lastLoginDateAt: null,
     roles: ['エンドユーザー'],
     skillRecord: {
