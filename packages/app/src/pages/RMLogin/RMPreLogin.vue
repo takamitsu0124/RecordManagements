@@ -49,7 +49,7 @@ const router = useRouter()
             class="_selectBtn"
             @click="
               () => {
-                // router.push('/RMPhoneLogin')
+                router.push('/RMUserRegister')
               }
             "
             label="新規登録"
@@ -115,9 +115,6 @@ const router = useRouter()
 
 ._botton_area
   margin-bottom: 20px
-
-._divForBtn
-  margin-top: 57px
 // PC
 @media screen and (min-width: 768px)
   ._login_form

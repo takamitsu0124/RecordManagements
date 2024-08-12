@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   margin_top: {
@@ -23,10 +23,14 @@ const props = defineProps({
 const marginTop = computed(() => `${props.margin_top}`)
 const marginBottom = computed(() => `${props.margin_bottom}`)
 const serviceBottom = computed(() => `${props.serviceBottom}`)
+
+const appLogo = ref(
+  'https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Ftwitter_header_photo_2.png?alt=media&token=ee80dd4e-12dd-4143-8a59-bb3641b434c6'
+)
 </script>
 
 <template>
-  <q-img src="~/assets/apple_logo.png" class="_logo" />
+  <q-img :src="appLogo" class="_logo" />
   <div class="_service_name" v-if="props.serviceName">
     {{ props.serviceName }}
   </div>
@@ -34,7 +38,7 @@ const serviceBottom = computed(() => `${props.serviceBottom}`)
 
 <style lang="sass" scoped>
 ._logo
-  width: 170px
+  width: 180px
   height: auto
   margin-top: v-bind(marginTop)
   margin-bottom: v-bind(marginBottom)
