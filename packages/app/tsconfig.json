@@ -12,5 +12,10 @@
     "./src-capacitor",
     "./src-cordova",
     "./quasar.config.*.temporary.compiled*"
-  ]
+  ],
+  "paths": {
+    "@rm/db": ["../types/src"],
+    "@rm/types": ["../types/src"],
+    "@rm/utils": ["../utils/src"]
+  }
 }
