@@ -13,6 +13,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { usePopupFun } from 'src/components/RMPopup/RMPopupFun'
+import { useToast } from 'src/components/RMToast/RMToast'
 
 const bgImgPath = ref(
   'url("https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Fregister_background.jpeg?alt=media&token=2a3fd22a-6f76-4c06-90a0-83152a09179f") no-repeat center'
@@ -63,7 +64,12 @@ const registerSave = async () => {
 
     try {
       // データベースユーザーの作成
-      await dbUserCreate(uid.value, registerInfo.value)
+      await dbUserCreate(uid.value, registerInfo.value).then(() => {
+        useToast({
+          toastTitle: '登録完了、ログインしました',
+          toastMovingTime: 3,
+        })
+      })
     } catch (error) {
       console.error(error)
     }
