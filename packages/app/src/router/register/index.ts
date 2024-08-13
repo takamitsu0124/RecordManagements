@@ -9,6 +9,13 @@ const routes = [
         path: '/RMUserRegister',
         component: () => import('src/pages/RMUserRegister/RMUserRegister.vue'),
       },
+      // ユーザー登録
+      {
+        name: 'RMUserRegisterConfirm',
+        path: '/RMUserRegisterConfirm',
+        component: () =>
+          import('src/pages/RMUserRegister/RMUserRegisterConfirm.vue'),
+      },
       // ギルド登録
       {
         name: 'RMGuildRegister',
