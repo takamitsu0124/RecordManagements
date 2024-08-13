@@ -15,9 +15,11 @@
   "dependencies": {
     "@rm/db": "^1.0.0",
     "@rm/types": "^1.0.0",
-    "@rm/utils": "^1.0.0"
+    "@rm/utils": "^1.0.0",
+    "copy-anything": "^4.0.2"
   },
   "devDependencies": {
-    "lerna": "^8.1.7"
+    "lerna": "^8.1.7",
+    "typescript": "^5.5.4"
   }
 }

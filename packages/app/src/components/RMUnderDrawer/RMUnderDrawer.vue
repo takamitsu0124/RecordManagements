@@ -145,7 +145,7 @@ const drawerClose = () => {
             name="close"
           />
         </div>
-        <div style="max-width: 850px; margin: 0 auto">
+        <div style="max-width: 850px; margin: 0 auto; overflow: scroll">
           <slot name="default" />
         </div>
       </div>

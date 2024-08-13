@@ -108,7 +108,7 @@ export function defaultUser(): User {
     guildId: '',
     affiliationDate: null,
     affiliationNum: 0,
-    situation: '',
+    situation: '現役',
     gameStartDateAt: null,
     contact: {
       email: '',
