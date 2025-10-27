@@ -39,7 +39,8 @@ const remote = PluginFirestore({ db, syncDebounceMs: 10 })
 const local = PluginVue3({ generateRandomId: genFirebaseRandomId })
 
 export const magnetar = Magnetar({
-  stores: { cache: local, 'local': remote },
+  stores: { cache: local, local, remote },
+  localStoreName: 'local',
   executionOrder: {
     read: ['local', 'remote'],
     write: ['local', 'remote'],

@@ -73,6 +73,7 @@ export type IconTypes =
   | 'ad_units'
   | 'adb'
   | 'add'
+  | 'add_home'
   | 'add_a_photo'
   | 'add_alarm'
   | 'add_alert'

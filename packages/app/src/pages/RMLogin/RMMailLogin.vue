@@ -113,87 +113,64 @@ const signIn = async () => {
 </template>
 <style lang="sass" scoped>
 ._login_outer_container
+  width: 100vw
   background: v-bind(bgImgPath)
   background-size: cover
-  display: block
-  position: fixed
-  left: 0
-  right: 0
-  bottom: 0
-  top: 0
+  display: flex
+  align-items: center
+  justify-content: center
+  min-height: 100vh
+  padding: 20px
 
 ._login_inner_container
-  padding: 10px
-  position: fixed
-  left: 0
-  bottom: 35px
-  width: 100%
+  width: 29.17vw
+  min-width: 375px
+  padding: 40px 30px
+  background: rgba(255, 255, 255, 0.85)
+  backdrop-filter: blur(10px)
+  -webkit-backdrop-filter: blur(10px)
+  border-radius: 20px
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37)
+  border: 1px solid rgba(255, 255, 255, 0.18)
 
 ._login_form
   width: 100%
-  padding: 20px
-> div
-  margin: 10px 0 !important
 
 ._logo
-  width: 55%
-  margin: 0 auto
+  width: 150px
+  margin: 0 auto 20px
   img
     width: 100%
+
+._title
+  font-size: 28px
+  color: #333333
+  font-weight: 900
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1)
+  text-align: center
+  margin-bottom: 30px
+
+._botton_area
+  margin-bottom: 20px
+
+._login_input
+  width: 100%
 
 ._caution
   width: 100%
   color: #d20000
   font-weight: bold
   text-align: center
+  min-height: 20px
+  margin-bottom: 20px
 
-._title
-  font-size: 40px
-  color: #333333
-  font-weight: 900
-  text-shadow: 0 3px 6px rgba(0,0,0,0.16)
-  padding-bottom: 35px
-@media screen and (max-height: 768px)
-  ._loginBtn
-    width: 100%
-    margin-top: 10px
-  ._login_form
-    padding: 20px
-  > div
-    margin: 10px 0 !important
-  ._title
-    font-size: 30px
-    text-align: center
-  ._logo
-    width: 180px
-    margin: 0 auto
-    display: block
-    position: absolute
-    bottom: 100%
-    left: 50%
-    transform: translateX(-50%)
-  ._botton_area
-    margin-bottom: 20px
+._divForBtn
+  margin-top: 30px
 
-  ._divForBtn
-    margin-top: 57px
+._loginBtn
+  font-size: 16px
 
 @media screen and (min-width: 768px)
   ._title
-    font-size: 90px
-    text-align: center
-
-  ._logo
-    width: 180px
-    display: block
-    position: relative
-    left: 6%
-    transform: translateX(-50%)
-
-  ._loginBtn,._login_input
-    width: 300px
-    font-size: 16px
-    margin: 0 auto
-    height: 50px
-    margin-bottom: 50px
+    font-size: 36px
 </style>

@@ -10,7 +10,8 @@ export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
       ...defaultUser(),
       charaName: info.name,
       charaNameKana: info.nameKana,
-      birthDateAt: parseDateString(info.birthDateAt) || null
+      birthDateAt: parseDateString(info.birthDateAt) || null,
+      id: uid
     })
   } catch (e) {
     useToast({
