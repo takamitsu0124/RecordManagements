@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { computed, PropType, watch } from 'vue'
+import { computed, PropType, toRefs, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { activeMenu } from './RMHamburger'
 
 /** メニュー項目の型定義 */
-type Menu = { name: string; url: string }[]
+type Menu = { name: string; url: string; isShow: boolean }[]
 /** プロパティ定義 */
 const props = defineProps({
   menu: { type: Object as PropType<Menu>, required: true },
@@ -17,6 +17,8 @@ const bar = computed(() => (isOpen.value ? '75%' : '52%'))
 const router = useRouter()
 /** emits定義 */
 const emits = defineEmits(['menuClick', 'logout'])
+/** propsをリアクティブにする */
+const menus = toRefs(props.menu)
 
 /**
  * ルートが変わったときに、現在のページと一致するメニューにアンダーラインを引く
@@ -25,7 +27,7 @@ const emits = defineEmits(['menuClick', 'logout'])
 watch(
   () => router.currentRoute.value.meta.pageTitle,
   (newRouteName) => {
-    if (props.menu !== undefined) {
+    if (menus !== undefined) {
       activeMenu.value = String(newRouteName)
     }
   },
@@ -48,7 +50,11 @@ const spHandleClick = (menu: { name: string; url: string }) => {
  * @param {string} menu.name - メニュー名
  * @param {string} menu.url - メニューURL
  */
-const pcHandleClick = (menu: { name: string; url: string }) => {
+const pcHandleClick = (menu: {
+  name: string
+  url: string
+  isShow: boolean
+}) => {
   menu.name === 'ログアウト' ? emits('logout') : emits('menuClick', menu)
 }
 </script>
@@ -68,20 +74,22 @@ const pcHandleClick = (menu: { name: string; url: string }) => {
   <div :class="['_menu_open', { show: isOpen }]" v-if="isOpen">
     <div class="_menu">
       <div
-        v-for="(menu, index) in menu"
-        :key="menu.name"
-        @click="spHandleClick(menu)"
-        :class="['_menu_item', { active: activeMenu === menu.name }]"
+        v-for="(menu, index) in menus"
+        :key="menu.value.name"
+        @click="spHandleClick(menu.value)"
+        :class="['_menu_item', { active: activeMenu === menu.value.name }]"
       >
         <div
           :class="{
-            _menu_item_margin_bottom: index === 4 && activeMenu !== menu.name,
+            _menu_item_margin_bottom:
+              index === 4 && activeMenu !== menu.value.name,
             _menu_item_margin_bottom_active:
-              index === 4 && activeMenu === menu.name,
+              index === 4 && activeMenu === menu.value.name,
             _menu_item_margin_top: index === 5,
           }"
+          v-show="menu.value.isShow"
         >
-          {{ menu.name }}
+          {{ menu.value.name }}
         </div>
         <div v-if="index === 4" class="_border_line"></div>
       </div>
@@ -96,7 +104,7 @@ const pcHandleClick = (menu: { name: string; url: string }) => {
       :key="menu.name"
       @click="pcHandleClick(menu)"
     >
-      <div>
+      <div v-show="menu.isShow">
         {{ menu.name }}
       </div>
     </div>

@@ -28,8 +28,6 @@ const router = useRouter()
             :buttonType="'standard'"
             bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
           />
-        </div>
-        <div class="_botton_area" v-show="false">
           <RMButton
             class="_selectBtn"
             @click="
@@ -41,10 +39,8 @@ const router = useRouter()
             :buttonShape="'ellipse'"
             :buttonType="'standard'"
             bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
-            :disabled="true"
+            v-show="false"
           />
-        </div>
-        <div class="_botton_area">
           <RMButton
             class="_selectBtn"
             @click="
@@ -110,17 +106,21 @@ const router = useRouter()
 
 ._login_form
   padding: 20px
-> div
+  div
     margin: 10px 0 !important
 
 ._botton_area
+  display: flex
+  flex-direction: column
+  justify-content: center
+  align-items: center
   margin-bottom: 20px
 // PC
 @media screen and (min-width: 768px)
   ._login_form
     padding: 20px
-  > div
-    margin: 10px 0 !important
+    div
+      margin: 10px 0 !important
   ._title
     font-size: 90px
     text-align: center

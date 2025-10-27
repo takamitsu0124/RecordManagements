@@ -26,7 +26,7 @@ export type User = {
   /** 最終ログイン日 */
   lastLoginDateAt: Date | null
   /** ロール */
-  roles: ('管理者' | 'エンドユーザー')[]
+  role: '管理者' | 'エンドユーザー'
   /**
    * スキルレコード一覧
    * @param {string[]} sword 片手直剣
@@ -116,7 +116,7 @@ export function defaultUser(): User {
     },
     birthDateAt: null,
     lastLoginDateAt: null,
-    roles: ['エンドユーザー'],
+    role: 'エンドユーザー',
     skillRecord: {
       sword: [],
       rapier: [],
