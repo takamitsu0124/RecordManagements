@@ -1,18 +1,57 @@
 <script lang="ts" setup>
 import { dbUserModule } from '@rm/db/src/fireStore/User'
+import { dbGuildModule } from '@rm/db/src/fireStore/Guild' // 追加
+import { Guild, User } from '@rm/types' // 追加
 import { globalLoginUserData, lacksGuildId, hasGuildId } from 'src/boot/main'
 import RMCard from 'src/components/RMCard/RMCard.vue'
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router' // useRouterをインポート
+import { onMounted, ref } from 'vue' // refもインポート
+import { useRouter } from 'vue-router'
 
-const router = useRouter() // routerインスタンスを取得
+const router = useRouter()
+
+const currentUserCharaName = ref<string | null>(null)
+const hasUserCharaNameInAnyGuild = ref(false)
+const isLoadingGuildCheck = ref(true)
 
 onMounted(async () => {
+  // ユーザー情報をフェッチ
   await dbUserModule.doc(globalLoginUserData.value.id).fetch()
+  const userData = dbUserModule.doc(globalLoginUserData.value.id)
+    .data as User | null
+
+  if (userData && userData.charaName) {
+    currentUserCharaName.value = userData.charaName
+  } else {
+    console.warn('ログインユーザーのcharaNameが見つかりません。')
+    isLoadingGuildCheck.value = false
+    return
+  }
+
+  // すべてのギルドをフェッチし、キャラ名が存在するかチェック
+  try {
+    await dbGuildModule.fetch()
+    const allGuilds: Guild[] = Array.from(dbGuildModule.data.values())
+
+    for (const guild of allGuilds) {
+      for (const memberUid in guild.guildMember) {
+        if (guild.guildMember[memberUid].name === currentUserCharaName.value) {
+          hasUserCharaNameInAnyGuild.value = true
+          break
+        }
+      }
+      if (hasUserCharaNameInAnyGuild.value) {
+        break
+      }
+    }
+  } catch (error) {
+    console.error('ギルド情報の取得中にエラーが発生しました:', error)
+  } finally {
+    isLoadingGuildCheck.value = false
+  }
 })
 
 const registerGuild = () => {
-  router.push('RMGuildRegister') // ギルド登録ページへ遷移
+  router.push('RMGuildRegister')
 }
 </script>
 
