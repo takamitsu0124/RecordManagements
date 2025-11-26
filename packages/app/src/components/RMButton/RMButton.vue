@@ -58,6 +58,11 @@ const props = defineProps({
   isDisable: { type: Boolean, default: false },
   /**google iconの素の書き方でしか実装できないケースに対応 */
   specialIcon: { type: Boolean, default: false },
+  /** ボタンのタイプ (button, submit, reset) */
+  type: {
+    type: String as PropType<'button' | 'submit' | 'reset'>,
+    default: 'button',
+  },
 })
 
 const letterSize = computed(() => `${props.letterSize}`)
@@ -101,7 +106,8 @@ const medalGarbageColor = () => {
 </script>
 
 <template>
-  <div
+  <button
+    :type="type"
     :class="[
       '_AFC_buttons',
       changeButtonShape(),
@@ -185,7 +191,7 @@ const medalGarbageColor = () => {
         v-html="label"
       ></div>
     </div>
-  </div>
+  </button>
 </template>
 
 <style lang="sass" scoped>

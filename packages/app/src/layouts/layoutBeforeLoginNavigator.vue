@@ -10,7 +10,7 @@
 </template>
 
 <style lang="sass" scoped>
-@media screen and (min-width: 1080px)
+@media screen and (min-width: 1440px)
   ._login_layout
-    width: 1080px
+    width: 1440px
 </style>
