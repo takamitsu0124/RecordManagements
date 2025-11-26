@@ -56,7 +56,7 @@ const onSubmit = async () => {
       message: 'ギルドが正常に登録されました。',
       position: 'top',
     })
-    router.push('/')
+    router.push('RMGuildDetail')
   } catch (error) {
     $q.notify?.({
       type: 'negative',

@@ -6,7 +6,7 @@ const routes = [
       // ギルド詳細
       {
         name: 'RMGuildDetail',
-        path: '/RMGuildDetail',
+        path: '/RMGuildDetail/:guildId', // パラメータを受け取るように修正
         component: () => import('src/pages/RMGuildDetail/RMGuildDetail.vue'),
       },
       // ギルドメンバー
