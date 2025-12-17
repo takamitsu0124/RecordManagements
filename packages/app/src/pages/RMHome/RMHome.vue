@@ -120,7 +120,7 @@ const goToUserEdit = () => {
         @click="goToUserEdit"
       >
         <q-icon class="_icon_setting" name="edit" />
-        <div class="_content_text">ユーザー情報編集</div>
+        <div class="_content_text">マイページ</div>
       </RMCard>
     </div>
   </div>

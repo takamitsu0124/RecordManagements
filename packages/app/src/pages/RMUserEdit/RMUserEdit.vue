@@ -97,7 +97,7 @@ const onCancel = () => {
 </script>
 
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md user-edit-page">
     <div v-if="isLoading" class="text-center q-pt-xl">
       <q-spinner-hourglass color="primary" size="3em" />
       <p class="text-primary q-mt-md">ユーザー情報を読み込み中...</p>
@@ -108,65 +108,171 @@ const onCancel = () => {
       <RMButton label="戻る" color="primary" @click="onCancel" class="q-mt-md" />
     </div>
 
-    <div v-else-if="user">
-      <q-form @submit.prevent="onSubmit">
-        <q-card class="q-ma-auto" style="max-width: 800px">
+    <div v-else-if="user" class="row justify-center">
+      <q-form @submit.prevent="onSubmit" class="col-12" style="max-width: 800px">
+        <q-card>
           <q-card-section>
             <div class="text-h6">ユーザー情報編集</div>
           </q-card-section>
 
-          <q-card-section class="q-gutter-md">
-            <q-input v-model="user.charaName" label="キャラクターネーム" outlined dense />
-            <q-input v-model="user.charaNameKana" label="キャラクターネーム(カナ)" outlined dense />
-            <q-input v-model="user.guildId" label="所属ギルドID" outlined dense />
-            <q-input v-model.number="user.affiliationNum" label="所属No" type="number" outlined dense />
-            <q-select v-model="user.situation" :options="situationOptions" label="プレイヤー状況" outlined dense />
+          <q-card-section class="q-gutter-y-md">
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="user.charaName"
+                  label="キャラクターネーム"
+                  outlined
+                  dense
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="user.charaNameKana"
+                  label="キャラクターネーム(カナ)"
+                  outlined
+                  dense
+                />
+              </div>
+            </div>
 
-            <q-input filled dense v-model="user.affiliationDate" mask="date" label="ギルド所属日">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="user.affiliationDate">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Close" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-input v-model="user.guildId" label="所属ギルドID" outlined dense />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="user.affiliationNum"
+                  label="所属No"
+                  type="number"
+                  outlined
+                  dense
+                />
+              </div>
+            </div>
 
-            <q-input filled dense v-model="user.gameStartDateAt" mask="date" label="ゲーム開始日時">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="user.gameStartDateAt">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Close" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+            <q-select
+              v-model="user.situation"
+              :options="situationOptions"
+              label="プレイヤー状況"
+              outlined
+              dense
+            />
 
-            <q-input filled dense v-model="user.birthDateAt" mask="date" label="誕生日">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="user.birthDateAt">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Close" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-4">
+                <q-input
+                  filled
+                  dense
+                  v-model="user.affiliationDate"
+                  mask="date"
+                  label="ギルド所属日"
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
+                      >
+                        <q-date v-model="user.affiliationDate">
+                          <div class="row items-center justify-end">
+                            <q-btn
+                              v-close-popup
+                              label="Close"
+                              color="primary"
+                              flat
+                            />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12 col-sm-4">
+                <q-input
+                  filled
+                  dense
+                  v-model="user.gameStartDateAt"
+                  mask="date"
+                  label="ゲーム開始日時"
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
+                      >
+                        <q-date v-model="user.gameStartDateAt">
+                          <div class="row items-center justify-end">
+                            <q-btn
+                              v-close-popup
+                              label="Close"
+                              color="primary"
+                              flat
+                            />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12 col-sm-4">
+                <q-input
+                  filled
+                  dense
+                  v-model="user.birthDateAt"
+                  mask="date"
+                  label="誕生日"
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
+                      >
+                        <q-date v-model="user.birthDateAt">
+                          <div class="row items-center justify-end">
+                            <q-btn
+                              v-close-popup
+                              label="Close"
+                              color="primary"
+                              flat
+                            />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+            </div>
 
-            <div class="text-subtitle1 q-mt-lg">連絡先</div>
-            <q-input v-model="user.contact.email" label="登録メールアドレス" type="email" outlined dense />
-            <q-input v-model="user.contact.phone" label="登録電話番号" type="tel" outlined dense />
+            <q-separator class="q-mt-lg q-mb-md" />
+            <div class="text-subtitle1">連絡先</div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="user.contact.email"
+                  label="登録メールアドレス"
+                  type="email"
+                  outlined
+                  dense
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="user.contact.phone"
+                  label="登録電話番号"
+                  type="tel"
+                  outlined
+                  dense
+                />
+              </div>
+            </div>
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
@@ -178,3 +284,10 @@ const onCancel = () => {
     </div>
   </q-page>
 </template>
+
+<style lang="scss" scoped>
+.user-edit-page {
+  background-color: #f0f2f5;
+}
+</style>
+
