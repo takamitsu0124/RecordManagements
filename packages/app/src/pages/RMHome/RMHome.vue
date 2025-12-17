@@ -2,12 +2,14 @@
 import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild' // 追加
 import { Guild, User } from '@rm/types' // 追加
-import { globalLoginUserData, lacksGuildId, hasGuildId } from 'src/boot/main'
+import { globalLoginUserData, lacksGuildId } from 'src/boot/main'
 import RMCard from 'src/components/RMCard/RMCard.vue'
 import { onMounted, ref } from 'vue' // refもインポート
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar' // useQuasarをインポート
 
 const router = useRouter()
+const $q = useQuasar() // $qインスタンスを取得
 
 const currentUserCharaName = ref<string | null>(null)
 const hasUserCharaNameInAnyGuild = ref(false)
@@ -53,6 +55,23 @@ onMounted(async () => {
 const registerGuild = () => {
   router.push('RMGuildRegister')
 }
+
+const selectGuild = () => {
+  const userData = dbUserModule.doc(globalLoginUserData.value.id)
+    .data as User | null
+  const userGuildId = userData?.guildId
+
+  if (userGuildId) {
+    router.push({ name: 'RMGuildDetail', params: { guildId: userGuildId } })
+  } else {
+    console.error('ログインユーザーのギルドIDが見つかりません。')
+    $q.notify?.({
+      type: 'negative',
+      message: '所属ギルド情報が見つかりません。',
+      position: 'top',
+    })
+  }
+}
 </script>
 
 <template>
@@ -73,8 +92,7 @@ const registerGuild = () => {
         class="_card_content"
         :cardShape="'roundM'"
         :shadowDirection="'allSide'"
-        @click="registerGuild"
-        v-if="hasGuildId"
+        @click="selectGuild"
       >
         <q-icon class="_icon_setting" name="o_touch_app" />
         <div class="_content_text">ギルド選択</div>

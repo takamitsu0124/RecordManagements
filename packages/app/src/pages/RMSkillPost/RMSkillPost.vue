@@ -1,0 +1,324 @@
+<script lang="ts" setup>
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+
+import { dbUserModule } from '@rm/db/src/fireStore/User'
+import { User, SkillRecord, ProficiencyLevel } from '@rm/types'
+import RMButton from 'src/components/RMButton/RMButton.vue'
+import { uploadFile, deleteFileByUrl } from '@rm/db/src/fireStorage/fireStorage'
+
+const route = useRoute()
+const router = useRouter()
+const $q = useQuasar()
+
+const userId = ref<string | null>(null)
+const userDetail = ref<User | null>(null)
+const skillRecord = ref<SkillRecord | null>(null)
+const proficiencyLevel = ref<ProficiencyLevel | null>(null)
+const isEditMode = ref(false) // 編集モード
+const isLoading = ref(true)
+const errorMessage = ref<string | null>(null)
+const deletedImageUrls = ref<string[]>([]) // 削除対象の画像URLリスト
+
+// テンプレートでのループ用 (型情報と同じ順序)
+const weaponTypes: Array<keyof SkillRecord> = [
+  'sword', 'rapier', 'club', 'dagger', 'axe', 'spear', 'bow', 'shield',
+  'ability', 'abilityRecollection', 'abilityAccele', 'weaponRecollection',
+  'weaponMod', 'weaponConnect', 'weaponAccele', 'burst_FullBurst', 'free'
+]
+const proficiencyKeys: Array<keyof ProficiencyLevel> = [
+  'sword', 'rapier', 'club', 'dagger', 'axe', 'spear', 'bow', 'shield'
+]
+
+// QUploaderのfactory関数
+const uploaderFactory = (weaponType: keyof SkillRecord) => {
+  return (files: readonly File[]) => {
+    return new Promise<{ url: string }>((resolve) => {
+      const file = files[0]
+      if (!userId.value) {
+        $q.notify({ type: 'negative', message: 'ユーザーIDがありません。' })
+        // QUploaderに失敗を伝えるためにreject
+        // reject('User ID not found');
+        return;
+      }
+      const uploadPath = `skill_records/${userId.value}/${String(weaponType)}`
+
+      $q.loading.show({ message: `${file.name} をアップロード中...` })
+      uploadFile(file, uploadPath, file.name)
+        .then(url => {
+          $q.loading.hide()
+          $q.notify({ type: 'positive', message: 'アップロード成功' })
+          
+          if (skillRecord.value) {
+            skillRecord.value[weaponType].push(url)
+          }
+          // 成功を伝えるために、ダミーのURLでresolve
+          resolve({ url: 'data:text/plain,' });
+        })
+        .catch(err => {
+          $q.loading.hide()
+          $q.notify({ type: 'negative', message: 'アップロードに失敗しました。' })
+          console.error(err)
+          // 失敗を伝えるために、ダミーのURLでresolveし、QUploader自体はエラーにしない
+          resolve({ url: 'data:text/plain,' });
+        })
+    })
+  }
+}
+
+
+onMounted(async () => {
+  userId.value = route.params.userId as string
+  if (!userId.value) {
+    errorMessage.value = 'ユーザーIDが指定されていません。'
+    isLoading.value = false
+    return
+  }
+
+  try {
+    isLoading.value = true
+    await dbUserModule.doc(userId.value).fetch()
+    const fetchedUser = dbUserModule.doc(userId.value).data
+
+    if (fetchedUser) {
+      userDetail.value = fetchedUser as User
+      skillRecord.value = JSON.parse(JSON.stringify(fetchedUser.skillRecord))
+      proficiencyLevel.value = JSON.parse(
+        JSON.stringify(fetchedUser.proficiencyLevel)
+      )
+    } else {
+      errorMessage.value = '指定されたユーザーが見つかりませんでした。'
+    }
+  } catch (error) {
+    errorMessage.value = 'ユーザー情報の取得中にエラーが発生しました。'
+    console.error('Error fetching user detail:', error)
+  } finally {
+    isLoading.value = false
+  }
+})
+
+// skillRecordから画像を削除する関数
+const removeSkillImage = (weaponType: keyof SkillRecord, url: string) => {
+  if (skillRecord.value) {
+    const index = skillRecord.value[weaponType].indexOf(url)
+    if (index > -1) {
+      skillRecord.value[weaponType].splice(index, 1)
+      deletedImageUrls.value.push(url) // 削除リストに追加
+      $q.notify({
+        type: 'info',
+        message: '画像をリストから削除しました。保存ボタンを押すと確定します。',
+      })
+    }
+  }
+}
+
+const onSubmit = async () => {
+  if (!userId.value || !proficiencyLevel.value || !skillRecord.value) {
+    $q.notify({ type: 'negative', message: '更新対象のデータがありません。' })
+    return
+  }
+
+  $q.loading.show({ message: '情報を更新しています...' })
+
+  try {
+    // ここでの画像アップロードはfactoryで行われるため、onSubmitではデータの保存のみ
+    const updatedData = {
+      proficiencyLevel: proficiencyLevel.value,
+      skillRecord: skillRecord.value,
+    }
+
+    await dbUserModule.doc(userId.value).merge(updatedData)
+
+    // 削除対象の画像をFirebase Storageから削除
+    if (deletedImageUrls.value.length > 0) {
+      await Promise.all(deletedImageUrls.value.map(url => deleteFileByUrl(url)))
+      deletedImageUrls.value = [] // 削除リストをクリア
+    }
+
+    $q.notify({ type: 'positive', message: '更新が完了しました。' })
+    isEditMode.value = false // 閲覧モードに戻る
+  } catch (error) {
+    $q.notify({ type: 'negative', message: '更新に失敗しました。' })
+    console.error('Update failed:', error)
+  } finally {
+    $q.loading.hide()
+  }
+}
+
+const onCancel = () => {
+  if (route.params.guildId) {
+    router.push({
+      name: 'RMGuildDetail',
+      params: { guildId: route.params.guildId as string },
+    })
+  } else {
+    router.go(-1)
+  }
+}
+</script>
+
+<template>
+  <q-page class="q-pa-md _skill_post_page">
+    <div v-if="isLoading" class="text-center q-pt-xl">
+      <q-spinner-hourglass color="primary" size="3em" />
+      <p class="text-primary q-mt-md">ユーザー情報を読み込み中...</p>
+    </div>
+
+    <div v-else-if="errorMessage" class="text-center q-pt-xl text-negative">
+      <p>{{ errorMessage }}</p>
+      <RMButton
+        label="戻る"
+        color="primary"
+        @click="onCancel"
+        class="q-mt-md"
+      />
+    </div>
+
+    <div v-else-if="userDetail && skillRecord && proficiencyLevel">
+      <q-card class="_skill_post_card sticky-header">
+        <q-card-section class="row items-center justify-between">
+          <div>
+            <div class="text-h6">スキル・熟練度</div>
+            <div class="text-subtitle1">{{ userDetail.charaName }}</div>
+          </div>
+          <q-toggle
+            v-model="isEditMode"
+            checked-icon="edit"
+            unchecked-icon="visibility"
+            label="編集モード"
+            color="primary"
+          />
+        </q-card-section>
+      </q-card>
+
+      <q-form @submit.prevent="onSubmit">
+        <!-- 熟練度レベル -->
+        <q-card class="_skill_post_card q-mt-md">
+          <q-card-section>
+            <div class="text-h6 q-mb-sm">熟練度レベル</div>
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <div class="row q-col-gutter-md">
+              <div
+                v-for="key in proficiencyKeys"
+                :key="key"
+                class="col-12 col-sm-6 col-md-4"
+              >
+                <q-input
+                  v-model.number="proficiencyLevel[key]"
+                  :label="key"
+                  type="number"
+                  :readonly="!isEditMode"
+                  :outlined="isEditMode"
+                  :filled="!isEditMode"
+                  dense
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- スキルレコード -->
+        <q-card class="_skill_post_card q-mt-md">
+          <q-card-section>
+            <div class="text-h6 q-mb-sm">スキルレコード</div>
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <div class="q-gutter-y-lg">
+              <div v-for="weapon in weaponTypes" :key="weapon">
+                <div class="text-subtitle1 text-capitalize q-mb-sm">
+                  {{ weapon }}
+                </div>
+                <!-- 閲覧モード -->
+                <div v-if="!isEditMode">
+                  <div
+                    v-if="skillRecord[weapon].length > 0"
+                    class="row q-col-gutter-sm"
+                  >
+                    <div
+                      v-for="(url, index) in skillRecord[weapon]"
+                      :key="index"
+                      class="col-6 col-sm-4 col-md-3"
+                    >
+                      <q-img :src="url" ratio="1" class="rounded-borders" />
+                    </div>
+                  </div>
+                  <div v-else class="text-grey">登録されていません</div>
+                </div>
+                <!-- 編集モード -->
+                <div v-else>
+                  <!-- 既存画像のプレビューと削除ボタン -->
+                  <div
+                    v-if="skillRecord[weapon].length > 0"
+                    class="row q-col-gutter-sm q-mb-md"
+                  >
+                    <div
+                      v-for="(url, index) in skillRecord[weapon]"
+                      :key="index"
+                      class="col-6 col-sm-4 col-md-3"
+                    >
+                      <div class="relative-position">
+                        <q-img :src="url" ratio="1" class="rounded-borders" />
+                        <q-btn
+                          icon="close"
+                          color="negative"
+                          size="sm"
+                          round
+                          dense
+                          class="absolute-top-right"
+                          style="top: -8px; right: -8px"
+                          @click="removeSkillImage(weapon, url)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 新規アップロード -->
+                  <q-uploader
+                    label="画像を追加"
+                    multiple
+                    :factory="uploaderFactory(weapon)"
+                    accept="image/*"
+                    auto-upload
+                    hide-upload-btn
+                    style="width: 100%"
+                  />
+                </div>
+                <q-separator class="q-mt-lg" />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-footer v-if="isEditMode" elevated class="bg-white q-pa-sm">
+          <q-toolbar class="justify-end">
+            <RMButton
+              label="キャンセル"
+              flat
+              color="grey"
+              @click="onCancel"
+              class="q-mr-sm"
+            />
+            <RMButton label="保存" type="submit" color="primary" />
+          </q-toolbar>
+        </q-footer>
+      </q-form>
+    </div>
+  </q-page>
+</template>
+
+<style lang="sass" scoped>
+._skill_post_page
+  background-color: #f0f2f5
+
+.sticky-header
+  position: sticky
+  top: 50px // レイアウトのヘッダーの高さに合わせる
+  z-index: 1 // ページ内の他の要素より手前に表示
+
+._skill_post_card
+  width: 100%
+  max-width: 900px
+  margin-left: auto
+  margin-right: auto
+</style>

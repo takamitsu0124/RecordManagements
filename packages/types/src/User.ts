@@ -49,39 +49,39 @@ export type User = {
    */
   skillRecord: {
     /** 片手直剣 */
-    sword: []
+    sword: string[]
     /** 片手細剣 */
-    rapier: []
+    rapier: string[]
     /** 片手棍 */
-    club: []
+    club: string[]
     /** 片手短剣 */
-    dagger: []
+    dagger: string[]
     /** 両手斧 */
-    axe: []
+    axe: string[]
     /** 両手槍 */
-    spear: []
+    spear: string[]
     /** 両手弓 */
-    bow: []
+    bow: string[]
     /** 盾 */
-    shield: []
+    shield: string[]
     /** アビリティ */
-    ability: []
+    ability: string[]
     /** 覚醒アビリティ */
-    abilityRecollection: []
+    abilityRecollection: string[]
     /** アクセルアビリティ */
-    abilityAccele: []
+    abilityAccele: string[]
     /** 武器覚醒スキル */
-    weaponRecollection: []
+    weaponRecollection: string[]
     /** 武器MODスキル */
-    weaponMod: []
+    weaponMod: string[]
     /** 武器Connectスキル */
-    weaponConnect: []
+    weaponConnect: string[]
     /** 武器Acceleスキル */
-    weaponAccele: []
+    weaponAccele: string[]
     /** フルバースト/バーストスキル */
-    burst_FullBurst: []
+    burst_FullBurst: string[]
     /** フリー枠 */
-    free: []
+    free: string[]
   }
   /** 熟練度レベル */
   proficiencyLevel: {
@@ -148,3 +148,7 @@ export function defaultUser(): User {
     }
   }
 }
+
+export type SkillRecord = User['skillRecord']
+export type ProficiencyLevel = User['proficiencyLevel']
+

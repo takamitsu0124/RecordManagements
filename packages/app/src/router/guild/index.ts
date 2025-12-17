@@ -22,6 +22,18 @@ const routes = [
         component: () =>
           import('src/pages/RMGuildRegister/RMGuildRegister.vue'),
       },
+      // ギルド編集 (追加)
+      {
+        name: 'RMGuildEdit',
+        path: '/RMGuildEdit/:guildId',
+        component: () => import('src/pages/RMGuildEdit/RMGuildEdit.vue'),
+      },
+      // スキル投稿 (追加)
+      {
+        name: 'RMSkillPost',
+        path: '/guild/:guildId/user/:userId/post-skill',
+        component: () => import('src/pages/RMSkillPost/RMSkillPost.vue'),
+      },
     ],
   },
 ]

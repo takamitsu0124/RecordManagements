@@ -484,11 +484,11 @@ input::placeholder
   cursor: pointer
   transition: 0.3s
 ._calendar_icon_container:hover
-  background: rgb(var(--c-primary-rgb), 0.3)
+  background: rgb(#707070, 0.3)
 
 ._cc_mdicon
   font-size: 24px
-  color: var(--c-primary)
+  color: #707070
 
 ._cc_search_icon
   font-size: 24px
@@ -562,7 +562,7 @@ input::placeholder
   appearance: none
   padding-top: 1px
   border-radius: 0px
-  border-bottom: solid 1px var(--c-primary)
+  border-bottom: solid 1px #707070
 
 ._outline
   border-radius: 5px
@@ -583,21 +583,21 @@ input::placeholder
 
 ._outline_or_square_width
   width: calc(100%)
-  border: solid 1px var(--c-primary)
+  border: solid 1px #707070
 
 ._standard_or_shadow_single_icon
   width: calc(100%)
 
 ._outline_or_square_single_icon
   width: calc(100%)
-  border: solid 1px var(--c-primary)
+  border: solid 1px #707070
 
 ._standard_or_shadow_double_icons
   width: calc(100%)
 
 ._outline_or_square_double_icons
   width: calc(100%)
-  border: solid 1px var(--c-primary)
+  border: solid 1px #707070
 
 ._disable
   background: #ECECEC
@@ -640,7 +640,7 @@ input::placeholder
   top: 0
   left: 0
   z-index: 9999
-  background: rgb(var(--c-modal-black-rgb), 0.3)
+  background: rgb(#707070, 0.3)
   backdrop-filter: blur(1px)
   height: 100vh
   width: 100vw

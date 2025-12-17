@@ -16,6 +16,7 @@ const guildId = ref<string | string[] | null>(null)
 const guildDetail = ref<Guild | null>(null)
 const isLoading = ref(true)
 const errorMessage = ref<string | null>(null)
+const isEditMode = ref(false) // 編集モードのトグル状態
 
 onMounted(async () => {
   guildId.value = route.params.guildId
@@ -69,17 +70,27 @@ const formatGuildFoundingDate = (date: Date | null) => {
 }
 
 const goToEditGuild = () => {
-  // 編集ページへの遷移ロジック（後で実装する可能性）
-  console.log('Edit Guild clicked for ID:', guildId.value)
-  $q.notify({
-    type: 'info',
-    message: 'ギルド編集機能は未実装です。',
-    position: 'top',
-  })
+  if (guildId.value) {
+    router.push({ name: 'RMGuildEdit', params: { guildId: guildId.value as string } })
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: '編集するギルドのIDが見つかりません。',
+      position: 'top',
+    })
+  }
 }
 
 const goBack = () => {
   router.go(-1) // 一つ前のページに戻る
+}
+
+const goToPostSkill = (userId: string) => {
+  if (!isEditMode.value) return; // 編集モードでない場合は何もしない
+
+  if (guildId.value) {
+    router.push({ name: 'RMSkillPost', params: { guildId: guildId.value as string, userId: userId } })
+  }
 }
 </script>
 
@@ -102,8 +113,18 @@ const goBack = () => {
 
     <q-card v-else-if="guildDetail" class="_guild_detail_card">
       <q-card-section class="q-pb-sm">
-        <div class="text-h5 text-bold _card_title">
-          {{ guildDetail.guildName }}
+        <div class="row items-center">
+          <div class="text-h5 text-bold _card_title col">
+            {{ guildDetail.guildName }}
+          </div>
+          <q-toggle
+            v-model="isEditMode"
+            checked-icon="edit"
+            unchecked-icon="visibility"
+            label="編集モード"
+            color="primary"
+            class="col-auto"
+          />
         </div>
         <div class="text-subtitle1 text-grey-7">ID: {{ guildDetail.id }}</div>
       </q-card-section>
@@ -145,7 +166,14 @@ const goBack = () => {
         <div class="text-h6 q-mb-md">ギルドメンバー</div>
         <div v-if="Object.keys(guildDetail.guildMember).length > 0">
           <q-list bordered separator>
-            <q-item v-for="(member, uid) in guildDetail.guildMember" :key="uid">
+            <q-item
+              v-for="(member, uid) in guildDetail.guildMember"
+              :key="uid"
+              :clickable="isEditMode"
+              v-ripple="isEditMode"
+              @click="goToPostSkill(uid)"
+              :class="{ '_item_clickable': isEditMode }"
+            >
               <q-item-section avatar>
                 <q-icon name="person" color="grey-6" />
               </q-item-section>
@@ -153,13 +181,16 @@ const goBack = () => {
                 <q-item-label>{{ member.name }}</q-item-label>
                 <q-item-label caption>{{ uid }}</q-item-label>
               </q-item-section>
+              <q-item-section v-if="isEditMode" side>
+                <q-icon name="arrow_forward_ios" color="grey" />
+              </q-item-section>
             </q-item>
           </q-list>
         </div>
         <p v-else class="text-grey-6">メンバーがいません。</p>
       </q-card-section>
 
-      <q-card-actions align="right" class="q-pa-md q-gutter-x-md">
+      <q-card-actions :align="'right'" class="q-pa-md q-gutter-x-md">
         <RMButton label="戻る" flat color="grey" @click="goBack" />
         <RMButton label="ギルドを編集" color="primary" @click="goToEditGuild" />
       </q-card-actions>
@@ -187,6 +218,11 @@ const goBack = () => {
 ._card_title
   font-size: 1.8em
   color: #333
+
+._item_clickable
+  cursor: pointer
+  &:hover
+    background-color: #f5f5f5
 
 @media screen and (max-width: 768px)
   ._guild_detail_card
