@@ -72,6 +72,21 @@ const selectGuild = () => {
     })
   }
 }
+
+const goToUserEdit = () => {
+  if (globalLoginUserData.value.id) {
+    router.push({
+      name: 'RMUserEdit',
+      params: { userId: globalLoginUserData.value.id },
+    })
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: 'ユーザー情報が見つかりません。',
+      position: 'top',
+    })
+  }
+}
 </script>
 
 <template>
@@ -96,6 +111,16 @@ const selectGuild = () => {
       >
         <q-icon class="_icon_setting" name="o_touch_app" />
         <div class="_content_text">ギルド選択</div>
+      </RMCard>
+
+      <RMCard
+        class="_card_content"
+        :cardShape="'roundM'"
+        :shadowDirection="'allSide'"
+        @click="goToUserEdit"
+      >
+        <q-icon class="_icon_setting" name="edit" />
+        <div class="_content_text">ユーザー情報編集</div>
       </RMCard>
     </div>
   </div>

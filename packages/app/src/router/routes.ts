@@ -3,6 +3,7 @@ import login from './login'
 import home from './home'
 import guild from './guild'
 import register from './register'
+import user from './user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -13,6 +14,7 @@ const routes: RouteRecordRaw[] = [
       ...home,
       ...guild,
       ...register,
+      ...user,
       {
         name: 'RMComponent',
         path: '/RMComponent',
