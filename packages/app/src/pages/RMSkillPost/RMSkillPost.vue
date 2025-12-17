@@ -21,14 +21,55 @@ const isLoading = ref(true)
 const errorMessage = ref<string | null>(null)
 const deletedImageUrls = ref<string[]>([]) // 削除対象の画像URLリスト
 
+const skillTypeTranslations: Record<string, string> = {
+  sword: '片手直剣',
+  rapier: '細剣',
+  club: '棍棒',
+  dagger: '短剣',
+  axe: '斧',
+  spear: '槍',
+  bow: '弓',
+  shield: '盾',
+  ability: 'アビリティ',
+  abilityRecollection: 'アビリティ(覚醒)',
+  abilityAccele: 'アビリティ(アクセル)',
+  weaponRecollection: '武器(覚醒)',
+  weaponMod: 'MOD',
+  weaponConnect: 'コネクト',
+  weaponAccele: 'アクセル',
+  burst_FullBurst: 'バースト/フルバースト',
+  free: 'フリー',
+}
+
 // テンプレートでのループ用 (型情報と同じ順序)
 const weaponTypes: Array<keyof SkillRecord> = [
-  'sword', 'rapier', 'club', 'dagger', 'axe', 'spear', 'bow', 'shield',
-  'ability', 'abilityRecollection', 'abilityAccele', 'weaponRecollection',
-  'weaponMod', 'weaponConnect', 'weaponAccele', 'burst_FullBurst', 'free'
+  'sword',
+  'rapier',
+  'club',
+  'dagger',
+  'axe',
+  'spear',
+  'bow',
+  'shield',
+  'ability',
+  'abilityRecollection',
+  'abilityAccele',
+  'weaponRecollection',
+  'weaponMod',
+  'weaponConnect',
+  'weaponAccele',
+  'burst_FullBurst',
+  'free',
 ]
 const proficiencyKeys: Array<keyof ProficiencyLevel> = [
-  'sword', 'rapier', 'club', 'dagger', 'axe', 'spear', 'bow', 'shield'
+  'sword',
+  'rapier',
+  'club',
+  'dagger',
+  'axe',
+  'spear',
+  'bow',
+  'shield',
 ]
 
 // QUploaderのfactory関数
@@ -40,33 +81,35 @@ const uploaderFactory = (weaponType: keyof SkillRecord) => {
         $q.notify({ type: 'negative', message: 'ユーザーIDがありません。' })
         // QUploaderに失敗を伝えるためにreject
         // reject('User ID not found');
-        return;
+        return
       }
       const uploadPath = `skill_records/${userId.value}/${String(weaponType)}`
 
       $q.loading.show({ message: `${file.name} をアップロード中...` })
       uploadFile(file, uploadPath, file.name)
-        .then(url => {
+        .then((url) => {
           $q.loading.hide()
           $q.notify({ type: 'positive', message: 'アップロード成功' })
-          
+
           if (skillRecord.value) {
             skillRecord.value[weaponType].push(url)
           }
           // 成功を伝えるために、ダミーのURLでresolve
-          resolve({ url: 'data:text/plain,' });
+          resolve({ url: 'data:text/plain,' })
         })
-        .catch(err => {
+        .catch((err) => {
           $q.loading.hide()
-          $q.notify({ type: 'negative', message: 'アップロードに失敗しました。' })
+          $q.notify({
+            type: 'negative',
+            message: 'アップロードに失敗しました。',
+          })
           console.error(err)
           // 失敗を伝えるために、ダミーのURLでresolveし、QUploader自体はエラーにしない
-          resolve({ url: 'data:text/plain,' });
+          resolve({ url: 'data:text/plain,' })
         })
     })
   }
 }
-
 
 onMounted(async () => {
   userId.value = route.params.userId as string
@@ -132,7 +175,9 @@ const onSubmit = async () => {
 
     // 削除対象の画像をFirebase Storageから削除
     if (deletedImageUrls.value.length > 0) {
-      await Promise.all(deletedImageUrls.value.map(url => deleteFileByUrl(url)))
+      await Promise.all(
+        deletedImageUrls.value.map((url) => deleteFileByUrl(url))
+      )
       deletedImageUrls.value = [] // 削除リストをクリア
     }
 
@@ -207,7 +252,9 @@ const onCancel = () => {
               >
                 <q-input
                   v-model.number="proficiencyLevel[key]"
-                  :label="key"
+                  :label="`${key}: ${
+                    skillTypeTranslations[key] || 'No Translation'
+                  }`"
                   type="number"
                   :readonly="!isEditMode"
                   :outlined="isEditMode"
@@ -227,8 +274,8 @@ const onCancel = () => {
           <q-card-section class="q-pt-none">
             <div class="q-gutter-y-lg">
               <div v-for="weapon in weaponTypes" :key="weapon">
-                <div class="text-subtitle1 text-capitalize q-mb-sm">
-                  {{ weapon }}
+                <div class="text-subtitle1 q-mb-sm">
+                  {{ skillTypeTranslations[weapon] || 'No Translation' }}
                 </div>
                 <!-- 閲覧モード -->
                 <div v-if="!isEditMode">
