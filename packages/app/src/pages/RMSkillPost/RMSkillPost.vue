@@ -156,7 +156,21 @@ const removeSkillImage = (weaponType: keyof SkillRecord, url: string) => {
   }
 }
 
+const sanitizeProficiencyLevel = () => {
+  if (proficiencyLevel.value) {
+    for (const key of proficiencyKeys) {
+      if (
+        proficiencyLevel.value[key] === null ||
+        proficiencyLevel.value[key] === undefined
+      ) {
+        proficiencyLevel.value[key] = 0
+      }
+    }
+  }
+}
+
 const onSubmit = async () => {
+  sanitizeProficiencyLevel()
   if (!userId.value || !proficiencyLevel.value || !skillRecord.value) {
     $q.notify({ type: 'negative', message: '更新対象のデータがありません。' })
     return
@@ -252,9 +266,7 @@ const onCancel = () => {
               >
                 <q-input
                   v-model.number="proficiencyLevel[key]"
-                  :label="`${key}: ${
-                    skillTypeTranslations[key] || 'No Translation'
-                  }`"
+                  :label="skillTypeTranslations[key] || key"
                   type="number"
                   :readonly="!isEditMode"
                   :outlined="isEditMode"
@@ -275,7 +287,7 @@ const onCancel = () => {
             <div class="q-gutter-y-lg">
               <div v-for="weapon in weaponTypes" :key="weapon">
                 <div class="text-subtitle1 q-mb-sm">
-                  {{ skillTypeTranslations[weapon] || 'No Translation' }}
+                  {{ skillTypeTranslations[weapon] || weapon }}
                 </div>
                 <!-- 閲覧モード -->
                 <div v-if="!isEditMode">
