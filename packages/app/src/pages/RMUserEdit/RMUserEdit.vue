@@ -19,6 +19,19 @@ const errorMessage = ref<string | null>(null)
 
 const situationOptions = ['現役', '隠居', '引退', '']
 
+const affiliationDateStr = ref<string | null>(null)
+const gameStartDateAtStr = ref<string | null>(null)
+const birthDateAtStr = ref<string | null>(null)
+
+const dateToModel = (d: Date | null): string | null => {
+  if (!d) return null
+  const date = new Date(d)
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  return `${year}/${month}/${day}`
+}
+
 onMounted(async () => {
   userId.value = route.params.userId as string
   if (!userId.value) {
@@ -38,9 +51,15 @@ onMounted(async () => {
         ...fetchedUser,
         contact: { ...fetchedUser.contact },
         skillRecord: JSON.parse(JSON.stringify(fetchedUser.skillRecord)),
-        proficiencyLevel: JSON.parse(JSON.stringify(fetchedUser.proficiencyLevel)),
+        proficiencyLevel: JSON.parse(
+          JSON.stringify(fetchedUser.proficiencyLevel)
+        ),
       }
       user.value = userCopy
+
+      affiliationDateStr.value = dateToModel(user.value.affiliationDate)
+      gameStartDateAtStr.value = dateToModel(user.value.gameStartDateAt)
+      birthDateAtStr.value = dateToModel(user.value.birthDateAt)
     } else {
       errorMessage.value = '指定されたユーザーが見つかりませんでした。'
     }
@@ -63,20 +82,20 @@ const onSubmit = async () => {
       charaName: user.value.charaName,
       charaNameKana: user.value.charaNameKana,
       guildId: user.value.guildId,
-      affiliationDate: user.value.affiliationDate
-        ? new Date(user.value.affiliationDate)
+      affiliationDate: affiliationDateStr.value
+        ? new Date(affiliationDateStr.value)
         : null,
       affiliationNum: Number(user.value.affiliationNum),
       situation: user.value.situation,
-      gameStartDateAt: user.value.gameStartDateAt
-        ? new Date(user.value.gameStartDateAt)
+      gameStartDateAt: gameStartDateAtStr.value
+        ? new Date(gameStartDateAtStr.value)
         : null,
       contact: {
         email: user.value.contact.email,
         phone: user.value.contact.phone,
       },
-      birthDateAt: user.value.birthDateAt
-        ? new Date(user.value.birthDateAt)
+      birthDateAt: birthDateAtStr.value
+        ? new Date(birthDateAtStr.value)
         : null,
     }
 
@@ -105,11 +124,20 @@ const onCancel = () => {
 
     <div v-else-if="errorMessage" class="text-center q-pt-xl text-negative">
       <p>{{ errorMessage }}</p>
-      <RMButton label="戻る" color="primary" @click="onCancel" class="q-mt-md" />
+      <RMButton
+        label="戻る"
+        color="primary"
+        @click="onCancel"
+        class="q-mt-md"
+      />
     </div>
 
     <div v-else-if="user" class="row justify-center">
-      <q-form @submit.prevent="onSubmit" class="col-12" style="max-width: 800px">
+      <q-form
+        @submit.prevent="onSubmit"
+        class="col-12"
+        style="max-width: 800px"
+      >
         <q-card>
           <q-card-section>
             <div class="text-h6">ユーザー情報編集</div>
@@ -137,7 +165,12 @@ const onCancel = () => {
 
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
-                <q-input v-model="user.guildId" label="所属ギルドID" outlined dense />
+                <q-input
+                  v-model="user.guildId"
+                  label="所属ギルドID"
+                  outlined
+                  dense
+                />
               </div>
               <div class="col-12 col-sm-6">
                 <q-input
@@ -163,7 +196,7 @@ const onCancel = () => {
                 <q-input
                   filled
                   dense
-                  v-model="user.affiliationDate"
+                  v-model="affiliationDateStr"
                   mask="date"
                   label="ギルド所属日"
                 >
@@ -174,7 +207,7 @@ const onCancel = () => {
                         transition-show="scale"
                         transition-hide="scale"
                       >
-                        <q-date v-model="user.affiliationDate">
+                        <q-date v-model="affiliationDateStr">
                           <div class="row items-center justify-end">
                             <q-btn
                               v-close-popup
@@ -193,7 +226,7 @@ const onCancel = () => {
                 <q-input
                   filled
                   dense
-                  v-model="user.gameStartDateAt"
+                  v-model="gameStartDateAtStr"
                   mask="date"
                   label="ゲーム開始日時"
                 >
@@ -204,7 +237,7 @@ const onCancel = () => {
                         transition-show="scale"
                         transition-hide="scale"
                       >
-                        <q-date v-model="user.gameStartDateAt">
+                        <q-date v-model="gameStartDateAtStr">
                           <div class="row items-center justify-end">
                             <q-btn
                               v-close-popup
@@ -223,7 +256,7 @@ const onCancel = () => {
                 <q-input
                   filled
                   dense
-                  v-model="user.birthDateAt"
+                  v-model="birthDateAtStr"
                   mask="date"
                   label="誕生日"
                 >
@@ -234,7 +267,7 @@ const onCancel = () => {
                         transition-show="scale"
                         transition-hide="scale"
                       >
-                        <q-date v-model="user.birthDateAt">
+                        <q-date v-model="birthDateAtStr">
                           <div class="row items-center justify-end">
                             <q-btn
                               v-close-popup
@@ -290,4 +323,3 @@ const onCancel = () => {
   background-color: #f0f2f5;
 }
 </style>
-

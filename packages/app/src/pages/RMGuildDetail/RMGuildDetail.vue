@@ -71,7 +71,10 @@ const formatGuildFoundingDate = (date: Date | null) => {
 
 const goToEditGuild = () => {
   if (guildId.value) {
-    router.push({ name: 'RMGuildEdit', params: { guildId: guildId.value as string } })
+    router.push({
+      name: 'RMGuildEdit',
+      params: { guildId: guildId.value as string },
+    })
   } else {
     $q.notify({
       type: 'negative',
@@ -86,10 +89,13 @@ const goBack = () => {
 }
 
 const goToPostSkill = (userId: string) => {
-  if (!isEditMode.value) return; // 編集モードでない場合は何もしない
+  if (!isEditMode.value) return // 編集モードでない場合は何もしない
 
   if (guildId.value) {
-    router.push({ name: 'RMSkillPost', params: { guildId: guildId.value as string, userId: userId } })
+    router.push({
+      name: 'RMSkillPost',
+      params: { guildId: guildId.value as string, userId: userId },
+    })
   }
 }
 </script>
@@ -171,8 +177,8 @@ const goToPostSkill = (userId: string) => {
               :key="uid"
               :clickable="isEditMode"
               v-ripple="isEditMode"
-              @click="goToPostSkill(uid)"
-              :class="{ '_item_clickable': isEditMode }"
+              @click="goToPostSkill(uid as string)"
+              :class="{ _item_clickable: isEditMode }"
             >
               <q-item-section avatar>
                 <q-icon name="person" color="grey-6" />
