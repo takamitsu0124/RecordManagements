@@ -5,10 +5,40 @@ import { useQuasar } from 'quasar'
 import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { User, defaultUser } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
+import { uploadFile } from '@rm/db/src/fireStorage/fireStorage'
 
 const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
+
+const iconUploaderFactory = (files: readonly File[]) => {
+  return new Promise<{ url: string }>((resolve) => {
+    const file = files[0]
+    if (!userId.value) {
+      $q.notify({ type: 'negative', message: 'ユーザーIDがありません。' })
+      return
+    }
+    const uploadPath = `user_icons/${userId.value}`
+
+    $q.loading.show({ message: `${file.name} をアップロード中...` })
+    uploadFile(file, uploadPath, file.name)
+      .then((url) => {
+        $q.loading.hide()
+        $q.notify({ type: 'positive', message: 'アイコンを更新しました。' })
+        if (user.value) {
+          user.value.iconUrl = url
+        }
+        //ダミーのURLでresolveしてq-uploaderのUIをリセット
+        resolve({ url: 'data:text/plain,' })
+      })
+      .catch((err) => {
+        $q.loading.hide()
+        $q.notify({ type: 'negative', message: 'アップロードに失敗しました。' })
+        console.error(err)
+        resolve({ url: 'data:text/plain,' })
+      })
+  })
+}
 
 const userId = ref<string | null>(null)
 // Use defaultUser to initialize to prevent template errors before data is loaded

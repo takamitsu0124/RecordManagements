@@ -1,6 +1,8 @@
 import { DefaultType } from './default'
 import { Guild } from './Guild'
 export type User = {
+  /** 自身のアイコン */
+  iconUrl: string
   /** キャラクターネーム */
   charaName: string
   /** キャラネームカタカナ */
@@ -103,6 +105,7 @@ export function defaultUser(): User {
     createdBy: '',
     updatedAt: new Date(),
     updatedBy: '',
+    iconUrl: '',
     charaName: '',
     charaNameKana: '',
     guildId: '',
