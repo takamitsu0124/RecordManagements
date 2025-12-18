@@ -7,6 +7,7 @@ import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { User, SkillRecord, ProficiencyLevel } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import { uploadFile, deleteFileByUrl } from '@rm/db/src/fireStorage/fireStorage'
+import draggable from 'vuedraggable'
 
 const route = useRoute()
 const router = useRouter()
@@ -308,30 +309,35 @@ const onCancel = () => {
                 <!-- 編集モード -->
                 <div v-else>
                   <!-- 既存画像のプレビューと削除ボタン -->
-                  <div
+                  <draggable
                     v-if="skillRecord[weapon].length > 0"
+                    v-model="skillRecord[weapon]"
                     class="row q-col-gutter-sm q-mb-md"
+                    item-key="url"
+                    tag="div"
                   >
-                    <div
-                      v-for="(url, index) in skillRecord[weapon]"
-                      :key="index"
-                      class="col-6 col-sm-4 col-md-3"
-                    >
-                      <div class="relative-position">
-                        <q-img :src="url" ratio="1" class="rounded-borders" />
-                        <q-btn
-                          icon="close"
-                          color="negative"
-                          size="sm"
-                          round
-                          dense
-                          class="absolute-top-right"
-                          style="top: -8px; right: -8px"
-                          @click="removeSkillImage(weapon, url)"
-                        />
+                    <template #item="{ element: url }">
+                      <div class="col-6 col-sm-4 col-md-3">
+                        <div class="relative-position draggable-item">
+                          <q-img
+                            :src="url"
+                            ratio="1"
+                            class="rounded-borders"
+                          />
+                          <q-btn
+                            icon="close"
+                            color="negative"
+                            size="sm"
+                            round
+                            dense
+                            class="absolute-top-right"
+                            style="top: -8px; right: -8px"
+                            @click="removeSkillImage(weapon, url)"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </template>
+                  </draggable>
                   <!-- 新規アップロード -->
                   <q-uploader
                     label="画像を追加"
@@ -380,4 +386,11 @@ const onCancel = () => {
   max-width: 900px
   margin-left: auto
   margin-right: auto
+
+.draggable-item
+  cursor: move
+
+.sortable-ghost
+  opacity: 0.5
+  background: #c8ebfb
 </style>
