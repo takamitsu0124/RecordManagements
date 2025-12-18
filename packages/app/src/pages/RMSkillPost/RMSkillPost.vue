@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
+import { useQuasar, QCarousel } from 'quasar'
 
 import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { User, SkillRecord, ProficiencyLevel } from '@rm/types'
@@ -13,6 +13,8 @@ const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
 
+const carouselRef = ref<QCarousel | null>(null)
+
 const userId = ref<string | null>(null)
 const userDetail = ref<User | null>(null)
 const skillRecord = ref<SkillRecord | null>(null)
@@ -21,6 +23,60 @@ const isEditMode = ref(false) // 編集モード
 const isLoading = ref(true)
 const errorMessage = ref<string | null>(null)
 const deletedImageUrls = ref<string[]>([]) // 削除対象の画像URLリスト
+
+// --- Carousel State ---
+const isCarouselVisible = ref(false)
+const carouselInitialIndex = ref(0)
+const activeCarouselImages = ref<string[]>([])
+const carouselSlide = ref(0)
+const isWheeling = ref(false)
+
+const openImageCarousel = (images: string[], clickedIndex: number) => {
+  activeCarouselImages.value = images
+  carouselInitialIndex.value = clickedIndex
+  carouselSlide.value = clickedIndex // v-model for QCarousel needs to be updated
+  isCarouselVisible.value = true
+}
+
+const handleWheel = (e: WheelEvent) => {
+  if (isWheeling.value) {
+    return
+  }
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+    e.preventDefault()
+    if (carouselRef.value) {
+      if (e.deltaX > 2) {
+        carouselRef.value.next()
+      } else if (e.deltaX < -2) {
+        carouselRef.value.previous()
+      }
+      isWheeling.value = true
+      setTimeout(() => {
+        isWheeling.value = false
+      }, 300) // 300ms cooldown to prevent rapid firing
+    }
+  }
+}
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (carouselRef.value) {
+    if (e.key === 'ArrowLeft') {
+      carouselRef.value.previous()
+    } else if (e.key === 'ArrowRight') {
+      carouselRef.value.next()
+    }
+  }
+}
+
+watch(isCarouselVisible, (isVisible) => {
+  if (isVisible) {
+    window.addEventListener('keydown', handleKeydown)
+  } else {
+    window.removeEventListener('keydown', handleKeydown)
+  }
+})
+
+
 
 const skillTypeTranslations: Record<string, string> = {
   sword: '片手直剣',
@@ -301,7 +357,12 @@ const onCancel = () => {
                       :key="index"
                       class="col-6 col-sm-4 col-md-3"
                     >
-                      <q-img :src="url" ratio="1" class="rounded-borders" />
+                      <q-img
+                        :src="url"
+                        ratio="1"
+                        class="rounded-borders cursor-pointer"
+                        @click="openImageCarousel(skillRecord[weapon], index)"
+                      />
                     </div>
                   </div>
                   <div v-else class="text-grey">登録されていません</div>
@@ -316,13 +377,16 @@ const onCancel = () => {
                     item-key="url"
                     tag="div"
                   >
-                    <template #item="{ element: url }">
+                    <template #item="{ element: url, index }">
                       <div class="col-6 col-sm-4 col-md-3">
                         <div class="relative-position draggable-item">
                           <q-img
                             :src="url"
                             ratio="1"
-                            class="rounded-borders"
+                            class="rounded-borders cursor-pointer"
+                            @click="
+                              openImageCarousel(skillRecord[weapon], index)
+                            "
                           />
                           <q-btn
                             icon="close"
@@ -370,6 +434,45 @@ const onCancel = () => {
       </q-form>
     </div>
   </q-page>
+
+  <q-dialog v-model="isCarouselVisible" maximized>
+    <q-card class="bg-black text-white">
+      <q-header class="bg-primary">
+        <q-toolbar>
+          <q-toolbar-title> 画像プレビュー </q-toolbar-title>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-toolbar>
+      </q-header>
+
+      <q-card-section class="flex flex-center">
+        <q-carousel
+          ref="carouselRef"
+          @wheel="handleWheel"
+          v-model="carouselSlide"
+          swipeable
+          animated
+          navigation
+          arrows
+          control-color="white"
+          class="bg-transparent"
+          style="width: 100%; max-width: 80vh; height: 80vh"
+        >
+          <q-carousel-slide
+            v-for="(imgUrl, i) in activeCarouselImages"
+            :key="i"
+            :name="i"
+            class="flex flex-center"
+          >
+            <q-img
+              :src="imgUrl"
+              fit="contain"
+              style="max-width: 100%; max-height: 100%"
+            />
+          </q-carousel-slide>
+        </q-carousel>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
 </template>
 
 <style lang="sass" scoped>
