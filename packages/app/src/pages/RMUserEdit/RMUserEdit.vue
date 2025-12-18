@@ -94,9 +94,7 @@ const onSubmit = async () => {
         email: user.value.contact.email,
         phone: user.value.contact.phone,
       },
-      birthDateAt: birthDateAtStr.value
-        ? new Date(birthDateAtStr.value)
-        : null,
+      birthDateAt: birthDateAtStr.value ? new Date(birthDateAtStr.value) : null,
     }
 
     await dbUserModule.doc(userId.value).merge(updatedData)
@@ -132,70 +130,69 @@ const onCancel = () => {
       />
     </div>
 
-    <div v-else-if="user" class="row justify-center">
+    <div v-else-if="user" class="row justify-center q-pa-sm q-pa-md-md">
       <q-form
         @submit.prevent="onSubmit"
         class="col-12"
         style="max-width: 800px"
       >
-        <q-card>
-          <q-card-section>
+        <q-card flat bordered class="user-edit-card">
+          <q-card-section class="bg-primary text-white q-pa-md">
             <div class="text-h6">ユーザー情報編集</div>
+            <div v-if="user.charaName" class="text-subtitle2">
+              {{ user.charaName }}
+            </div>
           </q-card-section>
 
-          <q-card-section class="q-gutter-y-md">
-            <div class="row q-col-gutter-md">
+          <q-separator />
+
+          <q-card-section class="q-pa-md">
+            <div class="text-subtitle1 q-mb-md text-weight-bold">基本情報</div>
+            <div class="row q-col-gutter-lg">
               <div class="col-12 col-sm-6">
                 <q-input
+                  filled
                   v-model="user.charaName"
                   label="キャラクターネーム"
-                  outlined
-                  dense
                 />
               </div>
               <div class="col-12 col-sm-6">
                 <q-input
+                  filled
                   v-model="user.charaNameKana"
                   label="キャラクターネーム(カナ)"
-                  outlined
-                  dense
-                />
-              </div>
-            </div>
-
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="user.guildId"
-                  label="所属ギルドID"
-                  outlined
-                  dense
                 />
               </div>
               <div class="col-12 col-sm-6">
+                <q-input filled v-model="user.guildId" label="所属ギルドID" />
+              </div>
+              <div class="col-12 col-sm-6">
                 <q-input
+                  filled
                   v-model.number="user.affiliationNum"
                   label="所属No"
                   type="number"
-                  outlined
-                  dense
+                />
+              </div>
+              <div class="col-12">
+                <q-select
+                  filled
+                  v-model="user.situation"
+                  :options="situationOptions"
+                  label="プレイヤー状況"
                 />
               </div>
             </div>
+          </q-card-section>
 
-            <q-select
-              v-model="user.situation"
-              :options="situationOptions"
-              label="プレイヤー状況"
-              outlined
-              dense
-            />
+          <q-separator inset />
 
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-4">
+          <q-card-section class="q-pa-md">
+            <div class="text-subtitle1 q-mb-md text-weight-bold">日付情報</div>
+            <div class="row q-col-gutter-lg">
+              <div class="col-12 col-md-4">
                 <q-input
                   filled
-                  dense
                   v-model="affiliationDateStr"
                   mask="date"
                   label="ギルド所属日"
@@ -222,10 +219,9 @@ const onCancel = () => {
                   </template>
                 </q-input>
               </div>
-              <div class="col-12 col-sm-4">
+              <div class="col-12 col-md-4">
                 <q-input
                   filled
-                  dense
                   v-model="gameStartDateAtStr"
                   mask="date"
                   label="ゲーム開始日時"
@@ -252,10 +248,9 @@ const onCancel = () => {
                   </template>
                 </q-input>
               </div>
-              <div class="col-12 col-sm-4">
+              <div class="col-12 col-md-4">
                 <q-input
                   filled
-                  dense
                   v-model="birthDateAtStr"
                   mask="date"
                   label="誕生日"
@@ -283,34 +278,46 @@ const onCancel = () => {
                 </q-input>
               </div>
             </div>
+          </q-card-section>
 
-            <q-separator class="q-mt-lg q-mb-md" />
-            <div class="text-subtitle1">連絡先</div>
-            <div class="row q-col-gutter-md">
+          <q-separator inset />
+
+          <q-card-section class="q-pa-md">
+            <div class="text-subtitle1 q-mb-md text-weight-bold">連絡先</div>
+            <div class="row q-col-gutter-lg">
               <div class="col-12 col-sm-6">
                 <q-input
+                  filled
                   v-model="user.contact.email"
                   label="登録メールアドレス"
                   type="email"
-                  outlined
-                  dense
                 />
               </div>
               <div class="col-12 col-sm-6">
                 <q-input
+                  filled
                   v-model="user.contact.phone"
                   label="登録電話番号"
                   type="tel"
-                  outlined
-                  dense
                 />
               </div>
             </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-pa-md">
-            <RMButton label="キャンセル" color="grey" flat @click="onCancel" />
-            <RMButton label="保存" type="submit" color="primary" />
+          <q-card-actions class="q-pa-lg bg-grey-2 _btn_area" :align="'center'">
+            <RMButton
+              label="キャンセル"
+              color="grey-7"
+              outline
+              @click="onCancel"
+              style="width: 160px"
+            />
+            <RMButton
+              label="保存"
+              type="submit"
+              color="primary"
+              style="width: 160px"
+            />
           </q-card-actions>
         </q-card>
       </q-form>
@@ -321,5 +328,15 @@ const onCancel = () => {
 <style lang="scss" scoped>
 .user-edit-page {
   background-color: #f0f2f5;
+}
+.user-edit-card {
+  border-radius: 8px;
+}
+
+._btn_area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
 }
 </style>
