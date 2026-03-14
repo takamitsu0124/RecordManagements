@@ -1,308 +1,283 @@
 <script lang="ts" setup>
 import { PropType, computed } from 'vue'
-/** props定義 */
+import Button from 'primevue/button'
+import RMIcon from '../RMIcon/RMIcon.vue'
+
 const props = defineProps({
-  /**
-   *@param standard 文字のみ
-   *@param justIcon アイコンのみ（いるか？）
-   *@param withIcon アイコンと文字
-   *@param withImg 画像中央、下に文字
-   *@param delete 削除ボタン
-   *@param medal メダルボタン
-   */
   buttonType: {
     type: String as PropType<
       'standard' | 'justIcon' | 'withIcon' | 'withImg' | 'delete' | 'medal'
     >,
     default: 'standard',
   },
-  /** ボタンの高さ */
   buttonHeight: { type: String, default: '50px' },
-  /** ボタン文字*/
   label: { type: String, default: 'ページ遷移します' },
-  /** 形
-   * @true 丸みをつける
-   */
+  letter: { type: String, default: '' },
+  width: { type: String, default: '100%' },
   buttonShape: { type: String as PropType<'round' | 'square' | 'ellipse'> },
-  /**背景カラー*/
-  bgColor: { type: String, default: '#707070' },
-  /**ボタン文字カラー*/
+  bgColor: { type: String, default: '' },
   letterColor: { type: String, default: 'white' },
-  /** 文字サイズ */
-  letterSize: {
-    type: String,
-    default: '18px',
-  },
-  /**
-   * @buttonTypeがjustIcon googleアイコンの名前を入力
-   * @buttonTypeがjustImg imgのurl,パス
-   * */
-  imageUrlOrIconName: { type: String },
-  /**アイコンカラー */
+  letterSize: { type: String, default: '18px' },
+  imageUrlOrIconName: { type: String, default: '' },
+  icon: { type: String, default: '' },
+  color: { type: String, default: '' },
   iconColor: { type: String, default: 'white' },
-  /** アイコンサイズ */
   iconSize: { type: String, default: '20px' },
-  /**メダル、ゴミ箱サイズ */
   medalGarbageSize: { type: String, default: '30px' },
-  /**文字　アイコンの位置 */
   contentPosition: { type: String as PropType<'center' | 'between'> },
-  /**シャドウ */
   isShadow: { type: Boolean, default: false },
-  /**メダルとゴミ箱の色を変更*/
   isMedalAndGarbageColor: {
     type: String as PropType<'grey' | 'blue' | 'white'>,
   },
-  /**ボーダー */
   isBorder: { type: Boolean, default: false },
-  /** disable */
   isDisable: { type: Boolean, default: false },
-  /**google iconの素の書き方でしか実装できないケースに対応 */
   specialIcon: { type: Boolean, default: false },
-  /** ボタンのタイプ (button, submit, reset) */
+  flat: { type: Boolean, default: false },
+  outline: { type: Boolean, default: false },
   type: {
     type: String as PropType<'button' | 'submit' | 'reset'>,
     default: 'button',
   },
 })
 
-const letterSize = computed(() => `${props.letterSize}`)
-const smallLetterSize = computed(() => `${parseInt(letterSize.value) - 2}px`)
-const microLetterSize = computed(() => `${parseInt(letterSize.value) - 4}px`)
-const iconSize = computed(() => `${props.iconSize}`)
-const svgSize = computed(() => `${props.medalGarbageSize}`)
-const buttonHeight = computed(() => `${props.buttonHeight}`)
+const buttonLabel = computed(() => props.label || props.letter)
 
-/**ボタンの形、アイコンのみの表示、シャドウの有無を調節 */
-const changeButtonShape = () => {
-  const array = []
-  if (props.buttonShape === 'round') array.push('_button_shape_round')
-  else if (props.buttonShape === 'ellipse') array.push('_button_shape_ellipse')
-  else if (props.buttonShape === 'square') ''
-  if (
+const resolvedBackground = computed(() => {
+  if (props.flat || props.outline) return 'transparent'
+  if (props.bgColor) return props.bgColor
+
+  const colorMap: Record<string, string> = {
+    primary: 'linear-gradient(180deg, #7ca6cb, #4b6982)',
+    grey: 'linear-gradient(180deg, #d1d5db, #6b7280)',
+    'grey-7': 'linear-gradient(180deg, #d1d5db, #6b7280)',
+    negative: 'linear-gradient(180deg, #f87171, #dc2626)',
+    white: '#ffffff',
+  }
+
+  return colorMap[props.color] ?? 'linear-gradient(180deg, #7ca6cb, #4b6982)'
+})
+
+const resolvedTextColor = computed(() => {
+  if (props.flat || props.outline) {
+    if (props.color === 'negative') return '#dc2626'
+    if (props.color === 'white') return '#ffffff'
+    if (props.color === 'grey' || props.color === 'grey-7') return '#475569'
+    return '#4b6982'
+  }
+  return props.letterColor
+})
+
+const buttonStyle = computed(() => ({
+  '--rm-button-height': props.buttonHeight,
+  '--rm-button-width': props.width,
+  '--rm-button-font-size': props.letterSize,
+  '--rm-button-icon-size': props.iconSize,
+  '--rm-button-badge-size': props.medalGarbageSize,
+  '--rm-button-bg': resolvedBackground.value,
+  '--rm-button-color': resolvedTextColor.value,
+  '--rm-button-border': props.outline || props.isBorder ? '1px solid #4b6982' : '1px solid transparent',
+}))
+
+const buttonClass = computed(() => ({
+  '_button_shape_round': props.buttonShape === 'round',
+  '_button_shape_ellipse': props.buttonShape === 'ellipse',
+  '_button_shadow': props.isShadow,
+  '_button_border': props.isBorder,
+  '_just_icon':
     props.buttonType === 'justIcon' ||
     props.buttonType === 'delete' ||
-    props.buttonType === 'medal'
-  )
-    array.push('_just_icon')
-  if (props.isShadow) array.push('_button_shadow')
-  if (props.isBorder) array.push('_button_border')
-  return array
-}
+    props.buttonType === 'medal',
+  '_withImg': props.buttonType === 'withImg',
+  '_button_content_center': props.contentPosition === 'center',
+  '_button_flat': props.flat,
+  '_button_outline': props.outline,
+}))
 
-/**文字とアイコンの位置を調節 */
-const textAndIconPosition = () => {
-  const array = []
-  if (props.buttonType === 'withImg') array.push('_withImg')
-  if (props.contentPosition === 'center') array.push('_button_content_position')
-  return array
-}
-
-/**ゴミ箱とメダルはsvgファイルであるため青にするにはfilterをかける */
-const medalGarbageColor = () => {
+const medalGarbageColor = computed(() => {
   if (props.isMedalAndGarbageColor === 'blue') return '_medal_garbage_blue'
   if (props.isMedalAndGarbageColor === 'white') return '_medal_garbage_white'
   return ''
-}
+})
+
+const iconName = computed(() => props.icon || props.imageUrlOrIconName)
 </script>
 
 <template>
-  <button
+  <Button
     :type="type"
-    :class="[
-      '_AFC_buttons',
-      changeButtonShape(),
-      `text-${letterColor}`,
-      { disable: props.isDisable },
-    ]"
-    :style="{ background: `${bgColor}` }"
+    :disabled="isDisable"
+    class="_AFC_buttons"
+    :class="buttonClass"
+    :style="buttonStyle"
   >
-    <!-- ボタンタイプ削除 -->
     <img
-      src="~/assets/garbage.svg"
-      :class="['_garbage_and_medal_icon', medalGarbageColor()]"
       v-if="buttonType === 'delete'"
+      src="~/assets/garbage.svg"
+      :class="['_garbage_and_medal_icon', medalGarbageColor]"
+      alt="delete"
     />
-    <!-- ボタンタイプメダル -->
     <img
-      src="~/assets/medal.svg"
-      :class="[
-        '_garbage_and_medal_icon',
-        '_medal_icon_size',
-
-        medalGarbageColor(),
-      ]"
       v-else-if="buttonType === 'medal'"
+      src="~/assets/medal.svg"
+      :class="['_garbage_and_medal_icon', '_medal_icon_size', medalGarbageColor]"
+      alt="medal"
     />
-    <!-- ボタンタイプ追加青もしくは追加灰 -->
-    <q-icon
-      :name="imageUrlOrIconName"
-      size="lg"
-      :color="iconColor"
-      v-else-if="buttonType === 'justIcon' && specialIcon === false"
-      class="_just_icon"
-    />
-    <!-- google fontsの素の書き方でしか対応できないものに対応 -->
     <div
-      v-else-if="specialIcon === true && buttonType === 'justIcon'"
+      v-else-if="buttonType === 'justIcon' && specialIcon"
       class="_just_icon _btn_icon"
     >
       <span class="material-symbols-outlined">{{ imageUrlOrIconName }}</span>
     </div>
-
-    <!-- ボタンタイプ、文字のみ、アイコンのみ、アイコンプラス文字、画像プラス文字 -->
-    <div v-else :class="['_icon_and_text_container', textAndIconPosition()]">
-      <!-- 文字プラスアイコン用 -->
-      <div class="_icon_status" v-if="buttonType === 'withIcon'">
+    <RMIcon
+      v-else-if="buttonType === 'justIcon'"
+      :name="iconName"
+      class="_btn_icon _just_icon"
+    />
+    <div v-else class="_icon_and_text_container">
+      <div v-if="buttonType === 'withIcon'" class="_icon_status">
         <img
-          src="~/assets/medal.svg"
           v-if="imageUrlOrIconName === 'medal'"
-          :class="[`'text-${letterColor}'`, '_modal_icon']"
+          src="~/assets/medal.svg"
+          class="_modal_icon"
+          alt="medal"
         />
-        <div
-          v-else-if="specialIcon === true"
-          class="_btn_icon _special_icon"
-          :color="iconColor"
-        >
-          <span class="material-symbols-outlined">
-            {{ imageUrlOrIconName }}
-          </span>
+        <div v-else-if="specialIcon" class="_btn_icon _special_icon">
+          <span class="material-symbols-outlined">{{ imageUrlOrIconName }}</span>
         </div>
-        <q-icon
-          class="_btn_icon"
-          :color="iconColor"
-          :name="imageUrlOrIconName"
-          v-else
-        />
+        <RMIcon v-else :name="iconName" class="_btn_icon" />
       </div>
-      <!-- 文字プラスイメージ画像 -->
-      <div class="_icon_status" v-else-if="buttonType === 'withImg'">
+      <div v-else-if="buttonType === 'withImg'" class="_icon_status">
         <div class="_img_box">
-          <img :src="imageUrlOrIconName" class="_icon_size _img_size" />
+          <img :src="imageUrlOrIconName" class="_icon_size _img_size" alt="button" />
         </div>
       </div>
-      <!-- テキスト用 -->
-      <div
-        :class="['_just_letter', `text-${letterColor}`]"
-        v-if="
-          buttonType === 'withImg' ||
-          buttonType === 'standard' ||
-          buttonType === 'withIcon'
-        "
-        v-html="label"
-      ></div>
+      <span
+        v-if="buttonType === 'withImg' || buttonType === 'standard' || buttonType === 'withIcon'"
+        class="_just_letter"
+        v-html="buttonLabel"
+      ></span>
     </div>
-  </button>
+  </Button>
 </template>
 
 <style lang="sass" scoped>
 ._AFC_buttons
-  font-size: 18px
-  width: 100%
-  height: v-bind(buttonHeight)
-//TODO iPad対応する場合はメディアクエリで対応
+  width: var(--rm-button-width)
+  min-height: var(--rm-button-height)
   max-width: 700px
-  transition: 0.5s
-  opacity: 1
+  border-radius: 16px
+  border: var(--rm-button-border)
+  background: var(--rm-button-bg)
+  color: var(--rm-button-color)
+  transition: 0.3s ease
   user-select: none
-._AFC_buttons:hover
-  transition: 0.5s
-  opacity: 0.8
-// buttonType:roundで追加
+  box-shadow: none
+  :deep(.p-button-label)
+    display: none
+  :deep(.p-button-icon)
+    display: none
+  &:hover
+    opacity: 0.92
+    transform: translateY(-1px)
+
+._button_flat
+  background: transparent
+  border: 1px solid transparent
+  box-shadow: none
+
+._button_outline
+  background: rgba(255,255,255,0.7)
+
 ._button_shape_round
-  border-radius: 30px
-//buttonType:ellipseで追加
+  border-radius: 999px
+
 ._button_shape_ellipse
-  border-radius: 14px
+  border-radius: 18px
+
 ._button_border
   border: 1px solid $primary
-//isShadowで追加
+
 ._button_shadow
-  box-shadow: 0px 5px 10px 0px rgba(0, 0, 0, 0.15)
-  //アイコンのみ表示の時使用
+  box-shadow: 0px 10px 24px rgba(15, 23, 42, 0.16)
+
 ._just_icon
   width: 49px
-  height: 49px
+  min-width: 49px
+  min-height: 49px
   display: grid
   place-items: center
-.disable
-  pointer-events: none
-  opacity: 0.5
+
 ._icon_and_text_container
   display: flex
-  padding: 5px 25px
-  height: 100%
+  align-items: center
+  justify-content: center
+  gap: 12px
+  width: 100%
+  padding: 10px 24px
+
+._button_content_center
+  justify-content: center
+
+._icon_status
+  display: flex
+  align-items: center
+  justify-content: center
+
+._btn_icon
+  font-size: var(--rm-button-icon-size)
+  color: var(--rm-button-color)
+
 ._icon_size
-  flex:2
   width: 90px
   height: auto
+
 ._img_size
   height: 100%
   width: auto
-._just_letter
-  flex:3
-  display: grid
-  place-items: center
-  font-size: v-bind(letterSize)
-@media (max-width: 374px)
-    ._just_letter
-      font-size: v-bind(smallLetterSize)
-@media (max-width: 340px)
-    ._just_letter
-      font-size: v-bind(microLetterSize)
-
-._icon_status
-  align-items: center
-  display: flex
 
 ._img_box
   display: grid
   place-items: center
 
-
-._btn_icon
-  font-size: v-bind(iconSize)
-  .q-icon,._medal_icon
-    padding-right: 20px
-
-
-// ボタン内文字アイコンポジション可変用
-._button_content_position
-  justify-content: center
-  ._icon_size
-    flex: initial
-  ._just_letter
-    flex: initial
-//ボタンタイプwithImg用
-._withImg
-  flex-direction: column
-  color: yellow
-  min-height: 101px
-  min-width: 101px
-  align-items: center
-  padding: 5px
-  border-radius: 14px
-  row-gap: 9.5px
-  ._icon_status
-    flex: 5
-    display: grid
-    place-items: center
-  ._just_letter
-    flex: 1
-    line-height: 80%
-._medal_garbage_blue
-  filter: invert(76%) sepia(59%) saturate(1421%) hue-rotate(153deg) brightness(98%) contrast(93%)
-._medal_garbage_white
-  filter: brightness(0) invert(1)
-._garbage_and_medal_icon
-  height: v-bind(svgSize)
-  width: auto
+._just_letter
   display: grid
   place-items: center
+  font-size: var(--rm-button-font-size)
+  line-height: 1.3
+
+._withImg
+  min-height: 101px
+  min-width: 101px
+  flex-direction: column
+
+._medal_garbage_blue
+  filter: invert(76%) sepia(59%) saturate(1421%) hue-rotate(153deg) brightness(98%) contrast(93%)
+
+._medal_garbage_white
+  filter: brightness(0) invert(1)
+
+._garbage_and_medal_icon
+  height: var(--rm-button-badge-size)
+  width: auto
+
 ._medal_icon_size
   height: 42px
   width: auto
+
+._modal_icon
+  width: 24px
+  height: 24px
+
 ._special_icon
   display: flex
   align-items: center
   justify-content: center
+
+@media (max-width: 374px)
+  ._just_letter
+    font-size: calc(var(--rm-button-font-size) - 2px)
+
+@media (max-width: 340px)
+  ._just_letter
+    font-size: calc(var(--rm-button-font-size) - 4px)
 </style>

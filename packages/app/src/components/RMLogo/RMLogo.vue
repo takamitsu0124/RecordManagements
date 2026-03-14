@@ -30,7 +30,7 @@ const appLogo = ref(
 </script>
 
 <template>
-  <q-img :src="appLogo" class="_logo" />
+  <img :src="appLogo" alt="RecordManagement" class="_logo" />
   <div class="_service_name" v-if="props.serviceName">
     {{ props.serviceName }}
   </div>

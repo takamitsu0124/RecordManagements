@@ -1,49 +1,22 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
+import Card from 'primevue/card'
+import Divider from 'primevue/divider'
+import Dropdown from 'primevue/dropdown'
+import ProgressSpinner from 'primevue/progressspinner'
 import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { User, defaultUser } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
-import { uploadFile } from '@rm/db/src/fireStorage/fireStorage'
+import RMInput from 'src/components/RMInput/RMInput.vue'
+import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
+import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 
 const route = useRoute()
 const router = useRouter()
-const $q = useQuasar()
-
-const iconUploaderFactory = (files: readonly File[]) => {
-  return new Promise<{ url: string }>((resolve) => {
-    const file = files[0]
-    if (!userId.value) {
-      $q.notify({ type: 'negative', message: 'ユーザーIDがありません。' })
-      return
-    }
-    const uploadPath = `user_icons/${userId.value}`
-
-    $q.loading.show({ message: `${file.name} をアップロード中...` })
-    uploadFile(file, uploadPath, file.name)
-      .then((url) => {
-        $q.loading.hide()
-        $q.notify({ type: 'positive', message: 'アイコンを更新しました。' })
-        if (user.value) {
-          user.value.iconUrl = url
-        }
-        //ダミーのURLでresolveしてq-uploaderのUIをリセット
-        resolve({ url: 'data:text/plain,' })
-      })
-      .catch((err) => {
-        $q.loading.hide()
-        $q.notify({ type: 'negative', message: 'アップロードに失敗しました。' })
-        console.error(err)
-        resolve({ url: 'data:text/plain,' })
-      })
-  })
-}
 
 const userId = ref<string | null>(null)
-// Use defaultUser to initialize to prevent template errors before data is loaded
 const user = ref<User>(defaultUser())
-
 const isLoading = ref(true)
 const errorMessage = ref<string | null>(null)
 
@@ -75,15 +48,11 @@ onMounted(async () => {
     await dbUserModule.doc(userId.value).fetch()
     const fetchedUser = dbUserModule.doc(userId.value).data
     if (fetchedUser) {
-      // Create a copy to avoid mutating the original object from the store
-      // This handles nested objects and preserves Date objects
       const userCopy = {
         ...fetchedUser,
         contact: { ...fetchedUser.contact },
         skillRecord: JSON.parse(JSON.stringify(fetchedUser.skillRecord)),
-        proficiencyLevel: JSON.parse(
-          JSON.stringify(fetchedUser.proficiencyLevel)
-        ),
+        proficiencyLevel: JSON.parse(JSON.stringify(fetchedUser.proficiencyLevel)),
       }
       user.value = userCopy
 
@@ -104,38 +73,31 @@ onMounted(async () => {
 const onSubmit = async () => {
   if (!userId.value) return
 
-  $q.loading.show({ message: 'ユーザー情報を更新しています...' })
+  await useSpinner(async () => {
+    try {
+      const updatedData: Partial<User> = {
+        charaName: user.value.charaName,
+        charaNameKana: user.value.charaNameKana,
+        guildId: user.value.guildId,
+        affiliationDate: affiliationDateStr.value ? new Date(affiliationDateStr.value) : null,
+        affiliationNum: Number(user.value.affiliationNum),
+        situation: user.value.situation,
+        gameStartDateAt: gameStartDateAtStr.value ? new Date(gameStartDateAtStr.value) : null,
+        contact: {
+          email: user.value.contact.email,
+          phone: user.value.contact.phone,
+        },
+        birthDateAt: birthDateAtStr.value ? new Date(birthDateAtStr.value) : null,
+      }
 
-  try {
-    // Ensure date values are correctly formatted as Date objects for Firestore
-    const updatedData: Partial<User> = {
-      charaName: user.value.charaName,
-      charaNameKana: user.value.charaNameKana,
-      guildId: user.value.guildId,
-      affiliationDate: affiliationDateStr.value
-        ? new Date(affiliationDateStr.value)
-        : null,
-      affiliationNum: Number(user.value.affiliationNum),
-      situation: user.value.situation,
-      gameStartDateAt: gameStartDateAtStr.value
-        ? new Date(gameStartDateAtStr.value)
-        : null,
-      contact: {
-        email: user.value.contact.email,
-        phone: user.value.contact.phone,
-      },
-      birthDateAt: birthDateAtStr.value ? new Date(birthDateAtStr.value) : null,
+      await dbUserModule.doc(userId.value).merge(updatedData)
+      notifySuccess('更新が完了しました。')
+      router.back()
+    } catch (error) {
+      notifyError('更新に失敗しました。')
+      console.error('Update failed:', error)
     }
-
-    await dbUserModule.doc(userId.value).merge(updatedData)
-    $q.notify({ type: 'positive', message: '更新が完了しました。' })
-    router.back()
-  } catch (error) {
-    $q.notify({ type: 'negative', message: '更新に失敗しました。' })
-    console.error('Update failed:', error)
-  } finally {
-    $q.loading.hide()
-  }
+  })
 }
 
 const onCancel = () => {
@@ -144,229 +106,132 @@ const onCancel = () => {
 </script>
 
 <template>
-  <q-page class="q-pa-md user-edit-page">
-    <div v-if="isLoading" class="text-center q-pt-xl">
-      <q-spinner-hourglass color="primary" size="3em" />
-      <p class="text-primary q-mt-md">ユーザー情報を読み込み中...</p>
+  <div class="rm-page rm-page--top">
+    <div v-if="isLoading" class="rm-state-card">
+      <ProgressSpinner strokeWidth="5" />
+      <p class="rm-muted">ユーザー情報を読み込み中...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="text-center q-pt-xl text-negative">
-      <p>{{ errorMessage }}</p>
-      <RMButton
-        label="戻る"
-        color="primary"
-        @click="onCancel"
-        class="q-mt-md"
-      />
+    <div v-else-if="errorMessage" class="rm-state-card">
+      <p class="rm-error">{{ errorMessage }}</p>
+      <RMButton label="戻る" color="primary" @click="onCancel" />
     </div>
 
-    <div v-else-if="user" class="row justify-center q-pa-sm q-pa-md-md">
-      <q-form
-        @submit.prevent="onSubmit"
-        class="col-12"
-        style="max-width: 800px"
-      >
-        <q-card flat bordered class="user-edit-card">
-          <q-card-section class="bg-primary text-white q-pa-md">
-            <div class="text-h6">ユーザー情報編集</div>
-            <div v-if="user.charaName" class="text-subtitle2">
-              {{ user.charaName }}
-            </div>
-          </q-card-section>
-
-          <q-separator />
-
-          <q-card-section class="q-pa-md">
-            <div class="text-subtitle1 q-mb-md text-weight-bold">基本情報</div>
-            <div class="row q-col-gutter-lg">
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="user.charaName"
-                  label="キャラクターネーム"
-                />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="user.charaNameKana"
-                  label="キャラクターネーム(カナ)"
-                />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input filled v-model="user.guildId" label="所属ギルドID" />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model.number="user.affiliationNum"
-                  label="所属No"
-                  type="number"
-                />
-              </div>
-              <div class="col-12">
-                <q-select
-                  filled
-                  v-model="user.situation"
-                  :options="situationOptions"
-                  label="プレイヤー状況"
-                />
+    <form v-else class="user-edit-form" @submit.prevent="onSubmit">
+      <Card class="user-edit-card">
+        <template #content>
+          <div class="user-edit-card__content">
+            <div class="user-edit-card__hero">
+              <div>
+                <div class="user-edit-card__title">ユーザー情報編集</div>
+                <div v-if="user.charaName" class="user-edit-card__subtitle">
+                  {{ user.charaName }}
+                </div>
               </div>
             </div>
-          </q-card-section>
 
-          <q-separator inset />
+            <Divider />
 
-          <q-card-section class="q-pa-md">
-            <div class="text-subtitle1 q-mb-md text-weight-bold">日付情報</div>
-            <div class="row q-col-gutter-lg">
-              <div class="col-12 col-md-4">
-                <q-input
-                  filled
-                  v-model="affiliationDateStr"
-                  mask="date"
-                  label="ギルド所属日"
-                >
-                  <template v-slot:append>
-                    <q-icon name="event" class="cursor-pointer">
-                      <q-popup-proxy
-                        cover
-                        transition-show="scale"
-                        transition-hide="scale"
-                      >
-                        <q-date v-model="affiliationDateStr">
-                          <div class="row items-center justify-end">
-                            <q-btn
-                              v-close-popup
-                              label="Close"
-                              color="primary"
-                              flat
-                            />
-                          </div>
-                        </q-date>
-                      </q-popup-proxy>
-                    </q-icon>
-                  </template>
-                </q-input>
+            <section>
+              <div class="rm-section-title">基本情報</div>
+              <div class="rm-form-grid rm-form-grid--two">
+                <RMInput v-model="user.charaName" label="キャラクターネーム" shadow />
+                <RMInput v-model="user.charaNameKana" label="キャラクターネーム(カナ)" shadow />
+                <RMInput v-model="user.guildId" label="所属ギルドID" shadow />
+                <RMInput v-model="user.affiliationNum" label="所属No" type="number" shadow />
               </div>
-              <div class="col-12 col-md-4">
-                <q-input
-                  filled
-                  v-model="gameStartDateAtStr"
-                  mask="date"
-                  label="ゲーム開始日時"
-                >
-                  <template v-slot:append>
-                    <q-icon name="event" class="cursor-pointer">
-                      <q-popup-proxy
-                        cover
-                        transition-show="scale"
-                        transition-hide="scale"
-                      >
-                        <q-date v-model="gameStartDateAtStr">
-                          <div class="row items-center justify-end">
-                            <q-btn
-                              v-close-popup
-                              label="Close"
-                              color="primary"
-                              flat
-                            />
-                          </div>
-                        </q-date>
-                      </q-popup-proxy>
-                    </q-icon>
-                  </template>
-                </q-input>
+              <div class="user-edit-form__field">
+                <div class="user-edit-form__label">プレイヤー状況</div>
+                <Dropdown v-model="user.situation" :options="situationOptions" placeholder="状況を選択" class="user-edit-form__dropdown" />
               </div>
-              <div class="col-12 col-md-4">
-                <q-input
-                  filled
-                  v-model="birthDateAtStr"
-                  mask="date"
-                  label="誕生日"
-                >
-                  <template v-slot:append>
-                    <q-icon name="event" class="cursor-pointer">
-                      <q-popup-proxy
-                        cover
-                        transition-show="scale"
-                        transition-hide="scale"
-                      >
-                        <q-date v-model="birthDateAtStr">
-                          <div class="row items-center justify-end">
-                            <q-btn
-                              v-close-popup
-                              label="Close"
-                              color="primary"
-                              flat
-                            />
-                          </div>
-                        </q-date>
-                      </q-popup-proxy>
-                    </q-icon>
-                  </template>
-                </q-input>
+            </section>
+
+            <Divider />
+
+            <section>
+              <div class="rm-section-title">日付情報</div>
+              <div class="rm-form-grid rm-form-grid--three">
+                <RMInput v-model="affiliationDateStr" label="ギルド所属日" type="date" :date="true" shadow />
+                <RMInput v-model="gameStartDateAtStr" label="ゲーム開始日時" type="date" :date="true" shadow />
+                <RMInput v-model="birthDateAtStr" label="誕生日" type="date" :date="true" shadow />
               </div>
+            </section>
+
+            <Divider />
+
+            <section>
+              <div class="rm-section-title">連絡先</div>
+              <div class="rm-form-grid rm-form-grid--two">
+                <RMInput v-model="user.contact.email" label="登録メールアドレス" type="email" shadow />
+                <RMInput v-model="user.contact.phone" label="登録電話番号" type="tel" shadow />
+              </div>
+            </section>
+
+            <div class="rm-actions user-edit-card__actions">
+              <RMButton label="キャンセル" color="grey-7" outline @click="onCancel" width="160px" />
+              <RMButton label="保存" type="submit" color="primary" width="160px" />
             </div>
-          </q-card-section>
-
-          <q-separator inset />
-
-          <q-card-section class="q-pa-md">
-            <div class="text-subtitle1 q-mb-md text-weight-bold">連絡先</div>
-            <div class="row q-col-gutter-lg">
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="user.contact.email"
-                  label="登録メールアドレス"
-                  type="email"
-                />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="user.contact.phone"
-                  label="登録電話番号"
-                  type="tel"
-                />
-              </div>
-            </div>
-          </q-card-section>
-
-          <q-card-actions class="q-pa-lg bg-grey-2 _btn_area" :align="'center'">
-            <RMButton
-              label="キャンセル"
-              color="grey-7"
-              outline
-              @click="onCancel"
-              style="width: 160px"
-            />
-            <RMButton
-              label="保存"
-              type="submit"
-              color="primary"
-              style="width: 160px"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-form>
-    </div>
-  </q-page>
+          </div>
+        </template>
+      </Card>
+    </form>
+  </div>
 </template>
 
 <style lang="scss" scoped>
-.user-edit-page {
-  background-color: #f0f2f5;
-}
-.user-edit-card {
-  border-radius: 8px;
+.user-edit-form {
+  width: min(100%, 860px);
 }
 
-._btn_area {
+.user-edit-card {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.user-edit-card__content {
+  padding: 28px;
+}
+
+.user-edit-card__hero {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.user-edit-card__title {
+  font-size: clamp(1.75rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.user-edit-card__subtitle {
+  margin-top: 6px;
+  color: #64748b;
+}
+
+.user-edit-form__field {
+  margin-top: 18px;
+}
+
+.user-edit-form__label {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.user-edit-form__dropdown {
+  width: 100%;
+}
+
+.user-edit-card__actions {
+  margin-top: 28px;
+}
+
+@media (max-width: 767px) {
+  .user-edit-card__content {
+    padding: 20px;
+  }
 }
 </style>

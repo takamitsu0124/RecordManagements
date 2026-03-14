@@ -13,8 +13,11 @@
     "build": "npm run lint && quasar build -m spa"
   },
   "dependencies": {
+    "@primeuix/themes": "^2.0.3",
     "@quasar/extras": "^1.16.4",
     "core-js": "^3.31.1",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.5.4",
     "quasar": "^2.16.0",
     "vue": "^3.4.18",
     "vue-router": "^4.0.12",

@@ -1,127 +1,41 @@
 <script setup lang="ts">
-import { ref, computed, PropType, watch } from 'vue'
+import { computed, PropType, ref } from 'vue'
+import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
+import DatePicker from 'primevue/datepicker'
+import Button from 'primevue/button'
 import { SizeTypes } from './size'
 import { IconTypes } from '../iconType'
 import RMIcon from '../RMIcon/RMIcon.vue'
-import RMCalendar from '../RMCalendar/RMCalendar.vue'
-import { calendarPosition } from './calendarPosition'
 
 const props = defineProps({
-  /**
-   * 値
-   * @example 'テスト', 100
-   */
   modelValue: { type: [String, Number, File] },
-  /**
-   * アウトライン
-   * @example outline
-   */
   outline: { type: Boolean, default: false },
-  /**
-   * シャドウ
-   * @example shadow
-   */
   shadow: { type: Boolean, default: false },
-  /**
-   * スクエア
-   * @example square
-   */
   square: { type: Boolean, default: false },
-  /**
-   * ディセーブル
-   * @example disable => true
-   */
   disabled: { type: Boolean, default: false },
-  /**
-   * ラベル
-   * @example 'お名前'
-   */
   label: { type: String, default: '' },
-  /**
-   * ラベルのテキストの大きさ
-   * line-heightが24pxのため、大きすぎるサイズを入れると表示が崩れる
-   * @example '16px'
-   */
   labelSize: { type: String, default: '' },
-  /**
-   * プレースホルダー
-   * @example 'お名前'
-   */
   placeholder: { type: String, default: '' },
-  /**
-   * サイズ
-   * @example 'S' | 'M' | 'L'
-   */
+  hint: { type: String, default: '' },
   size: { type: String as PropType<SizeTypes>, default: 'S' },
-  /**
-   * アイコンレフト
-   * @example 'left'
-   */
   iconLeft: { type: String as PropType<IconTypes>, default: '' },
-  /**
-   * アイコンライト
-   * @example 'right'
-   */
   iconRight: { type: String as PropType<IconTypes>, default: '' },
-  /**
-   * 必須テキスト
-   * @example '*' | '*必須'
-   */
   requiredText: { type: String as PropType<'※' | '※必須'>, default: '' },
-  /**
-   * 必須アイコン
-   * @example true
-   */
   requiredIcon: { type: Boolean, default: false },
-  /**
-   * エラー1
-   * @example true
-   */
   error1: { type: Boolean, default: false },
-  /**
-   * エラー2
-   * @example true
-   */
   error2: { type: Boolean, default: false },
-  /**
-   * エラー3
-   * @example '****を入力してください'
-   */
   error3: { type: String, default: '' },
-  /**
-   * エラー4
-   * @example '****を入力してください'
-   */
   error4: { type: String, default: '' },
-  /**
-   * 日付
-   * @example true | false
-   */
   date: { type: Boolean, default: false },
-  /**
-   * 文字数制限
-   * @example 11
-   */
   maxlength: { type: String, default: '999' },
-  /**
-   * 検索
-   * @example true | false
-   */
   search: { type: Boolean, default: false },
-  /**
-   * カレンダーをポップアップモードで表示する
-   * @example true | false
-   */
   calendarPopupMode: { type: Boolean, default: false },
-  /**
-   * ファイル選択
-   */
   accept: { type: String, default: '' },
-
-  /**
-   * inputmode
-   * @example inputmode: numeric
-   */
+  rules: {
+    type: Array as PropType<Array<(value: string) => true | string>>,
+    default: () => [],
+  },
   inputmode: {
     type: String as PropType<
       | 'text'
@@ -149,192 +63,112 @@ const emit = defineEmits<{
   (e: 'onFocus'): void
 }>()
 
-const model = computed({
-  get: () => props.modelValue,
-  set: (value) => {
+const hiddenFileInput = ref<HTMLInputElement | null>(null)
+const passwordVisible = ref(false)
+const validationMessage = ref('')
+
+const isDateField = computed(() => props.date || props.type === 'date')
+const isTextarea = computed(() => props.type === 'textarea')
+const isFile = computed(() => props.type === 'file')
+
+const currentType = computed(() => {
+  if (props.type !== 'password') return props.type
+  return passwordVisible.value ? 'text' : 'password'
+})
+
+const hasError = computed(
+  () =>
+    props.error1 ||
+    props.error2 ||
+    Boolean(props.error3) ||
+    Boolean(props.error4) ||
+    Boolean(validationMessage.value)
+)
+
+const errorMessage = computed(
+  () => props.error4 || props.error3 || validationMessage.value
+)
+
+const displayValue = computed(() => {
+  if (props.modelValue instanceof File) return props.modelValue.name
+  if (props.modelValue === undefined || props.modelValue === null) return ''
+  return String(props.modelValue)
+})
+
+const inputModel = computed({
+  get: () => displayValue.value,
+  set: (value: string) => {
+    if (props.type === 'number' || props.inputmode === 'numeric') {
+      emit('update:modelValue', value === '' ? undefined : Number(value))
+      return
+    }
     emit('update:modelValue', value)
   },
 })
 
-const typeLocal = ref<string>(props.type)
-
-const isDesign = computed(() => {
-  if (props.outline) return 'outline'
-  if (props.shadow) return 'shadow'
-  if (props.square) return 'square'
-  return 'standard'
-})
-
-// パスワードアイコンをクリックする
-const clickPasswordIcon = () => {
-  if (typeLocal.value === 'password') {
-    typeLocal.value = 'text'
-  } else {
-    typeLocal.value = 'password'
-  }
+const parseDate = (value: string) => {
+  if (!value) return null
+  const normalized = value.replace(/-/g, '/')
+  const [year, month, day] = normalized.split('/')
+  if (!year || !month || !day) return null
+  const parsed = new Date(Number(year), Number(month) - 1, Number(day))
+  return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
-const calendarState = ref<boolean>(false)
-const refCcInput = ref<HTMLElement>()
-const refCcCalendar = ref<HTMLElement>()
-const refCCCalendarPop = ref<HTMLElement>()
-const calendarOpen = () => {
-  calendarState.value = !calendarState.value
-
-  // ラベルフラグ
-  const labelFlag = ref<boolean>(false)
-  if (props.label || props.requiredIcon || props.requiredText) {
-    labelFlag.value = true
-  }
-
-  // カレンダーの表示位置を設定する:ポップアップの場合はスルーするー
-  if (!props.calendarPopupMode) {
-    const elementCalendar = refCcCalendar.value!
-    elementCalendar.style.top = calendarPosition(
-      refCcInput.value,
-      props.size,
-      labelFlag.value
-    )
-  }
+const formatDate = (value: Date | null) => {
+  if (!value) return ''
+  const year = value.getFullYear()
+  const month = `${value.getMonth() + 1}`.padStart(2, '0')
+  const day = `${value.getDate()}`.padStart(2, '0')
+  return `${year}/${month}/${day}`
 }
 
-// コンポーネントの要素外をクリックした場合、optionsを閉じる
-// onClickOutside(refCcInput, () => {
-//   if (!calendarState.value) return
-//   calendarState.value = false
-// })
-// onClickOutside(refCCCalendarPop, () => {
-//   if (!calendarState.value) return
-//   calendarState.value = false
-// })
-
-//カレンダー上で日付を選んでも閉じる
-watch(model, () => {
-  if (!calendarState.value) return
-  calendarState.value = false
-  //modelの値を監視し、変更があった場合その値をmodelValueを使用しているemitに返す
-  if (model.value) {
-    let year = String(model.value).split('/')[0]
-    let month = ('0' + String(model.value).split('/')[1]).slice(-2)
-    let day = ('0' + String(model.value).split('/')[2]).slice(-2)
-    /**日付を0付きの数字に変更する */
-    const date = `${year}/${month}/${day}`
-    emit('update:modelValue', date)
-  }
+const dateModel = computed<Date | null>({
+  get: () => parseDate(displayValue.value),
+  set: (value) => {
+    emit('update:modelValue', formatDate(value))
+  },
 })
 
-const onBlur = () => {
+const validate = () => {
+  const value = displayValue.value
+  validationMessage.value = ''
+  for (const rule of props.rules) {
+    const result = rule(value)
+    if (result !== true) {
+      validationMessage.value = String(result)
+      break
+    }
+  }
+  return validationMessage.value === ''
+}
+
+const handleBlur = () => {
+  validate()
   emit('onBlur')
 }
-const onFocus = () => {
+
+const handleFocus = () => {
   emit('onFocus')
 }
-const clickInput = () => {
-  if (typeLocal.value === 'file') {
-    const element = document.createElement('input')
-    if (props.accept) {
-      element.accept = props.accept
-    }
-    element.type = 'file'
-    element.addEventListener('change', (e) => {
-      const target = e.target as HTMLInputElement
-      const file = target.files![0]
-      model.value = file
-      element.remove()
-    })
-    element.click()
-  }
+
+const triggerFileInput = () => {
+  hiddenFileInput.value?.click()
 }
 
-const showFileName = computed(() => {
-  if (model.value instanceof File) {
-    const fileName = model.value.name
-    return fileName
-  }
-  return ''
-})
-
-const inputClass = computed(() => {
-  return {
-    _icon_left: props.iconLeft || props.search,
-    _icon_right: props.iconRight || props.date,
-    _icon_left_and_right: props.iconLeft && props.iconRight,
-    _size_s: props.size.toLocaleLowerCase() === 's',
-    _size_m: props.size.toLocaleLowerCase() === 'm',
-    _size_l: props.size.toLocaleLowerCase() === 'l',
-    _standard: isDesign.value === 'standard',
-    _outline: isDesign.value === 'outline',
-    _shadow: isDesign.value === 'shadow',
-    _square: isDesign.value === 'square',
-    _standard_or_shadow_width:
-      (isDesign.value === 'standard' && !props.iconLeft && !props.iconRight) ||
-      (isDesign.value === 'shadow' && !props.iconLeft && !props.iconRight),
-    _outline_or_square_width:
-      (isDesign.value === 'outline' && !props.iconLeft && !props.iconRight) ||
-      (isDesign.value === 'square' && !props.iconLeft && !props.iconRight),
-    _standard_or_shadow_single_icon:
-      (isDesign.value === 'standard' &&
-        (props.iconLeft || props.iconRight || props.date || props.search)) ||
-      (isDesign.value === 'shadow' &&
-        (props.iconLeft || props.iconRight || props.date || props.search)),
-    _outline_or_square_single_icon:
-      (isDesign.value === 'outline' &&
-        (props.iconLeft || props.iconRight || props.date || props.search)) ||
-      (isDesign.value === 'square' &&
-        (props.iconLeft || props.iconRight || props.date || props.search)),
-    _standard_or_shadow_double_icons:
-      (isDesign.value === 'standard' && props.iconLeft && props.iconRight) ||
-      (isDesign.value === 'shadow' && props.iconLeft && props.iconRight),
-    _outline_or_square_double_icons:
-      (isDesign.value === 'outline' && props.iconLeft && props.iconRight) ||
-      (isDesign.value === 'square' && props.iconLeft && props.iconRight),
-    _disable: props.disabled,
-    _error_standard:
-      isDesign.value === 'standard' &&
-      (props.error1 || props.error2 || props.error3 || props.error4),
-    _error_outline_and_square:
-      (isDesign.value === 'outline' || isDesign.value === 'square') &&
-      (props.error1 || props.error2 || props.error3 || props.error4),
-    _error_bg: props.error2 || props.error4,
-  }
-})
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isCCCalendar = (m: any): m is string | number | undefined => {
-  return typeof m === 'string' || typeof m === undefined
+const onFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  emit('update:modelValue', file)
+  if (target) target.value = ''
 }
+
+defineExpose({ validate })
 </script>
 
 <template>
-  <div ref="refCcInput" class="_cc_input" @click="clickInput">
-    <Teleport to="body">
-      <transition name="fade" v-if="calendarPopupMode">
-        <div
-          class="_calender_modal"
-          v-if="calendarPopupMode"
-          v-show="calendarState"
-        >
-          <div v-if="size === 's' || size === 'S'" class="_calender_modal_box">
-            <div class="_modal_card_small" ref="refCCCalendarPop">
-              <RMCalendar
-                v-if="isCCCalendar(model)"
-                v-model="(model as string)"
-              />
-            </div>
-          </div>
-        </div>
-      </transition>
-    </Teleport>
-    <transition v-if="!calendarPopupMode">
-      <div
-        ref="refCcCalendar"
-        v-show="calendarState"
-        class="_cc_calendar_container"
-      >
-        <RMCalendar v-if="isCCCalendar(model)" v-model="(model as string)" />
-      </div>
-    </transition>
-
-    <div class="_label_container">
+  <div class="_cc_input" :class="{ _error: hasError }">
+    <div v-if="label || requiredText || requiredIcon" class="_label_container">
       <div class="_label label_text_size">
         {{ label }}
       </div>
@@ -354,7 +188,7 @@ const isCCCalendar = (m: any): m is string | number | undefined => {
       </div>
     </div>
 
-    <div class="_input_container">
+    <div class="_input_container" :class="{ _with_left_icon: iconLeft || search, _with_right_icon: iconRight || isDateField || type === 'password' }">
       <div v-if="iconLeft && !search" class="_icon_left_position">
         <RMIcon :name="iconLeft" class="_cc_mdicon" />
       </div>
@@ -363,147 +197,115 @@ const isCCCalendar = (m: any): m is string | number | undefined => {
         <RMIcon name="search" class="_cc_search_icon" />
       </div>
 
-      <div v-if="iconRight && !date" class="_icon_right_position">
+      <div v-if="iconRight && !isDateField && type !== 'password'" class="_icon_right_position">
         <RMIcon :name="iconRight" class="_cc_mdicon" />
       </div>
 
-      <div
-        v-if="date && !iconRight"
-        class="_calendar_icon_container"
-        @click="calendarOpen"
-      >
-        <RMIcon name="calendar_today" class="_cc_mdicon" />
+      <DatePicker
+        v-if="isDateField"
+        v-model="dateModel"
+        showIcon
+        iconDisplay="input"
+        dateFormat="yy/mm/dd"
+        :disabled="disabled"
+        :manualInput="true"
+        inputClass="rm-input-field"
+        class="rm-input-control rm-input-datepicker"
+        @blur="handleBlur"
+        @focus="handleFocus"
+      />
+
+      <div v-else-if="isFile" class="rm-file-field">
+        <InputText
+          :modelValue="displayValue"
+          :disabled="disabled"
+          readonly
+          class="rm-input-control rm-input-field"
+          :placeholder="placeholder"
+          @focus="handleFocus"
+          @blur="handleBlur"
+        />
+        <input
+          ref="hiddenFileInput"
+          type="file"
+          class="rm-hidden-file"
+          :accept="accept"
+          @change="onFileChange"
+        />
+        <Button
+          type="button"
+          class="rm-file-trigger"
+          label="選択"
+          outlined
+          @click="triggerFileInput"
+        />
       </div>
 
-      <div v-if="type === 'password'">
-        <div
-          v-if="typeLocal === 'password'"
-          class="_calendar_icon_container"
-          @click="clickPasswordIcon"
-        >
-          <RMIcon name="visibility_off" class="_cc_mdicon" />
-        </div>
-        <div
-          v-if="typeLocal !== 'password'"
-          class="_calendar_icon_container"
-          @click="clickPasswordIcon"
-        >
-          <RMIcon name="visibility" class="_cc_mdicon" />
-        </div>
-      </div>
+      <Textarea
+        v-else-if="isTextarea"
+        v-model="inputModel"
+        autoResize
+        rows="4"
+        :disabled="disabled"
+        :placeholder="placeholder"
+        :maxlength="maxlength"
+        class="rm-input-control rm-input-field rm-input-textarea"
+        @blur="handleBlur"
+        @focus="handleFocus"
+      />
 
-      <div v-if="typeLocal === 'file'" class="_input _file" :class="inputClass">
-        {{ showFileName }}
-      </div>
-
-      <input
+      <InputText
         v-else
-        v-model="model"
+        v-model="inputModel"
         :disabled="disabled"
         :placeholder="search ? 'キーワードで検索' : placeholder"
         :maxlength="maxlength"
         :inputmode="inputmode"
-        :type="typeLocal"
-        @blur="onBlur()"
-        @focus="onFocus()"
-        class="_input"
-        :class="inputClass"
+        :type="currentType"
+        class="rm-input-control rm-input-field"
+        @blur="handleBlur"
+        @focus="handleFocus"
       />
+
+      <button
+        v-if="type === 'password'"
+        type="button"
+        class="_icon_button"
+        @click="passwordVisible = !passwordVisible"
+      >
+        <RMIcon
+          :name="passwordVisible ? 'visibility' : 'visibility_off'"
+          class="_cc_mdicon"
+        />
+      </button>
     </div>
 
-    <div v-show="error3" class="_error_message">
-      {{ error3 }}
+    <div v-if="hint" class="_hint_message">
+      {{ hint }}
     </div>
 
-    <div v-show="error4" class="_error_message">
-      {{ error4 }}
+    <div v-show="errorMessage" class="_error_message">
+      {{ errorMessage }}
     </div>
   </div>
 </template>
 
 <style lang="sass" scoped>
-input::placeholder
-  color: #D2D2D2
 ._cc_input
   font-family: 'Roboto', sans-serif
   position: relative
   box-sizing: border-box
 
-._cc_calendar_container
-  position: absolute
-  z-index: 100
-  right: 0
-
-._icon_left_position
-  width: 30px
-  height: 30px
-  display: flex
-  justify-content: center
-  align-items: center
-  position: absolute
-  top: 50%
-  left: 10px
-  transform: translateY(-50%)
-  -webkit-transform: translateY(-50%)
-  -ms-transform: translateY(-50%)
-
-._icon_right_position
-  width: 30px
-  height: 30px
-  display: flex
-  justify-content: center
-  align-items: center
-  position: absolute
-  top: 50%
-  right: 10px
-  transform: translateY(-50%)
-  -webkit-transform: translateY(-50%)
-  -ms-transform: translateY(-50%)
-._calendarpopup_mode
-  position: fixed
-  top: 50%
-  left: 50%
-  transform: translate(-50%, -50%)
-  z-index: 100
-
-
-._calendar_icon_container
-  -webkit-tap-highlight-color: rgba(0, 0, 0, 0)
-  width: 30px
-  height: 30px
-  display: flex
-  justify-content: center
-  align-items: center
-  position: absolute
-  top: 50%
-  right: 10px
-  transform: translateY(-50%)
-  -webkit-transform: translateY(-50%)
-  -ms-transform: translateY(-50%)
-  border-radius: 50%
-  cursor: pointer
-  transition: 0.3s
-._calendar_icon_container:hover
-  background: rgb(#707070, 0.3)
-
-._cc_mdicon
-  font-size: 24px
-  color: #707070
-
-._cc_search_icon
-  font-size: 24px
-  color: #9C9C9C
-
 ._label_container
   display: flex
   align-items: center
   padding: 0 5px
-  margin-bottom: 2px
+  margin-bottom: 6px
   line-height: 24px
 
 ._label
   font-size: 16px
-  color: #707070
+  color: #475569
   width: fit-content
 
 ._required_text
@@ -529,127 +331,96 @@ input::placeholder
 ._input_container
   position: relative
 
-._input
-  padding: 0 15px
+._with_left_icon
+  :deep(.p-inputtext), :deep(.p-textarea), :deep(.p-datepicker-input)
+    padding-left: 44px
+
+._with_right_icon
+  :deep(.p-inputtext), :deep(.p-textarea), :deep(.p-datepicker-input)
+    padding-right: 44px
+
+.rm-input-control
+  width: 100%
+
+:deep(.p-inputtext), :deep(.p-textarea), :deep(.p-datepicker-input)
+  width: 100%
+  border-radius: 14px
+  border: 1px solid rgba(148, 163, 184, 0.45)
+  background: rgba(255,255,255,0.92)
+  padding: 12px 14px
+  color: #1f2937
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease
+
+:deep(.p-inputtext:enabled:focus), :deep(.p-textarea:enabled:focus), :deep(.p-datepicker-input:enabled:focus)
+  border-color: #4B6982
+  box-shadow: 0 0 0 4px rgba(75, 105, 130, 0.14)
+
+._cc_input._error
+  :deep(.p-inputtext), :deep(.p-textarea), :deep(.p-datepicker-input)
+    border-color: #D20000
+
+._icon_left_position, ._icon_right_position
+  width: 30px
+  height: 30px
+  display: flex
+  justify-content: center
+  align-items: center
+  position: absolute
+  top: 50%
+  transform: translateY(-50%)
+  z-index: 1
+
+._icon_left_position
+  left: 10px
+
+._icon_right_position
+  right: 10px
+
+._icon_button
   border: none
-  outline: none
-  font-size: 16px
-
-._file
-  line-height: 40px
+  background: transparent
+  padding: 0
+  width: 30px
+  height: 30px
+  display: flex
+  justify-content: center
+  align-items: center
+  position: absolute
+  top: 50%
+  right: 10px
+  transform: translateY(-50%)
   cursor: pointer
+  z-index: 1
 
-._icon_left
-  padding: 0 15px 0 45px
+._cc_mdicon
+  font-size: 22px
+  color: #64748b
 
-._icon_right
-  padding: 0 45px 0 15px
-
-._icon_left_and_right
-  padding: 0 45px
-
-._size_s
-  height: 40px
-
-._size_m
-  height: 45px
-
-._size_l
-  height: 50px
-
-._standard
-  -webkit-appearance: none
-  appearance: none
-  padding-top: 1px
-  border-radius: 0px
-  border-bottom: solid 1px #707070
-
-._outline
-  border-radius: 5px
-
-._shadow
-  border-radius: 5px
-  box-shadow: rgba(99, 99, 99, 0.2) 0px 0px 8px 1px
-  -webkit-appearance: none
-  appearance: none
-  padding-top: 1px
-  padding-bottom: 1px
-
-._square
-  border-radius: 0px
-
-._standard_or_shadow_width
-  width: calc(100%)
-
-._outline_or_square_width
-  width: calc(100%)
-  border: solid 1px #707070
-
-._standard_or_shadow_single_icon
-  width: calc(100%)
-
-._outline_or_square_single_icon
-  width: calc(100%)
-  border: solid 1px #707070
-
-._standard_or_shadow_double_icons
-  width: calc(100%)
-
-._outline_or_square_double_icons
-  width: calc(100%)
-  border: solid 1px #707070
-
-._disable
-  background: #ECECEC
-  cursor: not-allowed
+._cc_search_icon
+  font-size: 22px
+  color: #94a3b8
 
 ._error_message
   color: #D20000
-  font-size: 16px
+  font-size: 14px
+  margin-top: 6px
 
-._error_standard
-  border-bottom: solid 1px #D20000
-
-._error_outline_and_square
-  border: solid 1px #D20000
-
-._error_bg
-  background: rgba(210,0,0,0.2)
-
-.v-enter-active, .v-leave-active
-  transition: opacity 0.3s ease
-
-.v-enter-from, .v-leave-to
-  opacity: 0
+._hint_message
+  color: #64748b
+  font-size: 13px
+  margin-top: 6px
 
 .label_text_size
   font-size: v-bind('labelSize === "" ? "16px" : labelSize')
-//
-// モーダルカレンダー用
-.fade-enter-active, .fade-leave-active
-  transition: opacity 0.3s ease
 
-.fade-enter-from, .fade-leave-to
-  opacity: 0
+.rm-hidden-file
+  display: none
 
-.fade-enter-to, .fade-leave-from
-  opacity: 1
-
-._calender_modal
-  position: fixed
-  top: 0
-  left: 0
-  z-index: 9999
-  background: rgb(#707070, 0.3)
-  backdrop-filter: blur(1px)
-  height: 100vh
-  width: 100vw
+.rm-file-field
   display: flex
-._calender_modal_box
-  position: absolute
-  top: 50%
-  left: calc((100vw + 0px) / 2)
-  transform: translate(-50%, -50%)
-  -webkit-transform: translate(-50%, -50%)
-  -ms-transform: translate(-50%, -50%)
+  gap: 10px
+  align-items: center
+
+.rm-file-trigger
+  flex-shrink: 0
 </style>

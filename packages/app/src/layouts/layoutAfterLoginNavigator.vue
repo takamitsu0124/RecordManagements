@@ -14,27 +14,35 @@ const logout = () => {
   console.log('logout')
 }
 
-const menuClick = (menu: { name: string; url: string; isShow: boolean }) => {
-  router.push({ path: menu.url })
+const menuClick = (currentMenu: { name: string; url: string; isShow: boolean }) => {
+  router.push({ path: currentMenu.url })
 }
 </script>
 
 <template>
-  <q-layout view="lHh Lpr lFf" class="_layout">
+  <div class="after-login-layout">
     <RMHeader
       v-model:hamOpen="isOpen"
       :menu="menu"
       @logout="logout"
       @menuClick="menuClick"
     />
-    <q-page-container>
+    <main class="after-login-layout__content">
       <router-view />
-    </q-page-container>
-  </q-layout>
+    </main>
+  </div>
 </template>
 
-<style lang="sass" scoped>
-._layout
-  background: v-bind(backgroundImg)
-  background-size: cover
+<style scoped>
+.after-login-layout {
+  min-height: 100vh;
+  background: v-bind(backgroundImg);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.after-login-layout__content {
+  padding-top: 72px;
+}
 </style>

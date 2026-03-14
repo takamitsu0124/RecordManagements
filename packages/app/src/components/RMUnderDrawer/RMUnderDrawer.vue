@@ -1,23 +1,18 @@
-<script lang="ts" setup>
-import { PropType, computed, nextTick, onMounted, ref, watch } from 'vue'
+<script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'vue'
+import RMIcon from '../RMIcon/RMIcon.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean },
   scroll: { type: Boolean, default: false },
   height: { type: Number, default: 500 },
-  /**背景色の変更 */
   backgroundColor: { type: String, default: '#FFFFFF' },
-  /**閉じるボタンの配置 */
   isClosebutton: { type: Boolean, default: true },
-  /** 全画面かどうか */
   isFull: { type: Boolean, default: false },
-  /** ２層目 */
   secondLayer: { type: Boolean, default: false },
-  /** トップに戻るキー */
   toTopKey: { type: Number, default: 0 },
-  /** ドロワー種類 */
   kind: {
-    type: String as PropType<'full' | 'second' | 'third' | ''>,
+    type: String,
     default: '',
   },
   isSelect: { type: Boolean, default: false },
@@ -26,29 +21,24 @@ const props = defineProps({
   isdrawerGraphrea: { type: Boolean, default: false },
 })
 
-const isTransitionRef = ref(true)
-
-const isLong = ref(false)
-const area = ref()
-const isScrollLocal = ref(props.scroll)
-
 const emit = defineEmits<{
   (e: 'update:modelValue', payload: boolean): void
 }>()
 
 const value = computed({
   get: () => props.modelValue,
-  set: (value) => {
-    emit('update:modelValue', value)
+  set: (nextValue) => {
+    emit('update:modelValue', nextValue)
   },
 })
+
+const area = ref<HTMLDivElement | null>(null)
 
 watch(
   () => props.toTopKey,
   () => {
     nextTick(() => {
-      if (!area.value?.$el) return
-      area.value.$el.scrollTo({
+      area.value?.scrollTo({
         top: 0,
         behavior: 'smooth',
       })
@@ -56,423 +46,143 @@ watch(
   }
 )
 
-// 下から出てくるレイアウト用
-watch(value, (now) => {
-  isTransitionRef.value = false
-
-  if (now) {
-    document.body.style.position = 'fixed'
-  }
-  // ２層目が開いた状態の時は、fixedを残したままにする
-  if (props.kind === 'second') return
-
-  // ２層目を閉じ、１層目も閉じた時にfixedを解除する
-  if (!now) {
-    isLong.value = false
-    document.body.style.position = ''
-  }
-})
-const drawerColor = ref(props.backgroundColor)
-
-const windowheight = ref(window.innerHeight)
-onMounted(() => {
-  window.addEventListener('resize', () => {
-    windowheight.value = window.innerHeight
-  })
-})
-
 watch(
-  () => [windowheight.value, props.height],
-  () => {
-    if (props.height > windowheight.value) {
-      isScrollLocal.value = true
-    }
+  value,
+  (opened) => {
+    document.body.style.overflow = opened ? 'hidden' : ''
   },
-  {
-    immediate: true,
-  }
+  { immediate: true }
 )
 
-const heightRef = computed(() => {
-  if (props.height > windowheight.value) {
-    return 'calc(20px + ' + windowheight.value + 'px)'
-  }
-  return 'calc(20px + ' + props.height + 'px)'
-})
+const panelClass = computed(() => ({
+  '_drawer--full': props.kind === 'full' || props.isFull,
+  '_drawer--secondary': props.kind === 'second',
+  '_drawer--third': props.kind === 'third',
+}))
 
 const drawerClose = () => {
   value.value = false
 }
-
-//シリンダーグループを選択していない時の判定。trueの時にエラーを表示させる
-// const isSelect = computed(() => props.isSelect)
 </script>
 
 <template>
-  <!--  default overray -->
-  <div id="overray" class="_overray" v-if="value" />
-
-  <!--  second layer overray -->
-  <div id="overray" class="_second_overray" v-if="kind === 'second' && value" />
-
-  <!-- third layer overray -->
-  <div id="overray" class="_third_overray" v-if="kind === 'third' && value" />
-
-  <!--  default underDrawer -->
-
-  <div
-    :class="[
-      '_drawer',
-      { _preload: isTransitionRef },
-      `${value ? '_open' : '_close'}`,
-    ]"
-    v-if="kind === ''"
-  >
-    <div
-      :style="`position: fixed;  ${isScrollLocal ? 'overflow: scroll' : ''}`"
-    >
-      <div
-        :class="{
-          _drawer_grapharea: isdrawerGraphrea,
-          _drawer_area: isdrawerArea,
-        }"
-      >
-        <div class="_icon_area">
-          <q-icon
-            v-show="isClosebutton"
-            @click="drawerClose()"
-            class="_close_icon"
-            name="close"
-          />
-        </div>
-        <div style="max-width: 850px; margin: 0 auto; overflow: scroll">
-          <slot name="default" />
+  <Teleport to="body">
+    <transition name="fade">
+      <div v-if="value" class="_overlay" @click="drawerClose"></div>
+    </transition>
+    <transition name="sheet-up">
+      <div v-if="value" class="_drawer" :class="panelClass">
+        <div
+          ref="area"
+          class="_drawer_area"
+          :class="{ _drawer_area_scroll: scroll, _drawer_grapharea: isdrawerGraphrea, _drawer_area_type: isdrawerArea }"
+          :style="{ '--drawer-height': `${height}px`, '--drawer-bg': backgroundColor }"
+        >
+          <div class="_drawer_header">
+            <div class="_selected_message" v-if="props.isSelect">
+              {{
+                isMaxGroup && isSelect
+                  ? 'グループが最大数登録されています。'
+                  : 'グループを選択してください。'
+              }}
+            </div>
+            <div v-else class="_empty_area"></div>
+            <button v-if="isClosebutton" type="button" class="_close_button" @click="drawerClose">
+              <RMIcon name="close" class="_close_icon" />
+            </button>
+          </div>
+          <div class="_drawer_content">
+            <slot name="default" />
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!--  full display underDrawer -->
-
-  <div v-if="kind === 'full'">
-    <q-dialog position="bottom" v-model="value" :maximized="kind === 'full'">
-      <q-card style="background: #f0f0f0; max-width: 850px" ref="area">
-        <div class="_drawer_header">
-          <div style="width: 93px; height: 40px"></div>
-          <div :class="{ _selected_message: isSelect }" v-if="props.isSelect">
-            {{
-              isMaxGroup && isSelect
-                ? 'グループが最大数登録されています。'
-                : 'グループを選択してください。'
-            }}
-          </div>
-
-          <div
-            v-else
-            class="_empty_area"
-            :class="{ _empty_isFull: kind === 'full' }"
-          ></div>
-
-          <div
-            class="_icon_area"
-            :class="{ _full_disp_icon_area: kind === 'full' }"
-          >
-            <q-icon
-              v-show="isClosebutton"
-              @click="drawerClose()"
-              class="_close_icon"
-              name="close"
-            ></q-icon>
-          </div>
-        </div>
-
-        <div style="max-width: 850px; margin: 0 auto">
-          <slot name="default" />
-        </div>
-      </q-card>
-    </q-dialog>
-  </div>
-
-  <!--  second Layer underDrawer -->
-
-  <div v-if="kind === 'second'">
-    <div
-      :class="[
-        '_second_drawer',
-        { _preload: isTransitionRef },
-        `${value ? '_open' : '_close'}`,
-      ]"
-    >
-      <div :style="`position: fixed;  ${scroll ? 'overflow: scroll' : ''}`">
-        <div class="_drawer_area">
-          <div class="_icon_area">
-            <q-icon
-              v-show="isClosebutton"
-              @click="drawerClose()"
-              class="_close_icon"
-              name="close"
-            ></q-icon>
-          </div>
-
-          <slot name="default" />
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!--  third Layer underDrawer -->
-  <div v-if="kind === 'third'">
-    <div
-      :class="[
-        '_third_drawer',
-        { _preload: isTransitionRef },
-        `${value ? '_open' : '_close'}`,
-      ]"
-    >
-      <div :style="`position: fixed;  ${scroll ? 'overflow: scroll' : ''}`">
-        <div class="_drawer_area">
-          <div class="_icon_area">
-            <q-icon
-              v-show="isClosebutton"
-              @click="drawerClose()"
-              class="_close_icon"
-              name="close"
-            ></q-icon>
-          </div>
-
-          <slot name="default" />
-        </div>
-      </div>
-    </div>
-  </div>
+    </transition>
+  </Teleport>
 </template>
 
 <style lang="sass" scoped>
-._preload
-  animation-duration: 0s !important
-._icon_area
-  width: 100%
-  margin: 0 auto
-  display: flex
-  justify-content: flex-end
-._full_disp_icon_area
-  padding: 0 35px 0 0
-  width: fit-content
+._overlay
+  position: fixed
+  inset: 0
+  z-index: 600
+  background: rgba(0,0,0,0.35)
 
-
-@media screen and (max-width: 700px)
-  ._icon_area
-    width: 100%
-    max-width: 850px
-    display: flex
-    justify-content: flex-end
-    padding: 0 20px
-  ._full_disp_icon_area
-    padding: 0 20px 0 0
-    width: fit-content
-._close_icon
-  font-size: 40px
-  color: #707070
 ._drawer
-  z-index: 555
   position: fixed
-  bottom: 0%
-  left: -10px
-  width: 100%
-  height: 100%
-  animation-duration: 0.5s
-  animation-timing-function: ease-fade-out
-  animation-fill-mode: forwards
-  animation-direction: alternate
-  border-left: 10px solid #3C4D58
-  overflow: hidden
-  overscroll-behavior: none
-  > div
-    width: inherit
-._second_drawer
-  z-index: 666
-  position: fixed
-  bottom: 0%
-  left: -10px
-  width: 100%
-  height: 100%
-  animation-duration: 0.5s
-  animation-timing-function: ease-fade-out
-  animation-fill-mode: forwards
-  animation-direction: alternate
-  border-left: 10px solid #3C4D58
-  overflow: hidden
-  overscroll-behavior: none
-  > div
-    width: inherit
-._third_drawer
-  z-index: 777
-  position: fixed
-  bottom: 0%
-  left: -10px
-  width: 100%
-  height: 100%
-  animation-duration: 0.5s
-  animation-timing-function: ease-fade-out
-  animation-fill-mode: forwards
-  animation-direction: alternate
-  border-left: 10px solid #3C4D58
-  overflow: hidden
-  overscroll-behavior: none
-  > div
-    width: inherit
-// ドロワーの外枠スタイル
+  left: 0
+  right: 0
+  bottom: 0
+  z-index: 700
+  display: flex
+  justify-content: center
+  padding: 0 10px
+
+._drawer--secondary
+  z-index: 710
+
+._drawer--third
+  z-index: 720
+
 ._drawer_area
-  display: block
-  position: relative
-  width: 100%
-  max-width: 850px
-  margin: 0 auto
-  height: v-bind(heightRef)
-  background: v-bind(drawerColor)
+  width: min(100%, 850px)
+  height: min(calc(100vh - 20px), calc(var(--drawer-height) + 20px))
+  background: var(--drawer-bg)
   border-top-left-radius: 20px
   border-top-right-radius: 20px
-  z-index: 200
-  padding: 20px 20px 20px 20px
-  text-align: left
-  overflow: scroll
-._drawer_grapharea
-  display: block
-  position: relative
-  width: 100%
-  max-width: 850px
-  margin: 0 auto
-  background: v-bind(drawerColor)
-  border-top-left-radius: 20px
-  border-top-right-radius: 20px
-  z-index: 200
-  padding: 20px
-  text-align: left
-  overflow: scroll
-._drawer_area_isFull
-  display: block
-  position: relative
-  width: 100%
-  height: v-bind(heightRef)
-  background: v-bind(drawerColor)
-  border-top-left-radius: 20px
-  border-top-right-radius: 20px
-  z-index: 300
-._drawer_area_second_layer
-  display: block
-  position: relative
-  width: 100%
-  height: v-bind(heightRef)
-  background: v-bind(drawerColor)
-  border-top-left-radius: 20px
-  border-top-right-radius: 20px
-  z-index: 400
-  padding: 20px
+  box-shadow: 0 -12px 32px rgba(15,23,42,0.18)
+  overflow: hidden
+  display: flex
+  flex-direction: column
+
+._drawer--full ._drawer_area
+  height: calc(100vh - 20px)
+
+._drawer_area_scroll
+  overflow: auto
 
 ._drawer_header
   display: flex
-  align-items: flex-end
-  justify-content: space-around
-  padding: 0 0 0 35px
-  margin-top: calc(env(titlebar-area-y) + 10px)
-  margin-top: calc(env(safe-area-inset-top) + 120px)
-@media screen and (max-width: 700px)
-  ._drawer_header
-    display: flex
-    align-items: flex-end
-    justify-content: space-around
-    padding: 0 0 0 20px
-    margin-top: calc(env(titlebar-area-y) + 10px)
-    margin-top: calc(env(safe-area-inset-top) + 120px)
+  align-items: center
+  justify-content: space-between
+  gap: 12px
+  padding: calc(env(safe-area-inset-top) + 16px) 20px 12px
 
+._drawer_content
+  flex: 1
+  overflow: auto
+  padding: 0 20px 20px
+
+._close_button
+  border: none
+  background: transparent
+  cursor: pointer
+  display: flex
+  align-items: center
+  justify-content: center
+
+._close_icon
+  font-size: 32px
+  color: #707070
 
 ._selected_message
-  width: 100%
+  flex: 1
   font-size: 16px
   text-align: center
   color: red
-  max-width: 1752px
+
 ._empty_area
-  width: 247px
-  text-align: center
-  font-size: 16px
-  max-width: 1752px
-._empty_isFull
-  width: 725px
-  text-align: center
-  font-size: 16px
-  max-width: 1752px
+  flex: 1
 
+.fade-enter-active,.fade-leave-active
+  transition: opacity .3s ease
 
-._second_layer_card
-  height: 500px
-  overflow: hidden
-  border-top-left-radius: 20px
-  border-top-right-radius: 20px
+.fade-enter-from,.fade-leave-to
+  opacity: 0
 
+.sheet-up-enter-active,.sheet-up-leave-active
+  transition: transform .3s ease, opacity .3s ease
 
-._overray
-  position: fixed
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
-  z-index: 200
-  background: rgba(0,0,0,0.35)
-  display: flex
-  align-items: center
-  justify-content: center
-  overflow: hidden
-._second_overray
-  position: fixed
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
-  z-index: 600
-  background: rgba(0,0,0,0.35)
-  display: flex
-  align-items: center
-  justify-content: center
-  overflow: hidden
-._third_overray
-  position: fixed
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
-  z-index: 700
-  background: rgba(0,0,0,0.35)
-  display: flex
-  align-items: center
-  justify-content: center
-  overflow: hidden
-
-
-._overray::-webkit-scrollbar
-  display: none
-
-._open
-  animation-name: fadeUpAnime
-
-._close
-  animation-name: fadeOutAnime
-
-@keyframes fadeUpAnime
-  from
-    height: 0
-  to
-    height: v-bind(heightRef)
-@keyframes fadeOutAnime
-  from
-    height: v-bind(heightRef)
-  to
-    height: 0
-</style>
-
-<style lang="sass">
-._drawer_area_second_layer
-  .q-card > div:first-child,.q-card > img:first-child
-    border-top-right-radius: 20px
-    border-top-left-radius: 20px
+.sheet-up-enter-from,.sheet-up-leave-to
+  transform: translateY(100%)
+  opacity: .85
 </style>
