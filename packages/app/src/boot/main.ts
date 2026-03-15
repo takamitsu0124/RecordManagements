@@ -38,11 +38,15 @@ const checkRouter = (router: Router) => {
           (await dbUserModule.doc(user.uid).fetch({ force: true })) ??
           defaultUser()
         if (userData.id) {
-          await dbUserModule.doc(user.uid).merge({ lastLoginDateAt: new Date() })
+          await dbUserModule
+            .doc(user.uid)
+            .merge({ lastLoginDateAt: new Date() })
         }
         globalLoginUserData.value = userData
       })
       router.push({ name: 'RMHome' })
+    } else {
+      router.push({ name: 'RMPreLogin' })
     }
   })
 }
