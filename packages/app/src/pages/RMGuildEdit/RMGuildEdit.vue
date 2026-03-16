@@ -1,187 +1,134 @@
 <script lang="ts" setup>
-import { ref, onMounted, computed } from 'vue' // computedも追加
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
-
-import RMInput from 'src/components/RMInput/RMInput.vue'
-import RMButton from 'src/components/RMButton/RMButton.vue'
-
+import Card from 'primevue/card'
+import Dropdown from 'primevue/dropdown'
+import FileUpload from 'primevue/fileupload'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
 import { Guild } from '@rm/types'
-import { uploadFile, deleteFileByUrl } from '@rm/db/src/fireStorage/fireStorage' // 追加
+import { uploadFile, deleteFileByUrl } from '@rm/db/src/fireStorage/fireStorage'
+import RMInput from 'src/components/RMInput/RMInput.vue'
+import RMButton from 'src/components/RMButton/RMButton.vue'
+import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
+import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 
 const route = useRoute()
 const router = useRouter()
-const $q = useQuasar()
 
 const guildId = ref<string | string[] | null>(null)
 const guildName = ref('')
 const guildDescription = ref('')
-const guildSituation = ref<'存続' | '解散' | ''>('') // 追加
-const guildFoundingDate = ref<string>('') // 追加 (YYYY/MM/DD形式)
-const guildLogoUrl = ref<string>('') // 追加 (現在のロゴURL)
-const newGuildLogoFile = ref<File | null>(null) // 追加 (新しいロゴファイル)
-const formRef = ref<HTMLFormElement | null>(null)
-const originalGuildData = ref<Guild | null>(null) // 元のギルドデータを保持
+const guildSituation = ref<'存続' | '解散' | ''>('')
+const guildFoundingDate = ref<string>('')
+const guildLogoUrl = ref('')
+const newGuildLogoFile = ref<File | null>(null)
 
-// 状況の選択肢
 const situationOptions = ['存続', '解散']
 
-// ファイル選択時にプレビューURLを生成
 const logoPreviewUrl = computed(() => {
   if (newGuildLogoFile.value) {
     return URL.createObjectURL(newGuildLogoFile.value)
-  } else if (guildLogoUrl.value) {
-    return guildLogoUrl.value
   }
-  return ''
+  return guildLogoUrl.value
 })
 
 onMounted(async () => {
   guildId.value = route.params.guildId
   if (!guildId.value) {
-    $q.notify?.({
-      type: 'negative',
-      message: '編集対象のギルドIDが指定されていません。',
-      position: 'top',
-    })
+    notifyError('編集対象のギルドIDが指定されていません。')
     router.push('/')
     return
   }
 
-  // 既存のギルド情報をフェッチ
-  try {
-    $q.loading?.show({ message: 'ギルド情報を読み込み中...' })
-    await dbGuildModule.doc(guildId.value as string).fetch()
-    const fetchedGuild = dbGuildModule.doc(guildId.value as string).data
+  await useSpinner(async () => {
+    try {
+      await dbGuildModule.doc(guildId.value as string).fetch()
+      const fetchedGuild = dbGuildModule.doc(guildId.value as string).data
 
-    if (fetchedGuild) {
-      originalGuildData.value = fetchedGuild as Guild
-      guildName.value = fetchedGuild.guildName || ''
-      guildDescription.value = fetchedGuild.guildMemo || ''
-      guildSituation.value = fetchedGuild.situation || ''
-      // DateオブジェクトをISO形式文字列に変換 (YYYY-MM-DD)
-      guildFoundingDate.value = fetchedGuild.guildFoundingDateAt
-        ? new Intl.DateTimeFormat('sv-SE').format(
-            fetchedGuild.guildFoundingDateAt
-          )
-        : ''
-      guildLogoUrl.value = fetchedGuild.guildLogo || ''
-    } else {
-      $q.notify?.({
-        type: 'negative',
-        message: '指定されたギルドが見つかりませんでした。',
-        position: 'top',
-      })
+      if (fetchedGuild) {
+        guildName.value = fetchedGuild.guildName || ''
+        guildDescription.value = fetchedGuild.guildMemo || ''
+        guildSituation.value = fetchedGuild.situation || ''
+        guildFoundingDate.value = fetchedGuild.guildFoundingDateAt
+          ? new Intl.DateTimeFormat('sv-SE').format(fetchedGuild.guildFoundingDateAt)
+          : ''
+        guildLogoUrl.value = fetchedGuild.guildLogo || ''
+      } else {
+        notifyError('指定されたギルドが見つかりませんでした。')
+        router.push('/')
+      }
+    } catch (error) {
+      notifyError('ギルド情報の取得中にエラーが発生しました。')
+      console.error('Error fetching guild for edit:', error)
       router.push('/')
     }
-  } catch (error) {
-    $q.notify?.({
-      type: 'negative',
-      message: 'ギルド情報の取得中にエラーが発生しました。',
-      position: 'top',
-    })
-    console.error('Error fetching guild for edit:', error)
-    router.push('/')
-  } finally {
-    $q.loading?.hide()
-  }
+  })
 })
+
+const onLogoSelect = (event: { files?: File[] }) => {
+  newGuildLogoFile.value = event.files?.[0] ?? null
+}
 
 const removeCurrentLogo = async () => {
   if (!guildId.value || !guildLogoUrl.value) return
 
-  $q.loading?.show({ message: 'ロゴを削除中...' })
-  try {
-    await deleteFileByUrl(guildLogoUrl.value)
-    await dbGuildModule.doc(guildId.value as string).merge({ guildLogo: '' }) // DBからもURLを削除
-    guildLogoUrl.value = '' // ローカルの状態をクリア
-    $q.notify?.({
-      type: 'positive',
-      message: 'ギルドロゴを削除しました。',
-      position: 'top',
-    })
-  } catch (error) {
-    $q.notify?.({
-      type: 'negative',
-      message: 'ギルドロゴの削除に失敗しました。',
-      position: 'top',
-    })
-    console.error('Error deleting guild logo:', error)
-  } finally {
-    $q.loading?.hide()
-  }
+  await useSpinner(async () => {
+    try {
+      await deleteFileByUrl(guildLogoUrl.value)
+      await dbGuildModule.doc(guildId.value as string).merge({ guildLogo: '' })
+      guildLogoUrl.value = ''
+      notifySuccess('ギルドロゴを削除しました。')
+    } catch (error) {
+      notifyError('ギルドロゴの削除に失敗しました。')
+      console.error('Error deleting guild logo:', error)
+    }
+  })
 }
 
 const onSubmit = async () => {
-  if (formRef.value) {
-    const isValid = await formRef.value.validate()
-    if (!isValid) {
-      $q.notify?.({
-        type: 'negative',
-        message: '入力内容に誤りがあります。',
-        position: 'top',
+  if (!guildName.value.trim()) {
+    notifyError('ギルド名を入力してください。')
+    return
+  }
+
+  await useSpinner(async () => {
+    try {
+      if (!guildId.value) {
+        throw new Error('ギルドIDがありません。')
+      }
+
+      let updatedLogoUrl = guildLogoUrl.value
+      if (newGuildLogoFile.value) {
+        const uploadDirPath = `guild_logos/${guildId.value}`
+        updatedLogoUrl = await uploadFile(
+          newGuildLogoFile.value,
+          uploadDirPath,
+          newGuildLogoFile.value.name
+        )
+      }
+
+      const updatedData: Partial<Guild> = {
+        guildName: guildName.value,
+        guildMemo: guildDescription.value,
+        situation: guildSituation.value,
+        guildFoundingDateAt: guildFoundingDate.value
+          ? new Date(guildFoundingDate.value)
+          : null,
+        guildLogo: updatedLogoUrl,
+      }
+
+      await dbGuildModule.doc(guildId.value as string).merge(updatedData)
+
+      notifySuccess('ギルド情報が正常に更新されました。')
+      router.push({
+        name: 'RMGuildDetail',
+        params: { guildId: guildId.value as string },
       })
-      return
+    } catch (error) {
+      notifyError('ギルド情報の更新に失敗しました。')
+      console.error('Guild update failed:', error)
     }
-  }
-
-  $q.loading?.show({
-    message: 'ギルド情報を更新しています...',
   })
-
-  try {
-    if (!guildId.value) {
-      throw new Error('ギルドIDがありません。')
-    }
-
-    let updatedLogoUrl = guildLogoUrl.value
-    // 新しいロゴファイルが選択された場合
-    if (newGuildLogoFile.value) {
-      // 古いロゴが存在すれば削除（これはuploadFileが成功した後に実行するのがより安全）
-      // if (guildLogoUrl.value && originalGuildData.value?.guildLogo) {
-      //   await deleteFileByUrl(originalGuildData.value.guildLogo)
-      // }
-
-      // ディレクトリパスのみを構築
-      const uploadDirPath = `guild_logos/${guildId.value}`
-      // uploadFile関数にファイル名も渡す
-      updatedLogoUrl = await uploadFile(newGuildLogoFile.value, uploadDirPath, newGuildLogoFile.value.name)
-    }
-
-    const updatedData: Partial<Guild> = {
-      // Partial<Guild> を使用して部分更新に対応
-      guildName: guildName.value,
-      guildMemo: guildDescription.value,
-      situation: guildSituation.value,
-      // 文字列の日付をDateオブジェクトに変換
-      guildFoundingDateAt: guildFoundingDate.value
-        ? new Date(guildFoundingDate.value)
-        : null,
-      guildLogo: updatedLogoUrl,
-    }
-
-    await dbGuildModule.doc(guildId.value as string).merge(updatedData)
-
-    $q.notify?.({
-      type: 'positive',
-      message: 'ギルド情報が正常に更新されました。',
-      position: 'top',
-    })
-    router.push({
-      name: 'RMGuildDetail',
-      params: { guildId: guildId.value as string },
-    })
-  } catch (error) {
-    $q.notify?.({
-      type: 'negative',
-      message: 'ギルド情報の更新に失敗しました。',
-      position: 'top',
-    })
-    console.error('Guild update failed:', error)
-  } finally {
-    $q.loading?.hide()
-  }
 }
 
 const onCancel = () => {
@@ -194,25 +141,19 @@ const onCancel = () => {
     router.push('/')
   }
 }
-
-const requiredRule = (val: string) =>
-  (val && val.length > 0) || 'このフィールドは必須です。'
 </script>
 
 <template>
-  <div class="flex flex-center _guild_edit_page">
-    <q-card class="_guild_edit_card">
-      <q-card-section>
-        <div class="text-h6 text-center _card_title">ギルド情報編集</div>
-      </q-card-section>
+  <div class="rm-page rm-page--center">
+    <Card class="guild-edit-card">
+      <template #content>
+        <form class="rm-form-stack guild-edit-card__content" @submit.prevent="onSubmit">
+          <div class="guild-edit-card__title">ギルド情報編集</div>
 
-      <q-card-section class="q-pt-none">
-        <q-form @submit.prevent="onSubmit" ref="formRef" class="q-gutter-md">
           <RMInput
             v-model="guildName"
             label="ギルド名 *"
             hint="ギルドの名称を入力してください"
-            :rules="[requiredRule]"
             :outline="true"
           />
 
@@ -224,18 +165,16 @@ const requiredRule = (val: string) =>
             :outline="true"
           />
 
-          <!-- 状況 -->
-          <q-select
-            v-model="guildSituation"
-            :options="situationOptions"
-            label="状況 *"
-            :rules="[requiredRule]"
-            :outlined="true"
-            emit-value
-            map-options
-          />
+          <div>
+            <div class="field-label">状況 *</div>
+            <Dropdown
+              v-model="guildSituation"
+              :options="situationOptions"
+              placeholder="状況を選択"
+              class="guild-edit-card__dropdown"
+            />
+          </div>
 
-          <!-- 創設日 -->
           <RMInput
             v-model="guildFoundingDate"
             label="創設日"
@@ -245,26 +184,23 @@ const requiredRule = (val: string) =>
             :outline="true"
           />
 
-          <!-- ギルドロゴ -->
-          <div class="q-pt-md">
-            <q-img
+          <div class="guild-logo-section">
+            <div class="field-label">ギルドロゴ</div>
+            <img
               v-if="logoPreviewUrl"
               :src="logoPreviewUrl"
               alt="ギルドロゴプレビュー"
-              class="q-mb-md _guild_logo_preview"
-              fit="contain"
+              class="guild-logo-preview"
             />
-            <q-file
-              v-model="newGuildLogoFile"
-              label="ギルドロゴ画像を選択"
+            <FileUpload
+              mode="basic"
               accept="image/*"
-              clearable
-              :outlined="true"
-            >
-              <template v-slot:prepend>
-                <q-icon name="attach_file" />
-              </template>
-            </q-file>
+              chooseLabel="ギルドロゴ画像を選択"
+              customUpload
+              auto
+              class="guild-logo-upload"
+              @select="onLogoSelect"
+            />
             <RMButton
               v-if="guildLogoUrl && !newGuildLogoFile"
               label="現在のロゴを削除"
@@ -272,61 +208,69 @@ const requiredRule = (val: string) =>
               color="negative"
               icon="delete"
               @click="removeCurrentLogo"
-              class="q-mt-sm"
             />
           </div>
 
-          <q-card-actions class="_btn_area">
+          <div class="rm-actions">
             <RMButton label="キャンセル" flat color="grey" @click="onCancel" />
             <RMButton label="更新" type="submit" color="primary" />
-          </q-card-actions>
-        </q-form>
-      </q-card-section>
-    </q-card>
+          </div>
+        </form>
+      </template>
+    </Card>
   </div>
 </template>
 
-<style lang="sass" scoped>
-._guild_edit_page
-  background-color: #f8f9fa
-  min-height: 100vh
+<style lang="scss" scoped>
+.guild-edit-card {
+  width: min(100%, 580px);
+  border-radius: 24px;
+  overflow: hidden;
+}
 
-._guild_edit_card
-  width: 100%
-  max-width: 550px
-  padding: 30px
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08)
-  border-radius: 12px
-  background-color: #ffffff
+.guild-edit-card__content {
+  padding: 32px;
+}
 
-._card_title
-  font-size: 28px
-  font-weight: 600
-  color: #343a40
-  margin-bottom: 30px
+.guild-edit-card__title {
+  text-align: center;
+  font-size: clamp(1.8rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: #1f2937;
+}
 
-.q-gutter-md
-  gap: 20px
+.field-label {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #475569;
+}
 
-.q-card-actions
-  margin-top: 30px
-._btn_area
-  display: flex
-  justify-content: center
-  gap: 10px
+.guild-edit-card__dropdown,
+.guild-logo-upload {
+  width: 100%;
+}
 
-._guild_logo_preview
-  max-width: 200px
-  height: 200px
-  border: 1px solid #ccc
-  border-radius: 4px
+.guild-logo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-// レスポンシブ調整
-@media screen and (max-width: 600px)
-  ._guild_edit_card
-    margin: 20px
-    padding: 20px
-  ._card_title
-    font-size: 24px
-    margin-bottom: 20px
+.guild-logo-preview {
+  max-width: 220px;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border: 1px solid #d1d5db;
+  border-radius: 18px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+@media (max-width: 600px) {
+  .guild-edit-card__content {
+    padding: 24px 18px;
+  }
+}
 </style>

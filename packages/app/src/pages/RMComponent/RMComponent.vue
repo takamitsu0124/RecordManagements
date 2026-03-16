@@ -1,11 +1,8 @@
 <script lang="ts" setup>
 import { menu } from '../../layouts/index'
 import { ref } from 'vue'
-// import RMHamburger from 'src/components/RMHamburger/RMHamburger.vue'
 import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import RMCard from 'src/components/RMCard/RMCard.vue'
-import RMDrawer from 'src/components/RMDrawer/RMDrawer.vue'
-import RMUnderDrawer from 'src/components/RMUnderDrawer/RMUnderDrawer.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMTab from 'src/components/RMTab/RMTab.vue'
@@ -16,20 +13,16 @@ import { useToast } from 'src/components/RMToast/RMToast'
 import { usePopupFun } from 'src/components/RMPopup/RMPopupFun'
 
 const router = useRouter()
-
 const isOpen = ref<boolean>(false)
-const drawerOpen = ref<boolean>(false)
-const underDrawerOpen = ref<boolean>(false)
-const drawerHeight = ref<string>(`${window.innerHeight - 50}px`)
 const inputModel = ref<string>('')
-const tabModel = ref<string>('')
+const tabModel = ref<string>('テスト①')
 
 const logout = () => {
   console.log('logout')
 }
 
-const menuClick = (menu: { name: string; url: string }) => {
-  router.push({ path: menu.url })
+const menuClick = (currentMenu: { name: string; url: string }) => {
+  router.push({ path: currentMenu.url })
 }
 
 const spinnerStart = () => {
@@ -41,7 +34,7 @@ const spinnerStart = () => {
           toastTitle: 'テスト',
           toastMovingTime: 3,
         })
-      }, 5000)
+      }, 1500)
     )
   })
 }
@@ -72,33 +65,15 @@ const popupStart = () => {
       @menuClick="menuClick"
     />
     <div class="page_container">
-      <q-btn label="スピナーテスト" @click="spinnerStart" />
-      <q-btn label="ポップアップテスト" @click="popupStart" />
-      <RMCard :cardShape="'square'" :shadowDirection="'allSide'" class="_test">
-        カードテスト
+      <div class="demo-actions">
+        <RMButton label="スピナーテスト" color="primary" width="220px" @click="spinnerStart" />
+        <RMButton label="ポップアップテスト" outline width="220px" @click="popupStart" />
+      </div>
+      <RMCard :cardShape="'roundM'" :shadowDirection="'allSide'" class="_test">
+        <div class="demo-card-content">カードテスト</div>
       </RMCard>
-      <q-btn label="ドロワーオープン" @click="drawerOpen = !drawerOpen" />
-      <RMDrawer v-model="drawerOpen" :drawerHeight="drawerHeight">
-        <div v-for="n in 20" :key="n + 1">{{ n }}</div>
-      </RMDrawer>
-      <q-btn
-        label="アンダードロワーオープン"
-        @click="underDrawerOpen = !underDrawerOpen"
-      />
-      <RMUnderDrawer
-        v-model="underDrawerOpen"
-        :drawerHeight="600"
-        scroll
-        isdrawerArea
-      >
-        <div v-for="n in 20" :key="n + 1">{{ n }}</div>
-      </RMUnderDrawer>
-      <RMInput v-model="inputModel" shadow date />
-      <RMButton
-        :buttonType="'standard'"
-        :buttonShape="'round'"
-        :letter="'テスト'"
-      />
+      <RMInput v-model="inputModel" shadow date label="日付入力" />
+      <RMButton :buttonType="'standard'" :buttonShape="'round'" label="テスト" width="220px" />
       <RMTab v-model="tabModel" />
       <RMLogo margin_top="20px" margin_bottom="10px" />
     </div>
@@ -107,9 +82,24 @@ const popupStart = () => {
 
 <style lang="sass" scoped>
 .page_container
-  margin-top: 60px
-  height: 100svh
+  min-height: 100svh
+  padding: 110px 24px 40px
+  display: flex
+  flex-direction: column
+  gap: 24px
+  align-items: center
+
+.demo-actions
+  display: flex
+  flex-wrap: wrap
+  justify-content: center
+  gap: 12px
+
 ._test
-  margin: 30px 15px 0 15px
-  height: 40px
+  width: min(100%, 420px)
+
+.demo-card-content
+  padding: 28px
+  text-align: center
+  font-weight: 700
 </style>

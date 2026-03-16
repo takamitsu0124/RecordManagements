@@ -1,96 +1,91 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
-
-import RMInput from 'src/components/RMInput/RMInput.vue'
-import RMButton from 'src/components/RMButton/RMButton.vue'
-
+import Card from 'primevue/card'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
 import { defaultGuild, Guild } from '@rm/types'
-import { globalLoginUserData } from 'src/boot/main' // ログインユーザーデータをインポート
+import { globalLoginUserData } from 'src/boot/main'
+import RMInput from 'src/components/RMInput/RMInput.vue'
+import RMButton from 'src/components/RMButton/RMButton.vue'
+import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
+import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 
 const router = useRouter()
-const $q = useQuasar()
 
 const guildName = ref('')
 const guildDescription = ref('')
-const formRef = ref<HTMLFormElement | null>(null)
 
 const onSubmit = async () => {
-  console.log('onSubmit')
-  if (formRef.value) {
-    const isValid = await formRef.value.validate()
-    if (!isValid) {
-      $q.notify?.({
-        type: 'negative',
-        message: '入力内容に誤りがあります。',
-        position: 'top',
-      })
-      return
-    }
+  if (!guildName.value.trim()) {
+    notifyError('ギルド名を入力してください。')
+    return
   }
 
-  $q.loading?.show({
-    message: 'ギルドを登録しています...',
-  })
-
-  try {
-    const newGuild: Guild = {
-      ...defaultGuild(),
-      guildName: guildName.value,
-      guildMemo: guildDescription.value,
-      situation: '存続', // 新規登録時は存続
-      officialMembers: 1, // 登録者自身を含む
-      guildMember: {
-        [globalLoginUserData.value.id]: {
-          name: globalLoginUserData.value.charaName || '',
+  await useSpinner(async () => {
+    try {
+      const newGuild: Guild = {
+        ...defaultGuild(),
+        guildName: guildName.value,
+        guildMemo: guildDescription.value,
+        situation: '存続',
+        officialMembers: 1,
+        guildMember: {
+          [globalLoginUserData.value.id]: {
+            name: globalLoginUserData.value.charaName || '',
+          },
         },
-      },
+      }
+
+      await dbGuildModule.insert(newGuild)
+      await dbGuildModule.fetch()
+
+      const createdGuild = Array.from(dbGuildModule.data.values())
+        .sort(
+          (a, b) =>
+            (b.createdAt instanceof Date ? b.createdAt.getTime() : 0) -
+            (a.createdAt instanceof Date ? a.createdAt.getTime() : 0)
+        )
+        .find(
+          (guild) =>
+            guild.createdBy === globalLoginUserData.value.id &&
+            guild.guildName === guildName.value &&
+            guild.guildMemo === guildDescription.value
+        )
+
+      notifySuccess('ギルドが正常に登録されました。')
+
+      if (createdGuild?.id) {
+        router.push({
+          name: 'RMGuildDetail',
+          params: { guildId: createdGuild.id },
+        })
+        return
+      }
+
+      router.push({ name: 'RMHome' })
+    } catch (error) {
+      notifyError('ギルドの登録に失敗しました。')
+      console.error('Guild registration failed:', error)
     }
-
-    await dbGuildModule.insert(newGuild)
-
-    $q.notify?.({
-      type: 'positive',
-      message: 'ギルドが正常に登録されました。',
-      position: 'top',
-    })
-    router.push('RMGuildDetail')
-  } catch (error) {
-    $q.notify?.({
-      type: 'negative',
-      message: 'ギルドの登録に失敗しました。',
-      position: 'top',
-    })
-    console.error('Guild registration failed:', error)
-  } finally {
-    $q.loading?.hide()
-  }
+  })
 }
 
 const onCancel = () => {
   router.push('/')
 }
-
-const requiredRule = (val: string) =>
-  (val && val.length > 0) || 'このフィールドは必須です。'
 </script>
 
 <template>
-  <div class="flex flex-center _guild_register_page">
-    <q-card class="_guild_register_card">
-      <q-card-section>
-        <div class="text-h6 text-center _card_title">ギルド登録</div>
-      </q-card-section>
+  <div class="rm-page rm-page--center">
+    <Card class="guild-register-card">
+      <template #content>
+        <form class="rm-form-stack guild-register-card__content" @submit.prevent="onSubmit">
+          <div class="guild-register-card__title">ギルド登録</div>
 
-      <q-card-section class="q-pt-none">
-        <q-form @submit.prevent="onSubmit" ref="formRef" class="q-gutter-md">
           <RMInput
             v-model="guildName"
             label="ギルド名 *"
             hint="ギルドの名称を入力してください"
-            :rules="[requiredRule]"
             shadow
           />
 
@@ -102,51 +97,38 @@ const requiredRule = (val: string) =>
             shadow
           />
 
-          <q-card-actions class="_btn_area">
+          <div class="rm-actions">
             <RMButton label="キャンセル" flat color="grey" @click="onCancel" />
             <RMButton label="登録" type="submit" color="primary" />
-          </q-card-actions>
-        </q-form>
-      </q-card-section>
-    </q-card>
+          </div>
+        </form>
+      </template>
+    </Card>
   </div>
 </template>
 
-<style lang="sass" scoped>
-._guild_register_page
-  background-color: #f8f9fa
-  min-height: 100vh
+<style lang="scss" scoped>
+.guild-register-card {
+  width: min(100%, 560px);
+  border-radius: 24px;
+  overflow: hidden;
+}
 
-._guild_register_card
-  width: 100%
-  max-width: 550px
-  padding: 30px
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08)
-  border-radius: 12px
-  background-color: #ffffff
+.guild-register-card__content {
+  padding: 32px;
+}
 
-._card_title
-  font-size: 28px
-  font-weight: 600
-  color: #343a40
-  margin-bottom: 30px
+.guild-register-card__title {
+  margin-bottom: 4px;
+  text-align: center;
+  font-size: clamp(1.8rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: #1f2937;
+}
 
-.q-gutter-md
-  gap: 20px
-
-.q-card-actions
-  margin-top: 30px
-._btn_area
-  display: flex
-  justify-content: center
-  gap: 10px
-
-// レスポンシブ調整
-@media screen and (max-width: 600px)
-  ._guild_register_card
-    margin: 20px
-    padding: 20px
-  ._card_title
-    font-size: 24px
-    margin-bottom: 20px
+@media (max-width: 600px) {
+  .guild-register-card__content {
+    padding: 24px 18px;
+  }
+}
 </style>

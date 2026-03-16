@@ -1,1 +1,136 @@
-// app global css in SCSS form
+@import 'primeicons/primeicons.css';
+
+:root {
+  --rm-primary: #4b6982;
+  --rm-primary-soft: #a1c2e1;
+  --rm-accent: #7b4d81;
+  --rm-surface: rgba(255, 255, 255, 0.92);
+  --rm-surface-muted: #f8fafc;
+  --rm-border: #d7dee8;
+  --rm-text: #1f2937;
+  --rm-text-soft: #64748b;
+  --rm-danger: #dc2626;
+  --rm-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  --rm-radius: 20px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#q-app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(180deg, #eef4fb 0%, #f7f9fc 100%);
+  color: var(--rm-text);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.p-component {
+  font-family: 'Roboto', sans-serif;
+}
+
+.rm-page {
+  min-height: calc(100vh - 72px);
+  padding: 24px 16px 40px;
+}
+
+.rm-page--center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rm-page--top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rm-page-card,
+.rm-state-card {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  border-radius: var(--rm-radius);
+  background: var(--rm-surface);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: var(--rm-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.rm-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.rm-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rm-form-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.rm-form-grid--two {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.rm-form-grid--three {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.rm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.rm-section-title {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--rm-text);
+}
+
+.rm-muted {
+  color: var(--rm-text-soft);
+}
+
+.rm-error {
+  color: var(--rm-danger);
+}
+
+@media (min-width: 768px) {
+  .rm-page {
+    padding: 32px 24px 56px;
+  }
+}

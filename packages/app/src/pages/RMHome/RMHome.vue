@@ -1,36 +1,37 @@
 <script lang="ts" setup>
 import { dbUserModule } from '@rm/db/src/fireStore/User'
-import { dbGuildModule } from '@rm/db/src/fireStore/Guild' // 追加
-import { Guild, User } from '@rm/types' // 追加
+import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
+import { Guild, User } from '@rm/types'
 import { globalLoginUserData, lacksGuildId } from 'src/boot/main'
 import RMCard from 'src/components/RMCard/RMCard.vue'
-import { onMounted, ref } from 'vue' // refもインポート
+import RMIcon from 'src/components/RMIcon/RMIcon.vue'
+import ProgressSpinner from 'primevue/progressspinner'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuasar } from 'quasar' // useQuasarをインポート
+import { notifyError } from 'src/composables/useAppNotifications'
 
 const router = useRouter()
-const $q = useQuasar() // $qインスタンスを取得
 
 const currentUserCharaName = ref<string | null>(null)
 const hasUserCharaNameInAnyGuild = ref(false)
 const isLoadingGuildCheck = ref(true)
+const hasInitialized = ref(false)
 
-onMounted(async () => {
-  // ユーザー情報をフェッチ
-  await dbUserModule.doc(globalLoginUserData.value.id).fetch()
-  const userData = dbUserModule.doc(globalLoginUserData.value.id)
-    .data as User | null
-
-  if (userData && userData.charaName) {
-    currentUserCharaName.value = userData.charaName
-  } else {
-    console.warn('ログインユーザーのcharaNameが見つかりません。')
-    isLoadingGuildCheck.value = false
-    return
-  }
-
-  // すべてのギルドをフェッチし、キャラ名が存在するかチェック
+const loadHomeData = async (userId: string) => {
   try {
+    isLoadingGuildCheck.value = true
+    hasUserCharaNameInAnyGuild.value = false
+
+    await dbUserModule.doc(userId).fetch()
+    const userData = dbUserModule.doc(userId).data as User | null
+
+    if (userData && userData.charaName) {
+      currentUserCharaName.value = userData.charaName
+    } else {
+      console.warn('ログインユーザーのcharaNameが見つかりません。')
+      return
+    }
+
     await dbGuildModule.fetch()
     const allGuilds: Guild[] = Array.from(dbGuildModule.data.values())
 
@@ -41,35 +42,50 @@ onMounted(async () => {
           break
         }
       }
-      if (hasUserCharaNameInAnyGuild.value) {
-        break
-      }
+      if (hasUserCharaNameInAnyGuild.value) break
     }
   } catch (error) {
     console.error('ギルド情報の取得中にエラーが発生しました:', error)
+    notifyError('所属情報の取得に失敗しました。')
   } finally {
     isLoadingGuildCheck.value = false
   }
-})
+}
+
+watch(
+  () => globalLoginUserData.value.id,
+  async (userId) => {
+    if (!userId) {
+      if (hasInitialized.value) {
+        isLoadingGuildCheck.value = false
+      }
+      return
+    }
+
+    hasInitialized.value = true
+    await loadHomeData(userId)
+  },
+  { immediate: true }
+)
 
 const registerGuild = () => {
   router.push('RMGuildRegister')
 }
 
 const selectGuild = () => {
-  const userData = dbUserModule.doc(globalLoginUserData.value.id)
-    .data as User | null
+  if (!globalLoginUserData.value.id) {
+    notifyError('ユーザー情報がまだ読み込まれていません。')
+    return
+  }
+
+  const userData = dbUserModule.doc(globalLoginUserData.value.id).data as User | null
   const userGuildId = userData?.guildId
 
   if (userGuildId) {
     router.push({ name: 'RMGuildDetail', params: { guildId: userGuildId } })
   } else {
     console.error('ログインユーザーのギルドIDが見つかりません。')
-    $q.notify?.({
-      type: 'negative',
-      message: '所属ギルド情報が見つかりません。',
-      position: 'top',
-    })
+    notifyError('所属ギルド情報が見つかりません。')
   }
 }
 
@@ -80,27 +96,27 @@ const goToUserEdit = () => {
       params: { userId: globalLoginUserData.value.id },
     })
   } else {
-    $q.notify({
-      type: 'negative',
-      message: 'ユーザー情報が見つかりません。',
-      position: 'top',
-    })
+    notifyError('ユーザー情報が見つかりません。')
   }
 }
 </script>
 
 <template>
-  <div class="_home_outer_container">
-    <!-- ギルドに所属しておらず、roleがエンドユーザー -->
-    <div class="_home_inner_container">
+  <div class="rm-page rm-page--top">
+    <div v-if="isLoadingGuildCheck" class="rm-state-card">
+      <ProgressSpinner strokeWidth="5" />
+      <p class="rm-muted">所属情報を確認中...</p>
+    </div>
+
+    <div v-else class="_home_inner_container">
       <RMCard
+        v-if="lacksGuildId"
         class="_card_content"
         :cardShape="'roundM'"
         :shadowDirection="'allSide'"
         @click="registerGuild"
-        v-if="lacksGuildId"
       >
-        <q-icon class="_icon_setting" name="add_home" />
+        <RMIcon class="_icon_setting" name="add_home" />
         <div class="_content_text">ギルド登録</div>
       </RMCard>
       <RMCard
@@ -109,7 +125,7 @@ const goToUserEdit = () => {
         :shadowDirection="'allSide'"
         @click="selectGuild"
       >
-        <q-icon class="_icon_setting" name="o_touch_app" />
+        <RMIcon class="_icon_setting" name="touch_app" />
         <div class="_content_text">ギルド選択</div>
       </RMCard>
 
@@ -119,7 +135,7 @@ const goToUserEdit = () => {
         :shadowDirection="'allSide'"
         @click="goToUserEdit"
       >
-        <q-icon class="_icon_setting" name="edit" />
+        <RMIcon class="_icon_setting" name="edit" />
         <div class="_content_text">マイページ</div>
       </RMCard>
     </div>
@@ -127,43 +143,41 @@ const goToUserEdit = () => {
 </template>
 
 <style lang="sass" scoped>
-._home_outer_container
-  padding: 40px
-
 ._home_inner_container
+  width: min(100%, 920px)
   display: flex
   flex-wrap: wrap
   justify-content: center
   align-items: center
-  gap: 25px
+  gap: 24px
+  padding: 8px
 
 ._card_content
-  width: 150px
-  height: 150px
+  width: 160px
+  min-height: 160px
   display: flex
   flex-direction: column
   justify-content: center
   align-items: center
-  gap: 10px
+  gap: 14px
   cursor: pointer
-  border: 1px solid #e0e0e0
-  border-radius: 12px
-  background-color: #ffffff
+  border: 1px solid rgba(255,255,255,0.72)
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,248,252,0.94))
   transition: all 0.3s ease
   &:hover
-    transform: translateY(-5px) scale(1.02)
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1)
-    border-color: #b0c4de
+    transform: translateY(-6px) scale(1.02)
+    box-shadow: 0 20px 36px rgba(15, 23, 42, 0.14)
+    border-color: rgba(161, 194, 225, 0.8)
 
 ._icon_setting
-  font-size: 80px
+  font-size: 78px
   color: #5c6bc0
   transition: color 0.3s ease
 
 ._content_text
   font-size: 18px
-  font-weight: 500
-  color: #424242
+  font-weight: 600
+  color: #334155
   transition: color 0.3s ease
 
 ._card_content:hover ._icon_setting
@@ -172,18 +186,12 @@ const goToUserEdit = () => {
 ._card_content:hover ._content_text
   color: #3f51b5
 
-// PC
 @media screen and (min-width: 768px)
-  ._home_outer_container
-    padding: 60px
-  ._home_inner_container
-    max-width: 900px
-    margin: 0 auto
   ._card_content
-    width: 180px
-    height: 180px
+    width: 190px
+    min-height: 190px
   ._icon_setting
-    font-size: 90px
+    font-size: 88px
   ._content_text
     font-size: 20px
 </style>

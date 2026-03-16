@@ -1,11 +1,15 @@
+<template>
+  <div class="main-layout-shell">
+    <router-view />
+  </div>
+</template>
+
 <script setup lang="ts">
-//$
+// Main layout intentionally stays minimal.
 </script>
 
-<template>
-  <q-layout view="lHh Lpr lFf">
-    <!--<q-page-container>-->
-    <router-view />
-    <!--</q-page-container>-->
-  </q-layout>
-</template>
+<style scoped>
+.main-layout-shell {
+  min-height: 100vh;
+}
+</style>

@@ -1,5 +1,4 @@
 import { computed, ref } from 'vue'
-import { hasGuildId, lacksGuildId, hasAdmin } from 'src/boot/main'
 
 const showState = computed(() => {
   const home = true

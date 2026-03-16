@@ -16,5 +16,7 @@
     {
       "text": "Use Japanese with a condense and simplified description for commit generation. Focus on key changes and avoid unnecessary details. Abiding the Semantic Commit Messages Standard, such as 'feat:', 'fix:', 'docs:', 'style:', 'refactor:', 'test:', 'chore:', 'format:', 'perf:', 'ci:', 'build:'."
     }
-  ]
+  ],
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": []
 }
