@@ -15,6 +15,10 @@ const registerUser = () => {
 	router.push({ name: 'RMUserRegister' })
 }
 
+const goToSkillMasterAdmin = () => {
+	router.push({ name: 'RMSkillMasterAdmin' })
+}
+
 const selectGuild = () => {
 	if (!globalLoginUserData.value.guildId) {
 		notifyError('所属ギルド情報が見つかりません。')
@@ -52,6 +56,17 @@ const goToUserEdit = () => {
       >
         <RMIcon class="_icon_setting" name="person_add" />
         <div class="_content_text">ユーザー登録</div>
+      </RMCard>
+
+      <RMCard
+        v-if="hasAdmin"
+        class="_card_content"
+        :cardShape="'roundM'"
+        :shadowDirection="'allSide'"
+        @click="goToSkillMasterAdmin"
+      >
+        <RMIcon class="_icon_setting" name="edit" />
+        <div class="_content_text">スキルマスター管理</div>
       </RMCard>
 
       <RMCard

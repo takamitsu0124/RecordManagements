@@ -6,10 +6,18 @@ export type SkillWeaponType = string
 export type SkillMaster = {
 	/** Skill display name */
 	name: string
-	/** Attribute such as fire/water/wood */
+	/** Attribute such as fire/water/earth */
 	attr: SkillAttribute
-	/** Weapon type such as sword/staff */
+	/** Detailed category such as sword/link or ability/chain */
 	type: SkillWeaponType
+	/** Cooldown text */
+	cool: string
+	/** Switch gauge text */
+	swGauge: string
+	/** Burst gauge text */
+	brGauge: string
+	/** Skill image URL */
+	image: string
 } & DefaultType
 
 export function defaultSkillMaster(): SkillMaster {
@@ -22,5 +30,9 @@ export function defaultSkillMaster(): SkillMaster {
 		name: '',
 		attr: '',
 		type: '',
+		cool: '',
+		swGauge: '',
+		brGauge: '',
+		image: '',
 	}
 }
