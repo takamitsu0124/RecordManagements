@@ -1,0 +1,342 @@
+rules_version = '2';
+
+service cloud.firestore {
+	match /databases/{database}/documents {
+		/*
+		 * Role and guild scope are resolved from the users collection first.
+		 * Custom Claims are intentionally not used yet because the current app
+		 * already manages role and guild state in Firestore.
+		 */
+		function isSignedIn() {
+			return request.auth != null;
+		}
+
+		function authUid() {
+			return request.auth.uid;
+		}
+
+		function usersPath(uid) {
+			return /databases/$(database)/documents/users/$(uid);
+		}
+
+		function legacyUsersPath(uid) {
+			return /databases/$(database)/documents/user/$(uid);
+		}
+
+		function guildPath(guildId) {
+			return /databases/$(database)/documents/guild/$(guildId);
+		}
+
+		function hasUsersDoc(uid) {
+			return exists(usersPath(uid));
+		}
+
+		function hasLegacyUserDoc(uid) {
+			return exists(legacyUsersPath(uid));
+		}
+
+		function usersDoc(uid) {
+			return get(usersPath(uid)).data;
+		}
+
+		function legacyUserDoc(uid) {
+			return get(legacyUsersPath(uid)).data;
+		}
+
+		function hasGuildDoc(guildId) {
+			return exists(guildPath(guildId));
+		}
+
+		function guildDoc(guildId) {
+			return get(guildPath(guildId)).data;
+		}
+
+		function currentUserRole() {
+			return !isSignedIn()
+				? null
+				: hasUsersDoc(authUid())
+					? usersDoc(authUid()).role
+					: hasLegacyUserDoc(authUid())
+						? legacyUserDoc(authUid()).role == '管理者'
+							? 'admin'
+							: 'member'
+						: null;
+		}
+
+		function currentUserGuildId() {
+			return !isSignedIn()
+				? null
+				: hasUsersDoc(authUid())
+					? usersDoc(authUid()).guildId
+					: hasLegacyUserDoc(authUid())
+						? legacyUserDoc(authUid()).guildId
+						: null;
+		}
+
+		function isAdmin() {
+			return isSignedIn() && currentUserRole() == 'admin';
+		}
+
+		function isGuildAdmin() {
+			return isSignedIn() && currentUserRole() == 'guild_admin';
+		}
+
+		function isSelf(uid) {
+			return isSignedIn() && authUid() == uid;
+		}
+
+		function isValidAppRole(role) {
+			return role == 'admin' || role == 'guild_admin' || role == 'member';
+		}
+
+		function sameGuildId(guildId) {
+			return isSignedIn() && guildId != null && guildId != '' && currentUserGuildId() == guildId;
+		}
+
+		function isGuildMember(guildId) {
+			return hasGuildDoc(guildId) && guildDoc(guildId).guildMember[authUid()] != null;
+		}
+
+		function ownsCreatedGuild(guildId) {
+			return hasGuildDoc(guildId) && guildDoc(guildId).createdBy == authUid();
+		}
+
+		function canReadGuild(guildId) {
+			return isAdmin() || sameGuildId(guildId) || isGuildMember(guildId) || ownsCreatedGuild(guildId);
+		}
+
+		function canManageGuild(guildId) {
+			return isAdmin() || (isGuildAdmin() && canReadGuild(guildId));
+		}
+
+		function isCurrentUsersGuildMember(uid) {
+			return hasUsersDoc(uid) && currentUserGuildId() != null && usersDoc(uid).guildId == currentUserGuildId();
+		}
+
+		function isCurrentLegacyUsersGuildMember(uid) {
+			return hasLegacyUserDoc(uid) && currentUserGuildId() != null && legacyUserDoc(uid).guildId == currentUserGuildId();
+		}
+
+		function preservesUserIdentity(uid) {
+			return request.resource.data.uid == resource.data.uid &&
+				request.resource.data.id == resource.data.id &&
+				request.resource.data.email == resource.data.email;
+		}
+
+		function preservesLegacyIdentity(uid) {
+			return request.resource.data.id == resource.data.id &&
+				request.resource.data.contact.email == resource.data.contact.email;
+		}
+
+		function isGuildClaimForOwnCreatedGuild(uid) {
+			let nextGuildId = request.resource.data.guildId;
+			let nextRole = request.resource.data.role;
+
+			return isSelf(uid) &&
+				resource.data.guildId == '' &&
+				nextGuildId != '' &&
+				ownsCreatedGuild(nextGuildId) &&
+				isGuildMember(nextGuildId) &&
+				request.resource.data.uid == resource.data.uid &&
+				request.resource.data.id == resource.data.id &&
+				request.resource.data.email == resource.data.email &&
+				request.resource.data.diff(resource.data).affectedKeys().hasOnly(['guildId', 'role', 'updatedAt', 'updatedBy']) &&
+				(
+					(resource.data.role == 'admin' && nextRole == 'admin') ||
+					(resource.data.role == 'member' && nextRole == 'guild_admin')
+				);
+		}
+
+		function isLegacyGuildClaimForOwnCreatedGuild(uid) {
+			let nextGuildId = request.resource.data.guildId;
+
+			return isSelf(uid) &&
+				resource.data.guildId == '' &&
+				nextGuildId != '' &&
+				ownsCreatedGuild(nextGuildId) &&
+				isGuildMember(nextGuildId) &&
+				request.resource.data.id == resource.data.id &&
+				request.resource.data.role == resource.data.role &&
+				request.resource.data.diff(resource.data).affectedKeys().hasOnly(['guildId', 'updatedAt', 'updatedBy']);
+		}
+
+		match /skill_master/{skillId} {
+			allow read: if isSignedIn();
+			allow create, update, delete: if isAdmin();
+		}
+
+		match /users/{uid} {
+			allow read: if isSignedIn() && (
+				isAdmin() ||
+				isSelf(uid) ||
+				(isGuildAdmin() && resource.data.guildId == currentUserGuildId())
+			);
+
+			allow create: if isSignedIn() && request.resource.data.uid == uid && request.resource.data.id == uid && isValidAppRole(request.resource.data.role) && (
+				isAdmin() ||
+				(
+					isSelf(uid) &&
+					!hasUsersDoc(uid) &&
+					hasLegacyUserDoc(uid) &&
+					request.resource.data.guildId == legacyUserDoc(uid).guildId &&
+					request.resource.data.role == (
+						legacyUserDoc(uid).role == '管理者' ? 'admin' : 'member'
+					)
+				)
+			);
+
+			allow update: if isSignedIn() && (
+				(
+					isAdmin() &&
+					request.resource.data.uid == resource.data.uid &&
+					request.resource.data.id == resource.data.id &&
+					isValidAppRole(request.resource.data.role)
+				) ||
+				(
+					isSelf(uid) &&
+					preservesUserIdentity(uid) &&
+					request.resource.data.guildId == resource.data.guildId &&
+					request.resource.data.role == resource.data.role &&
+					request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'updatedAt', 'updatedBy'])
+				) ||
+				isGuildClaimForOwnCreatedGuild(uid) ||
+				(
+					isGuildAdmin() &&
+					resource.data.guildId == currentUserGuildId() &&
+					resource.data.role != 'admin' &&
+					preservesUserIdentity(uid) &&
+					request.resource.data.guildId == resource.data.guildId &&
+					request.resource.data.role != 'admin' &&
+					request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt', 'updatedBy'])
+				)
+			);
+
+			allow delete: if isAdmin();
+		}
+
+		match /user_skills/{userId} {
+			allow read: if isSignedIn() && (
+				isAdmin() ||
+				isSelf(userId) ||
+				isCurrentUsersGuildMember(userId)
+			);
+
+			allow create, update: if isSignedIn() && request.resource.data.userId == userId && (
+				isAdmin() ||
+				isSelf(userId) ||
+				(
+					isGuildAdmin() &&
+					isCurrentUsersGuildMember(userId)
+				)
+			);
+
+			allow delete: if isSignedIn() && (
+				isAdmin() ||
+				isSelf(userId) ||
+				(
+					isGuildAdmin() &&
+					isCurrentUsersGuildMember(userId)
+				)
+			);
+		}
+
+		/*
+		 * Legacy collections are still used by the current UI.
+		 * Keep them protected until issue #51 removes the compatibility layer.
+		 */
+		match /user/{uid} {
+			allow read: if isSignedIn() && (
+				isAdmin() ||
+				isSelf(uid) ||
+				(isGuildAdmin() && isCurrentLegacyUsersGuildMember(uid))
+			);
+
+			allow create: if isSignedIn() && request.resource.data.id == uid && (
+				isAdmin() ||
+				(
+					isSelf(uid) &&
+					!hasLegacyUserDoc(uid) &&
+					request.resource.data.role == 'エンドユーザー'
+				)
+			);
+
+			allow update: if isSignedIn() && (
+				(
+					isAdmin() &&
+					request.resource.data.id == resource.data.id
+				) ||
+				(
+					isSelf(uid) &&
+					preservesLegacyIdentity(uid) &&
+					request.resource.data.guildId == resource.data.guildId &&
+					request.resource.data.role == resource.data.role &&
+					request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+						'iconUrl',
+						'charaName',
+						'charaNameKana',
+						'affiliationDate',
+						'affiliationNum',
+						'situation',
+						'gameStartDateAt',
+						'contact',
+						'birthDateAt',
+						'lastLoginDateAt',
+						'skillRecord',
+						'proficiencyLevel',
+						'updatedAt',
+						'updatedBy'
+					])
+				) ||
+				isLegacyGuildClaimForOwnCreatedGuild(uid) ||
+				(
+					isGuildAdmin() &&
+					isCurrentLegacyUsersGuildMember(uid) &&
+					resource.data.role != '管理者' &&
+					preservesLegacyIdentity(uid) &&
+					request.resource.data.guildId == resource.data.guildId &&
+					request.resource.data.role == resource.data.role &&
+					request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+						'skillRecord',
+						'proficiencyLevel',
+						'updatedAt',
+						'updatedBy'
+					])
+				)
+			);
+
+			allow delete: if isAdmin();
+		}
+
+		match /guild/{guildId} {
+			allow read: if isSignedIn() && canReadGuild(guildId);
+
+			allow create: if isSignedIn() &&
+				request.resource.data.createdBy == authUid() &&
+				request.resource.data.guildMember.keys().hasOnly([authUid()]) &&
+				request.resource.data.officialMembers == 1 &&
+				(
+					isAdmin() ||
+					currentUserGuildId() == null ||
+					currentUserGuildId() == ''
+				);
+
+			allow update: if isSignedIn() &&
+				canManageGuild(guildId) &&
+				request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+					'guildName',
+					'guildNameKana',
+					'guildFoundingDateAt',
+					'situation',
+					'guildIdInGame',
+					'officialMembers',
+					'guildMemo',
+					'guildLogo',
+					'guildMember',
+					'updatedAt',
+					'updatedBy'
+				]);
+
+			allow delete: if isAdmin();
+		}
+	}
+}

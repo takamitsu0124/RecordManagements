@@ -1,0 +1,137 @@
+rules_version = '2';
+
+service firebase.storage {
+	match /b/{bucket}/o {
+		function isSignedIn() {
+			return request.auth != null;
+		}
+
+		function authUid() {
+			return request.auth.uid;
+		}
+
+		function usersPath(uid) {
+			return /databases/(default)/documents/users/$(uid);
+		}
+
+		function legacyUsersPath(uid) {
+			return /databases/(default)/documents/user/$(uid);
+		}
+
+		function guildPath(guildId) {
+			return /databases/(default)/documents/guild/$(guildId);
+		}
+
+		function hasUsersDoc(uid) {
+			return firestore.exists(usersPath(uid));
+		}
+
+		function hasLegacyUserDoc(uid) {
+			return firestore.exists(legacyUsersPath(uid));
+		}
+
+		function usersDoc(uid) {
+			return firestore.get(usersPath(uid)).data;
+		}
+
+		function legacyUserDoc(uid) {
+			return firestore.get(legacyUsersPath(uid)).data;
+		}
+
+		function hasGuildDoc(guildId) {
+			return firestore.exists(guildPath(guildId));
+		}
+
+		function guildDoc(guildId) {
+			return firestore.get(guildPath(guildId)).data;
+		}
+
+		function currentUserRole() {
+			return !isSignedIn()
+				? null
+				: hasUsersDoc(authUid())
+					? usersDoc(authUid()).role
+					: hasLegacyUserDoc(authUid())
+						? legacyUserDoc(authUid()).role == '管理者'
+							? 'admin'
+							: 'member'
+						: null;
+		}
+
+		function currentUserGuildId() {
+			return !isSignedIn()
+				? null
+				: hasUsersDoc(authUid())
+					? usersDoc(authUid()).guildId
+					: hasLegacyUserDoc(authUid())
+						? legacyUserDoc(authUid()).guildId
+						: null;
+		}
+
+		function isAdmin() {
+			return isSignedIn() && currentUserRole() == 'admin';
+		}
+
+		function isGuildAdmin() {
+			return isSignedIn() && currentUserRole() == 'guild_admin';
+		}
+
+		function isSelf(uid) {
+			return isSignedIn() && authUid() == uid;
+		}
+
+		function isGuildMember(guildId) {
+			return hasGuildDoc(guildId) && guildDoc(guildId).guildMember[authUid()] != null;
+		}
+
+		function canReadGuildAssets(guildId) {
+			return isAdmin() || currentUserGuildId() == guildId || isGuildMember(guildId);
+		}
+
+		function canManageGuildAssets(guildId) {
+			return isAdmin() || (isGuildAdmin() && canReadGuildAssets(guildId));
+		}
+
+		function isCurrentUsersGuildMember(uid) {
+			return hasUsersDoc(uid) && currentUserGuildId() != null && usersDoc(uid).guildId == currentUserGuildId();
+		}
+
+		function canReadPersonalUploads(uid) {
+			return isAdmin() || isSelf(uid) || (isGuildAdmin() && isCurrentUsersGuildMember(uid));
+		}
+
+		match /guild_logos/{guildId}/{allPaths=**} {
+			allow read: if isSignedIn() && canReadGuildAssets(guildId);
+			allow write: if isSignedIn() && canManageGuildAssets(guildId);
+		}
+
+		match /skill_records/{userId}/{allPaths=**} {
+			allow read: if isSignedIn() && canReadPersonalUploads(userId);
+			allow write: if isSignedIn() && (
+				isAdmin() ||
+				isSelf(userId) ||
+				(isGuildAdmin() && isCurrentUsersGuildMember(userId))
+			);
+		}
+
+		/*
+		 * Future profile / my page uploads should stay owner-scoped.
+		 * Reuse one of these whitelisted prefixes instead of uploading to arbitrary paths.
+		 */
+		match /profile_images/{userId}/{allPaths=**} {
+			allow read, write: if isSignedIn() && canReadPersonalUploads(userId);
+		}
+
+		match /user_images/{userId}/{allPaths=**} {
+			allow read, write: if isSignedIn() && canReadPersonalUploads(userId);
+		}
+
+		match /mypage_images/{userId}/{allPaths=**} {
+			allow read, write: if isSignedIn() && canReadPersonalUploads(userId);
+		}
+
+		match /{allPaths=**} {
+			allow read, write: if false;
+		}
+	}
+}

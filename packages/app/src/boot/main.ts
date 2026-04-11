@@ -274,7 +274,16 @@ export default boot(async ({ app, router }) => {
 			return
 		}
 
-		if (authUser && isDeniedUserScope(to.params.userId, globalLoginUserData.value)) {
+		const isGuildAdminManagingOwnGuildMember =
+			globalLoginUserData.value.role === 'guild_admin' &&
+			typeof to.params.guildId === 'string' &&
+			to.params.guildId === globalLoginUserData.value.guildId
+
+		if (
+			authUser &&
+			isDeniedUserScope(to.params.userId, globalLoginUserData.value) &&
+			!isGuildAdminManagingOwnGuildMember
+		) {
 			notifyError('他ユーザーの画面にはアクセスできません。')
 			next({ name: 'RMHome', replace: true })
 			return

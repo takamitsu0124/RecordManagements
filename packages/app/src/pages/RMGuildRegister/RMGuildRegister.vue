@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
+import { dbUserModule } from '@rm/db/src/fireStore/User'
+import { dbUsersModule, writeDocWithRandomId } from '@rm/db'
 import { defaultGuild, Guild } from '@rm/types'
 import { globalLoginUserData } from 'src/boot/main'
 import RMInput from 'src/components/RMInput/RMInput.vue'
@@ -23,6 +25,7 @@ const onSubmit = async () => {
 
   await useSpinner(async () => {
     try {
+      const creatorId = globalLoginUserData.value.id
       const newGuild: Guild = {
         ...defaultGuild(),
         guildName: guildName.value,
@@ -30,31 +33,35 @@ const onSubmit = async () => {
         situation: '存続',
         officialMembers: 1,
         guildMember: {
-          [globalLoginUserData.value.id]: {
+          [creatorId]: {
             name: globalLoginUserData.value.displayName || '',
           },
         },
       }
 
-      await dbGuildModule.insert(newGuild)
-      await dbGuildModule.fetch()
-
-      const createdGuild = Array.from(dbGuildModule.data.values())
-        .sort(
-          (a, b) =>
-            (b.createdAt instanceof Date ? b.createdAt.getTime() : 0) -
-            (a.createdAt instanceof Date ? a.createdAt.getTime() : 0)
-        )
-        .find(
-          (guild) =>
-            guild.createdBy === globalLoginUserData.value.id &&
-            guild.guildName === guildName.value &&
-            guild.guildMemo === guildDescription.value
-        )
+      const createdGuild = await writeDocWithRandomId(dbGuildModule, newGuild)
 
       notifySuccess('ギルドが正常に登録されました。')
 
-      if (createdGuild?.id) {
+      if (createdGuild?.id && creatorId) {
+        if (globalLoginUserData.value.role !== 'admin') {
+          await Promise.all([
+            dbUsersModule.doc(creatorId).merge({
+              guildId: createdGuild.id,
+              role: 'guild_admin',
+            }),
+            dbUserModule.doc(creatorId).merge({
+              guildId: createdGuild.id,
+            }),
+          ])
+
+          globalLoginUserData.value = {
+            ...globalLoginUserData.value,
+            guildId: createdGuild.id,
+            role: 'guild_admin',
+          }
+        }
+
         router.push({
           name: 'RMGuildDetail',
           params: { guildId: createdGuild.id },

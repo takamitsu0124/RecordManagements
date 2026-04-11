@@ -6,9 +6,10 @@ import Divider from 'primevue/divider'
 import Dropdown from 'primevue/dropdown'
 import ProgressSpinner from 'primevue/progressspinner'
 import ToggleButton from 'primevue/togglebutton'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from '@rm/db'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
 import { dbUserModule } from '@rm/db/src/fireStore/User'
-import { dbUsersModule } from '@rm/db/src/fireStore/Users'
 import { AppRole, AppUser, Guild, User } from '@rm/types'
 import { canManageGuildMembers, globalLoginUserData, hasAdmin } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -142,10 +143,19 @@ const loadGuildUsers = async () => {
 	isMemberLoading.value = true
 
 	try {
-		await dbUsersModule.fetch()
-		guildUsers.value = Array.from(dbUsersModule.data.values()).filter(
-			(user) => user.guildId === currentGuildId.value
+		const guildUsersQuery = query(
+			collection(db, 'users'),
+			where('guildId', '==', currentGuildId.value)
 		)
+		const guildUsersSnapshot = await getDocs(guildUsersQuery)
+		guildUsers.value = guildUsersSnapshot.docs.map((doc) => {
+			const data = doc.data() as AppUser
+			return {
+				...data,
+				id: data.id || doc.id,
+				uid: data.uid || doc.id,
+			}
+		})
 		syncRoleDrafts()
 	} catch (error) {
 		notifyError('ギルドメンバー管理情報の取得に失敗しました。')
