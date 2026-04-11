@@ -18,6 +18,13 @@ const routes = [
           import('src/pages/RMUserRegister/RMUserRegisterConfirm.vue'),
         meta: { roles: ['admin'] },
       },
+      {
+        name: 'RMSkillMasterAdmin',
+        path: '/RMSkillMasterAdmin',
+        component: () =>
+          import('src/pages/RMSkillMasterAdmin/RMSkillMasterAdmin.vue'),
+        meta: { roles: ['admin'] },
+      },
       // ギルド登録
       {
         name: 'RMGuildRegister',
