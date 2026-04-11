@@ -2,6 +2,7 @@ import { User } from '@rm/types'
 import { auth, magnetar } from '../config'
 import { formatDataTimestampToDate } from '../utils'
 
+/** @deprecated Use dbUsersModule for new implementations targeting the users collection. */
 export const dbUserModule = magnetar.collection<User>('user', {
   modifyPayloadOn: {
     insert: (payload: User) => {

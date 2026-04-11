@@ -1,5 +1,7 @@
 import { DefaultType } from './default'
 import { Guild } from './Guild'
+
+/** @deprecated Use AppUser + UserSkill + SkillMaster for new implementations. */
 export type User = {
   /** 自身のアイコン */
   iconUrl: string
@@ -154,4 +156,3 @@ export function defaultUser(): User {
 
 export type SkillRecord = User['skillRecord']
 export type ProficiencyLevel = User['proficiencyLevel']
-
