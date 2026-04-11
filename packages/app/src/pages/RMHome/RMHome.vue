@@ -1,114 +1,59 @@
 <script lang="ts" setup>
-import { dbUserModule } from '@rm/db/src/fireStore/User'
-import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
-import { Guild, User } from '@rm/types'
-import { globalLoginUserData, lacksGuildId } from 'src/boot/main'
+import { hasAdmin, hasGuildId, globalLoginUserData, lacksGuildId } from 'src/boot/main'
 import RMCard from 'src/components/RMCard/RMCard.vue'
 import RMIcon from 'src/components/RMIcon/RMIcon.vue'
-import ProgressSpinner from 'primevue/progressspinner'
-import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { notifyError } from 'src/composables/useAppNotifications'
 
 const router = useRouter()
 
-const currentUserCharaName = ref<string | null>(null)
-const hasUserCharaNameInAnyGuild = ref(false)
-const isLoadingGuildCheck = ref(true)
-const hasInitialized = ref(false)
-
-const loadHomeData = async (userId: string) => {
-  try {
-    isLoadingGuildCheck.value = true
-    hasUserCharaNameInAnyGuild.value = false
-
-    await dbUserModule.doc(userId).fetch()
-    const userData = dbUserModule.doc(userId).data as User | null
-
-    if (userData && userData.charaName) {
-      currentUserCharaName.value = userData.charaName
-    } else {
-      console.warn('ログインユーザーのcharaNameが見つかりません。')
-      return
-    }
-
-    await dbGuildModule.fetch()
-    const allGuilds: Guild[] = Array.from(dbGuildModule.data.values())
-
-    for (const guild of allGuilds) {
-      for (const memberUid in guild.guildMember) {
-        if (guild.guildMember[memberUid].name === currentUserCharaName.value) {
-          hasUserCharaNameInAnyGuild.value = true
-          break
-        }
-      }
-      if (hasUserCharaNameInAnyGuild.value) break
-    }
-  } catch (error) {
-    console.error('ギルド情報の取得中にエラーが発生しました:', error)
-    notifyError('所属情報の取得に失敗しました。')
-  } finally {
-    isLoadingGuildCheck.value = false
-  }
+const registerGuild = () => {
+	router.push({ name: 'RMGuildRegister' })
 }
 
-watch(
-  () => globalLoginUserData.value.id,
-  async (userId) => {
-    if (!userId) {
-      if (hasInitialized.value) {
-        isLoadingGuildCheck.value = false
-      }
-      return
-    }
-
-    hasInitialized.value = true
-    await loadHomeData(userId)
-  },
-  { immediate: true }
-)
-
-const registerGuild = () => {
-  router.push('RMGuildRegister')
+const registerUser = () => {
+	router.push({ name: 'RMUserRegister' })
 }
 
 const selectGuild = () => {
-  if (!globalLoginUserData.value.id) {
-    notifyError('ユーザー情報がまだ読み込まれていません。')
-    return
-  }
+	if (!globalLoginUserData.value.guildId) {
+		notifyError('所属ギルド情報が見つかりません。')
+		return
+	}
 
-  const userData = dbUserModule.doc(globalLoginUserData.value.id).data as User | null
-  const userGuildId = userData?.guildId
-
-  if (userGuildId) {
-    router.push({ name: 'RMGuildDetail', params: { guildId: userGuildId } })
-  } else {
-    console.error('ログインユーザーのギルドIDが見つかりません。')
-    notifyError('所属ギルド情報が見つかりません。')
-  }
+	router.push({
+		name: 'RMGuildDetail',
+		params: { guildId: globalLoginUserData.value.guildId },
+	})
 }
 
 const goToUserEdit = () => {
-  if (globalLoginUserData.value.id) {
-    router.push({
-      name: 'RMUserEdit',
-      params: { userId: globalLoginUserData.value.id },
-    })
-  } else {
-    notifyError('ユーザー情報が見つかりません。')
-  }
+	if (!globalLoginUserData.value.id) {
+		notifyError('ユーザー情報が見つかりません。')
+		return
+	}
+
+	router.push({
+		name: 'RMUserEdit',
+		params: { userId: globalLoginUserData.value.id },
+	})
 }
 </script>
 
 <template>
   <div class="rm-page rm-page--top">
-    <div v-if="isLoadingGuildCheck" class="rm-state-card">
-      <ProgressSpinner strokeWidth="5" />
-      <p class="rm-muted">所属情報を確認中...</p>
-    </div>
+    <div class="_home_inner_container">
+      <RMCard
+        v-if="hasAdmin"
+        class="_card_content"
+        :cardShape="'roundM'"
+        :shadowDirection="'allSide'"
+        @click="registerUser"
+      >
+        <RMIcon class="_icon_setting" name="person_add" />
+        <div class="_content_text">ユーザー登録</div>
+      </RMCard>
 
-    <div v-else class="_home_inner_container">
       <RMCard
         v-if="lacksGuildId"
         class="_card_content"
@@ -119,7 +64,9 @@ const goToUserEdit = () => {
         <RMIcon class="_icon_setting" name="add_home" />
         <div class="_content_text">ギルド登録</div>
       </RMCard>
+
       <RMCard
+        v-if="hasGuildId"
         class="_card_content"
         :cardShape="'roundM'"
         :shadowDirection="'allSide'"

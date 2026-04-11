@@ -27,6 +27,7 @@ const routes = [
         name: 'RMGuildEdit',
         path: '/RMGuildEdit/:guildId',
         component: () => import('src/pages/RMGuildEdit/RMGuildEdit.vue'),
+        meta: { roles: ['admin', 'guild_admin'] },
       },
       // スキル投稿 (追加)
       {

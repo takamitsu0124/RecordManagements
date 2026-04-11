@@ -3,12 +3,7 @@ import RMCard from 'src/components/RMCard/RMCard.vue'
 import RMLogo from 'src/components/RMLogo/RMLogo.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import { globalRegisterForm } from './register'
-import {
-  stringDateFormat,
-  maskPassword,
-  createUser,
-  dbUserCreate,
-} from '@rm/utils'
+import { maskPassword, createUser, dbUserCreate } from '@rm/utils'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
@@ -19,9 +14,14 @@ const bgImgPath = ref(
   'url("https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Fregister_background.jpeg?alt=media&token=2a3fd22a-6f76-4c06-90a0-83152a09179f") no-repeat center'
 )
 const router = useRouter()
-const { registerInfo } = globalRegisterForm()
+const { registerInfo, defaultRegisterInfo } = globalRegisterForm()
 const uid = ref<string>('')
 const errorMsg = ref<string>('')
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  guild_admin: 'Guild Admin',
+  member: 'General Member',
+}
 
 const registerSave = async () => {
   await useSpinner(async () => {
@@ -35,16 +35,21 @@ const registerSave = async () => {
       // uidを取得
       uid.value = userCredential
     } catch (error) {
-      if (error === 'auth/email-already-in-use') {
+      const errorCode =
+        typeof error === 'object' && error && 'code' in error
+          ? String(error.code)
+          : String(error)
+
+      if (errorCode === 'auth/email-already-in-use') {
         errorMsg.value = 'このメールアドレスは既に登録されています'
       }
-      if (error === 'auth/invalid-email') {
+      if (errorCode === 'auth/invalid-email') {
         errorMsg.value = 'メールアドレスの形式が無効です'
       }
-      if (error === 'auth/operation-not-allowed') {
+      if (errorCode === 'auth/operation-not-allowed') {
         errorMsg.value = 'メール/パスワードログインが有効になっていません。'
       }
-      if (error === 'auth/weak-password') {
+      if (errorCode === 'auth/weak-password') {
         errorMsg.value = 'パスワードが弱すぎます'
       }
       if (errorMsg.value) {
@@ -66,10 +71,12 @@ const registerSave = async () => {
       // データベースユーザーの作成
       await dbUserCreate(uid.value, registerInfo.value).then(() => {
         useToast({
-          toastTitle: '登録完了、ログインしました',
+          toastTitle: 'ユーザー登録が完了しました',
           toastMovingTime: 3,
         })
       })
+      registerInfo.value = defaultRegisterInfo()
+      await router.push({ name: 'RMHome' })
     } catch (error) {
       console.error(error)
     }
@@ -108,27 +115,21 @@ const registerSave = async () => {
             </div>
           </div>
           <div class="_content">
-            <div class="_label">キャラネーム</div>
+            <div class="_label">表示名</div>
             <div class="_value">
               {{ `　${!!registerInfo.name ? registerInfo.name : '-'}` }}
             </div>
           </div>
           <div class="_content">
-            <div class="_label">キャラネーム（カタカナ）</div>
+            <div class="_label">所属ギルドID</div>
             <div class="_value">
-              {{ `　${!!registerInfo.nameKana ? registerInfo.nameKana : '-'}` }}
+              {{ `　${!!registerInfo.guildId ? registerInfo.guildId : '-'}` }}
             </div>
           </div>
           <div class="_content">
-            <div class="_label">誕生日</div>
+            <div class="_label">権限</div>
             <div class="_value">
-              {{
-                `　${
-                  !!registerInfo.birthDateAt
-                    ? stringDateFormat(registerInfo.birthDateAt)
-                    : '-'
-                }`
-              }}
+              {{ `　${roleLabels[registerInfo.role] ?? '-'}` }}
             </div>
           </div>
         </div>

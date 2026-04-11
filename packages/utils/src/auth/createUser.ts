@@ -1,5 +1,7 @@
-import { auth } from '@rm/db'
+import { firebaseConfig } from '@rm/db'
+import { deleteApp, getApp, getApps, initializeApp } from 'firebase/app'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { getAuth } from 'firebase/auth'
 
 /**
  * 入力した情報をAuthに登録する(アカウント作成)
@@ -10,17 +12,26 @@ export const createUser = async (
   email: string,
   password: string
 ): Promise<string> => {
-  return new Promise((resolve, rejects) => {
-    // 入力情報(メールアドレス、パスワードでアカウント作成する)
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // 登録成功
-        const user = userCredential.user
-        resolve(user.uid)
-      })
-      .catch((error) => {
-        rejects(error.code)
-        throw error.code
-      })
-  })
+  const secondaryAppName = 'rm-admin-user-creation'
+  const secondaryApp = getApps().some((app) => app.name === secondaryAppName)
+    ? getApp(secondaryAppName)
+    : initializeApp(firebaseConfig, secondaryAppName)
+  const secondaryAuth = getAuth(secondaryApp)
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      secondaryAuth,
+      email,
+      password
+    )
+
+    return userCredential.user.uid
+  } catch (error) {
+    throw error
+  } finally {
+    if (secondaryAuth.currentUser) {
+      await secondaryAuth.signOut()
+    }
+    await deleteApp(secondaryApp)
+  }
 }

@@ -1,170 +1,285 @@
 import { onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth'
-import { auth } from '@rm/db'
+import { AppRole, AppUser, User, defaultAppUser } from '@rm/types'
+import { auth, dbUserModule, dbUsersModule } from '@rm/db'
 import { Router } from 'vue-router'
 import { boot } from 'quasar/wrappers'
 import { computed, ref } from 'vue'
 import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
-import { defaultUser, User } from '@rm/types'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
-import { dbUserModule } from '@rm/db/src/fireStore/User'
+import { notifyError } from 'src/composables/useAppNotifications'
 
 export const globalPrePath = ref<string>('')
-export const globalLoginUserData = ref<User>(defaultUser())
+export const globalLoginUserData = ref<AppUser>(defaultAppUser())
 
 export const hasGuildId = computed(() => {
-  const isGuild = globalLoginUserData.value.guildId === '' ? false : true
-  const isRole = globalLoginUserData.value.role === '管理者' ? true : false
-
-  return isGuild === true && isRole === false
+	return globalLoginUserData.value.guildId !== ''
 })
 
 export const lacksGuildId = computed(() => {
-  const isGuild = globalLoginUserData.value.guildId === '' ? false : true
-  const isRole = globalLoginUserData.value.role === '管理者' ? true : false
-
-  return isGuild === false && isRole === false
+	return !hasGuildId.value && globalLoginUserData.value.role !== 'admin'
 })
 
 export const hasAdmin = computed(() => {
-  return globalLoginUserData.value.role === '管理者'
+	return globalLoginUserData.value.role === 'admin'
+})
+
+export const hasGuildAdmin = computed(() => {
+	return globalLoginUserData.value.role === 'guild_admin'
+})
+
+export const canManageGuildMembers = computed(() => {
+	return hasAdmin.value || hasGuildAdmin.value
 })
 
 const publicRouteNames = new Set([
-  'RMPreLogin',
-  'RMMailLogin',
-  'RMPhoneLogin',
-  'RMLoginSmsCode',
-  'RMUserRegister',
-  'RMUserRegisterConfirm',
+	'RMPreLogin',
+	'RMMailLogin',
+	'RMPhoneLogin',
+	'RMLoginSmsCode',
 ])
 
 const isPublicRoute = (routeName: unknown) => {
-  return typeof routeName === 'string' && publicRouteNames.has(routeName)
+	return typeof routeName === 'string' && publicRouteNames.has(routeName)
 }
 
 const getLandingRoute = (user: FirebaseAuthUser | null) => {
-  return user ? { name: 'RMHome' } : { name: 'RMPreLogin' }
+	return user ? { name: 'RMHome' } : { name: 'RMPreLogin' }
+}
+
+const mapLegacyRoleToAppRole = (role: User['role'] | undefined): AppRole => {
+	return role === '管理者' ? 'admin' : 'member'
+}
+
+const createFallbackAppUser = (authUser: FirebaseAuthUser | null): AppUser => {
+	return {
+		...defaultAppUser(),
+		id: authUser?.uid ?? '',
+		uid: authUser?.uid ?? '',
+		email: authUser?.email ?? '',
+		displayName: authUser?.displayName ?? authUser?.email ?? '',
+	}
+}
+
+const buildAppUserFromLegacyUser = (
+	authUser: FirebaseAuthUser,
+	legacyUser: User
+): AppUser => {
+	return {
+		...defaultAppUser(),
+		id: authUser.uid,
+		uid: authUser.uid,
+		email: legacyUser.contact.email || authUser.email || '',
+		displayName: legacyUser.charaName || authUser.displayName || authUser.email || '',
+		guildId: legacyUser.guildId || '',
+		role: mapLegacyRoleToAppRole(legacyUser.role),
+		createdAt: legacyUser.createdAt,
+		createdBy: legacyUser.createdBy,
+		updatedAt: legacyUser.updatedAt,
+		updatedBy: legacyUser.updatedBy,
+	}
+}
+
+const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
+	const appUser = await dbUsersModule.doc(authUser.uid).fetch({ force: true })
+
+	if (appUser?.id) {
+		return {
+			...defaultAppUser(),
+			...appUser,
+			id: appUser.id || authUser.uid,
+			uid: appUser.uid || authUser.uid,
+			email: appUser.email || authUser.email || '',
+			displayName:
+				appUser.displayName || authUser.displayName || authUser.email || '',
+		}
+	}
+
+	const legacyUser = await dbUserModule.doc(authUser.uid).fetch({ force: true })
+
+	if (legacyUser?.id) {
+		const migratedAppUser = buildAppUserFromLegacyUser(authUser, legacyUser)
+		await dbUsersModule.doc(authUser.uid).insert(migratedAppUser)
+		return migratedAppUser
+	}
+
+	return createFallbackAppUser(authUser)
 }
 
 const shouldRedirectForAuthState = (
-  path: string,
-  routeName: unknown,
-  user: FirebaseAuthUser | null
+	path: string,
+	routeName: unknown,
+	user: FirebaseAuthUser | null
 ) => {
-  if (path === '/') {
-    return true
-  }
+	if (path === '/') {
+		return true
+	}
 
-  if (!routeName) {
-    return false
-  }
+	if (!routeName) {
+		return false
+	}
 
-  if (user) {
-    return isPublicRoute(routeName)
-  }
+	if (user) {
+		return isPublicRoute(routeName)
+	}
 
-  return !isPublicRoute(routeName)
+	return !isPublicRoute(routeName)
+}
+
+const isDeniedGuildScope = (
+	targetGuildId: unknown,
+	currentUser: AppUser
+): targetGuildId is string => {
+	return (
+		typeof targetGuildId === 'string' &&
+		targetGuildId !== '' &&
+		currentUser.role !== 'admin' &&
+		targetGuildId !== currentUser.guildId
+	)
+}
+
+const isDeniedUserScope = (
+	targetUserId: unknown,
+	currentUser: AppUser
+): targetUserId is string => {
+	return (
+		typeof targetUserId === 'string' &&
+		targetUserId !== '' &&
+		currentUser.role !== 'admin' &&
+		targetUserId !== currentUser.id
+	)
 }
 
 const checkRouter = (router: Router) => {
-  let currentAuthUser: FirebaseAuthUser | null = auth.currentUser
-  let resolveInitialAuthState: () => void = () => {}
-  const initialAuthStateResolved = new Promise<void>((resolve) => {
-    resolveInitialAuthState = resolve
-  })
-  let hasResolvedInitialAuthState = false
+	let currentAuthUser: FirebaseAuthUser | null = auth.currentUser
+	let resolveInitialAuthState: () => void = () => {}
+	const initialAuthStateResolved = new Promise<void>((resolve) => {
+		resolveInitialAuthState = resolve
+	})
+	let hasResolvedInitialAuthState = false
 
-  const syncRouteWithAuthState = async (user: FirebaseAuthUser | null) => {
-    const { path, name } = router.currentRoute.value
+	const ensureRouteRoleAccess = async (routeName: unknown) => {
+		const allowedRoles = router.currentRoute.value.meta?.roles as
+			| AppRole[]
+			| undefined
 
-    if (!shouldRedirectForAuthState(path, name, user)) {
-      return
-    }
+		if (!routeName || !allowedRoles?.length) {
+			return
+		}
 
-    const landingRoute = getLandingRoute(user)
+		if (!allowedRoles.includes(globalLoginUserData.value.role)) {
+			notifyError('この画面にアクセスする権限がありません。')
+			await router.replace({ name: 'RMHome' })
+		}
+	}
 
-    if (name === landingRoute.name) {
-      return
-    }
+	const syncRouteWithAuthState = async (user: FirebaseAuthUser | null) => {
+		const { path, name } = router.currentRoute.value
 
-    await router.replace(landingRoute)
-  }
+		if (!shouldRedirectForAuthState(path, name, user)) {
+			return
+		}
 
-  onAuthStateChanged(auth, async (user) => {
-    currentAuthUser = user
+		const landingRoute = getLandingRoute(user)
 
-    if (user) {
-      await useSpinner(async () => {
-        const userData: User =
-          (await dbUserModule.doc(user.uid).fetch({ force: true })) ??
-          defaultUser()
-        if (userData.id) {
-          await dbUserModule
-            .doc(user.uid)
-            .merge({ lastLoginDateAt: new Date() })
-        }
-        globalLoginUserData.value = userData
-      })
-    } else {
-      globalLoginUserData.value = defaultUser()
-    }
+		if (name === landingRoute.name) {
+			return
+		}
 
-    if (hasResolvedInitialAuthState === false) {
-      hasResolvedInitialAuthState = true
-      resolveInitialAuthState()
-    }
+		await router.replace(landingRoute)
+	}
 
-    await syncRouteWithAuthState(user)
-  })
+	onAuthStateChanged(auth, async (user) => {
+		currentAuthUser = user
 
-  return {
-    initialAuthStateResolved,
-    getCurrentAuthUser: () => currentAuthUser,
-  }
+		if (user) {
+			await useSpinner(async () => {
+				globalLoginUserData.value = await loadAppUser(user)
+			})
+		} else {
+			globalLoginUserData.value = defaultAppUser()
+		}
+
+		if (hasResolvedInitialAuthState === false) {
+			hasResolvedInitialAuthState = true
+			resolveInitialAuthState()
+		}
+
+		await syncRouteWithAuthState(user)
+		await ensureRouteRoleAccess(router.currentRoute.value.name)
+	})
+
+	return {
+		initialAuthStateResolved,
+		getCurrentAuthUser: () => currentAuthUser,
+	}
 }
 
 export default boot(async ({ app, router }) => {
-  app.use(PrimeVue, {
-    ripple: true,
-    theme: {
-      preset: Aura,
-      options: {
-        darkModeSelector: false,
-        cssLayer: false,
-      },
-    },
-  })
+	app.use(PrimeVue, {
+		ripple: true,
+		theme: {
+			preset: Aura,
+			options: {
+				darkModeSelector: false,
+				cssLayer: false,
+			},
+		},
+	})
 
-  const { initialAuthStateResolved, getCurrentAuthUser } = checkRouter(router)
+	const { initialAuthStateResolved, getCurrentAuthUser } = checkRouter(router)
 
-  router.beforeEach(async (to, from, next) => {
-    globalPrePath.value = from.path
+	router.beforeEach(async (to, from, next) => {
+		globalPrePath.value = from.path
 
-    await initialAuthStateResolved
+		await initialAuthStateResolved
 
-    const authUser = getCurrentAuthUser()
+		const authUser = getCurrentAuthUser()
 
-    if (to.path === '/') {
-      next({ ...getLandingRoute(authUser), replace: true })
-      return
-    }
+		if (to.path === '/') {
+			next({ ...getLandingRoute(authUser), replace: true })
+			return
+		}
 
-    if (!to.name) {
-      next()
-      return
-    }
+		if (!to.name) {
+			next()
+			return
+		}
 
-    if (!authUser && !isPublicRoute(to.name)) {
-      next({ name: 'RMPreLogin', replace: true })
-      return
-    }
+		if (!authUser && !isPublicRoute(to.name)) {
+			next({ name: 'RMPreLogin', replace: true })
+			return
+		}
 
-    if (authUser && isPublicRoute(to.name)) {
-      next({ name: 'RMHome', replace: true })
-      return
-    }
+		if (authUser && isPublicRoute(to.name)) {
+			next({ name: 'RMHome', replace: true })
+			return
+		}
 
-    next()
-  })
+		const allowedRoles = to.meta?.roles as AppRole[] | undefined
+
+		if (
+			authUser &&
+			allowedRoles?.length &&
+			!allowedRoles.includes(globalLoginUserData.value.role)
+		) {
+			notifyError('この画面にアクセスする権限がありません。')
+			next({ name: 'RMHome', replace: true })
+			return
+		}
+
+		if (authUser && isDeniedGuildScope(to.params.guildId, globalLoginUserData.value)) {
+			notifyError('他ギルドの画面にはアクセスできません。')
+			next({ name: 'RMHome', replace: true })
+			return
+		}
+
+		if (authUser && isDeniedUserScope(to.params.userId, globalLoginUserData.value)) {
+			notifyError('他ユーザーの画面にはアクセスできません。')
+			next({ name: 'RMHome', replace: true })
+			return
+		}
+
+		next()
+	})
 })
