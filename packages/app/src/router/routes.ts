@@ -10,6 +10,11 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     children: [
+      {
+        name: 'RMRoot',
+        path: '',
+        redirect: { name: 'RMPreLogin' },
+      },
       ...login,
       ...home,
       ...guild,
