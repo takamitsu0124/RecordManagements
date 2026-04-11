@@ -8,6 +8,7 @@ import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError } from 'src/composables/useAppNotifications'
+import { useSkillStore } from 'src/store'
 
 export const globalPrePath = ref<string>('')
 export const globalLoginUserData = ref<AppUser>(defaultAppUser())
@@ -151,6 +152,7 @@ const isDeniedUserScope = (
 }
 
 const checkRouter = (router: Router) => {
+	const skillStore = useSkillStore()
 	let currentAuthUser: FirebaseAuthUser | null = auth.currentUser
 	let resolveInitialAuthState: () => void = () => {}
 	const initialAuthStateResolved = new Promise<void>((resolve) => {
@@ -194,9 +196,16 @@ const checkRouter = (router: Router) => {
 
 		if (user) {
 			await useSpinner(async () => {
+				skillStore.clearCurrentUserSkills()
 				globalLoginUserData.value = await loadAppUser(user)
+				try {
+					await skillStore.fetchMasterData()
+				} catch (error) {
+					console.error('Failed to preload skill master data:', error)
+				}
 			})
 		} else {
+			skillStore.clearCurrentUserSkills()
 			globalLoginUserData.value = defaultAppUser()
 		}
 
