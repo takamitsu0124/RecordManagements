@@ -1,17 +1,16 @@
-import { defaultUser } from '@rm/types'
-import { dbUserModule } from './../../../db/src/fireStore/User'
+import { defaultAppUser } from '@rm/types'
+import { dbUsersModule } from '@rm/db'
 import { RegisterInfo } from 'src/pages/RMUserRegister/register'
-import { parseDateString } from '../format'
 import { useToast } from 'src/components/RMToast/RMToast'
 
 export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
   try {
-    await dbUserModule.doc(uid).insert({
-      ...defaultUser(),
-      charaName: info.name,
-      charaNameKana: info.nameKana,
-      birthDateAt: parseDateString(info.birthDateAt) || null,
-      id: uid
+    await dbUsersModule.doc(uid).insert({
+      ...defaultAppUser(),
+      id: uid,
+      uid,
+      email: info.email,
+      displayName: info.name,
     })
   } catch (e) {
     useToast({
