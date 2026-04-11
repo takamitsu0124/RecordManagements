@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import Dropdown from 'primevue/dropdown'
+import { AppRole } from '@rm/types'
 import { globalRegisterForm } from './register'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -17,6 +19,11 @@ const bgImgPath = ref(
   'url("https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Fregister_background.jpeg?alt=media&token=2a3fd22a-6f76-4c06-90a0-83152a09179f") no-repeat center'
 )
 const onFocus = ref<number>(0)
+const roleOptions: { label: string; value: AppRole }[] = [
+  { label: 'General Member', value: 'member' },
+  { label: 'Guild Admin', value: 'guild_admin' },
+  { label: 'Admin', value: 'admin' },
+]
 
 const registerConfirm = () => {
   errors.value.message = validateRegisterInfo(registerInfo.value)?.message ?? ''
@@ -24,6 +31,14 @@ const registerConfirm = () => {
   if (errors.value.message === '')
     router.push({ name: 'RMUserRegisterConfirm' })
   else return
+}
+
+const resetRegisterForm = () => {
+  registerInfo.value = defaultRegisterInfo()
+  errors.value = {
+    field: '',
+    message: '',
+  }
 }
 </script>
 
@@ -61,40 +76,36 @@ const registerConfirm = () => {
         <RMInput
           v-model="registerInfo.name"
           :class="['_register_input', { _input_active: onFocus === 3 }]"
-          label="キャラネーム"
+          label="表示名"
           type="text"
           requiredText="※必須"
-          placeholder="characterName"
+          placeholder="displayName"
           shadow
           @onFocus="onFocus = 3"
           @onBlur="onFocus = 0"
           :error2="errors.field === 'name'"
         />
         <RMInput
-          v-model="registerInfo.nameKana"
+          v-model="registerInfo.guildId"
           :class="['_register_input', { _input_active: onFocus === 4 }]"
-          label="キャラネーム（カタカナ）"
+          label="所属ギルドID"
           type="text"
-          requiredText="※必須"
-          placeholder="キャラクターネーム"
+          placeholder="guild-id (任意)"
           shadow
           @onFocus="onFocus = 4"
           @onBlur="onFocus = 0"
-          :error2="errors.field === 'nameKana'"
         />
-        <RMInput
-          v-model="registerInfo.birthDateAt"
-          :class="['_register_input', { _input_active: onFocus === 5 }]"
-          label="誕生日"
-          type="text"
-          placeholder="20240101"
-          :inputmode="'numeric'"
-          maxlength="8"
-          shadow
-          @onFocus="onFocus = 5"
-          @onBlur="onFocus = 0"
-          :error2="errors.field === 'birthDateAt'"
-        />
+        <div class="_role_area">
+          <div class="_role_label">権限</div>
+          <Dropdown
+            v-model="registerInfo.role"
+            :options="roleOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="_role_dropdown"
+            placeholder="権限を選択"
+          />
+        </div>
         <div class="_error_area" v-if="errors.message">
           {{ errors.message }}
         </div>
@@ -104,11 +115,11 @@ const registerConfirm = () => {
             class="_to_login"
             @click="
               () => {
-                router.push({ name: 'RMPreLogin' })
+                router.push({ name: 'RMHome' })
               }
             "
           >
-            ログイン画面へ
+            ホームへ
           </div>
         </div>
         <div class="_btn_area">
@@ -122,11 +133,7 @@ const registerConfirm = () => {
           />
           <RMButton
             class="_select_btn"
-            @click="
-              () => {
-                registerInfo = defaultRegisterInfo()
-              }
-            "
+            @click="resetRegisterForm"
             :button-shape="'ellipse'"
             :button-type="'standard'"
             label="キャンセル"
@@ -180,6 +187,18 @@ const registerConfirm = () => {
   text-decoration: underline
   cursor: pointer
   width: fit-content
+
+._role_area
+  display: flex
+  flex-direction: column
+  gap: 8px
+
+._role_label
+  font-size: 14px
+  font-weight: bold
+
+._role_dropdown
+  width: 100%
 
 ._btn_area
   display: flex

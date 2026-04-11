@@ -28,31 +28,9 @@ const router = useRouter()
             :buttonType="'standard'"
             bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
           />
-          <RMButton
-            class="_selectBtn"
-            @click="
-              () => {
-                // router.push('/RMPhoneLogin')
-              }
-            "
-            label="電話番号でログイン"
-            :buttonShape="'ellipse'"
-            :buttonType="'standard'"
-            bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
-            v-show="false"
-          />
-          <RMButton
-            class="_selectBtn"
-            @click="
-              () => {
-                router.push('/RMUserRegister')
-              }
-            "
-            label="新規登録"
-            :buttonShape="'ellipse'"
-            :buttonType="'standard'"
-            bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
-          />
+          <div class="_invite_notice">
+            アカウント作成は管理者のみ可能です。招待や登録が必要な場合は管理者へ依頼してください。
+          </div>
         </div>
       </div>
     </div>
@@ -115,6 +93,15 @@ const router = useRouter()
   justify-content: center
   align-items: center
   margin-bottom: 20px
+
+._invite_notice
+  width: 100%
+  max-width: 420px
+  margin-top: 12px
+  color: #475569
+  font-size: 14px
+  line-height: 1.7
+  text-align: center
 // PC
 @media screen and (min-width: 768px)
   ._login_form

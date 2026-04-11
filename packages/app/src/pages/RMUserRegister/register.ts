@@ -1,8 +1,7 @@
+import { AppRole, appRoles } from '@rm/types'
 import {
-  checkDateFormat,
   checkMailAddress,
   checkPassword,
-  kanaOnly,
   notEmpty,
 } from '@rm/utils'
 import { ref } from 'vue'
@@ -19,24 +18,24 @@ export interface RegisterInfo {
   email: string
   password: string
   name: string
-  nameKana: string
-  birthDateAt: string
+  guildId: string
+  role: AppRole
 }
 
 const registerInfo = ref<RegisterInfo>({
   email: '',
   password: '',
   name: '',
-  nameKana: '',
-  birthDateAt: '',
+  guildId: '',
+  role: 'member',
 })
 
 const defaultRegisterInfo = (): RegisterInfo => ({
   email: '',
   password: '',
   name: '',
-  nameKana: '',
-  birthDateAt: '',
+  guildId: '',
+  role: 'member',
 })
 
 /**
@@ -48,20 +47,22 @@ export function validateRegisterInfo(registerInfo: {
   email: string
   password: string
   name: string
-  nameKana: string
-  birthDateAt: string
+  guildId: string
+  role: AppRole
 }): ValidationError | null {
   const validators = [
     { field: 'email', validate: checkMailAddress },
     { field: 'password', validate: checkPassword },
     { field: 'name', validate: notEmpty },
-    { field: 'nameKana', validate: kanaOnly },
-    { field: 'birthDateAt', validate: checkDateFormat },
   ]
 
   for (const { field, validate } of validators) {
     const error = validate(registerInfo[field as keyof typeof registerInfo])
     if (error) return { field, message: error } // 最初に発生したエラーを返す
+  }
+
+  if (!appRoles.includes(registerInfo.role)) {
+    return { field: 'role', message: '権限を選択してください。' }
   }
 
   return null // エラーがない場合はnullを返す

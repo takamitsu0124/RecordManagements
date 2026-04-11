@@ -1,13 +1,14 @@
 const routes = [
   {
     path: '/',
-    component: () => import('src/layouts/layoutBeforeLoginNavigator.vue'),
+    component: () => import('src/layouts/layoutAfterLoginNavigator.vue'),
     children: [
       // ユーザー登録
       {
         name: 'RMUserRegister',
         path: '/RMUserRegister',
         component: () => import('src/pages/RMUserRegister/RMUserRegister.vue'),
+        meta: { roles: ['admin'] },
       },
       // ユーザー登録
       {
@@ -15,6 +16,7 @@ const routes = [
         path: '/RMUserRegisterConfirm',
         component: () =>
           import('src/pages/RMUserRegister/RMUserRegisterConfirm.vue'),
+        meta: { roles: ['admin'] },
       },
       // ギルド登録
       {

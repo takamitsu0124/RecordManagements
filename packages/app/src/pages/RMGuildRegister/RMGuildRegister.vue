@@ -31,7 +31,7 @@ const onSubmit = async () => {
         officialMembers: 1,
         guildMember: {
           [globalLoginUserData.value.id]: {
-            name: globalLoginUserData.value.charaName || '',
+            name: globalLoginUserData.value.displayName || '',
           },
         },
       }

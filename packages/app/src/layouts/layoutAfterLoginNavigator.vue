@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import { signOut } from 'firebase/auth'
+import { auth } from '@rm/db'
 import RMHeader from 'src/components/RMHeader/RMHeader.vue'
 import { ref } from 'vue'
 import { menu } from './index'
 import { useRouter } from 'vue-router'
+import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 
 const router = useRouter()
 const backgroundImg = ref<string>(
@@ -10,11 +13,21 @@ const backgroundImg = ref<string>(
 )
 const isOpen = ref<boolean>(false)
 
-const logout = () => {
-  console.log('logout')
+const logout = async () => {
+  try {
+    await signOut(auth)
+    notifySuccess('ログアウトしました。')
+    await router.push({ name: 'RMPreLogin' })
+  } catch (error) {
+    notifyError('ログアウトに失敗しました。')
+    console.error('Logout failed:', error)
+  }
 }
 
 const menuClick = (currentMenu: { name: string; url: string; isShow: boolean }) => {
+  if (!currentMenu.url) {
+    return
+  }
   router.push({ path: currentMenu.url })
 }
 </script>

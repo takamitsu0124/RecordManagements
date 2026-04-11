@@ -9,10 +9,7 @@ import { CreatePlugin as PluginVue3 } from '@magnetarjs/plugin-vue3'
 import { Magnetar } from '@magnetarjs/core'
 import { logger } from '@magnetarjs/utils'
 
-// ===============================
-// 0. Initialize firebase
-// ===============================
-export const firebaseApp = initializeApp({
+export const firebaseConfig = {
   apiKey: 'AIzaSyAbP781Dp0Nw-AStVWf2cTnrOcrOQO3H7U',
   authDomain: 'recordmanagements-756bf.firebaseapp.com',
   projectId: 'recordmanagements-756bf',
@@ -20,7 +17,12 @@ export const firebaseApp = initializeApp({
   messagingSenderId: '330209751384',
   appId: '1:330209751384:web:a944d02b0e5adfa8a5352d',
   measurementId: 'G-Z6LZKFB4BN'
-})
+}
+
+// ===============================
+// 0. Initialize firebase
+// ===============================
+export const firebaseApp = initializeApp(firebaseConfig)
 
 export const db = getFirestore(firebaseApp)
 export const auth = getAuth(firebaseApp)
