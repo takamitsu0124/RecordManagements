@@ -1,4 +1,4 @@
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth'
 import { auth } from '@rm/db'
 import { Router } from 'vue-router'
 import { boot } from 'quasar/wrappers'
@@ -30,8 +30,70 @@ export const hasAdmin = computed(() => {
   return globalLoginUserData.value.role === '管理者'
 })
 
+const publicRouteNames = new Set([
+  'RMPreLogin',
+  'RMMailLogin',
+  'RMPhoneLogin',
+  'RMLoginSmsCode',
+  'RMUserRegister',
+  'RMUserRegisterConfirm',
+])
+
+const isPublicRoute = (routeName: unknown) => {
+  return typeof routeName === 'string' && publicRouteNames.has(routeName)
+}
+
+const getLandingRoute = (user: FirebaseAuthUser | null) => {
+  return user ? { name: 'RMHome' } : { name: 'RMPreLogin' }
+}
+
+const shouldRedirectForAuthState = (
+  path: string,
+  routeName: unknown,
+  user: FirebaseAuthUser | null
+) => {
+  if (path === '/') {
+    return true
+  }
+
+  if (!routeName) {
+    return false
+  }
+
+  if (user) {
+    return isPublicRoute(routeName)
+  }
+
+  return !isPublicRoute(routeName)
+}
+
 const checkRouter = (router: Router) => {
+  let currentAuthUser: FirebaseAuthUser | null = auth.currentUser
+  let resolveInitialAuthState: () => void = () => {}
+  const initialAuthStateResolved = new Promise<void>((resolve) => {
+    resolveInitialAuthState = resolve
+  })
+  let hasResolvedInitialAuthState = false
+
+  const syncRouteWithAuthState = async (user: FirebaseAuthUser | null) => {
+    const { path, name } = router.currentRoute.value
+
+    if (!shouldRedirectForAuthState(path, name, user)) {
+      return
+    }
+
+    const landingRoute = getLandingRoute(user)
+
+    if (name === landingRoute.name) {
+      return
+    }
+
+    await router.replace(landingRoute)
+  }
+
   onAuthStateChanged(auth, async (user) => {
+    currentAuthUser = user
+
     if (user) {
       await useSpinner(async () => {
         const userData: User =
@@ -44,11 +106,22 @@ const checkRouter = (router: Router) => {
         }
         globalLoginUserData.value = userData
       })
-      router.push({ name: 'RMHome' })
     } else {
-      router.push({ name: 'RMPreLogin' })
+      globalLoginUserData.value = defaultUser()
     }
+
+    if (hasResolvedInitialAuthState === false) {
+      hasResolvedInitialAuthState = true
+      resolveInitialAuthState()
+    }
+
+    await syncRouteWithAuthState(user)
   })
+
+  return {
+    initialAuthStateResolved,
+    getCurrentAuthUser: () => currentAuthUser,
+  }
 }
 
 export default boot(async ({ app, router }) => {
@@ -63,9 +136,35 @@ export default boot(async ({ app, router }) => {
     },
   })
 
-  checkRouter(router)
-  router.beforeEach((to, from, next) => {
+  const { initialAuthStateResolved, getCurrentAuthUser } = checkRouter(router)
+
+  router.beforeEach(async (to, from, next) => {
     globalPrePath.value = from.path
+
+    await initialAuthStateResolved
+
+    const authUser = getCurrentAuthUser()
+
+    if (to.path === '/') {
+      next({ ...getLandingRoute(authUser), replace: true })
+      return
+    }
+
+    if (!to.name) {
+      next()
+      return
+    }
+
+    if (!authUser && !isPublicRoute(to.name)) {
+      next({ name: 'RMPreLogin', replace: true })
+      return
+    }
+
+    if (authUser && isPublicRoute(to.name)) {
+      next({ name: 'RMHome', replace: true })
+      return
+    }
+
     next()
   })
 })
