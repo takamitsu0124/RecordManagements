@@ -14,6 +14,10 @@ export type SkillDetail = SkillMaster & {
 	masterMissing: boolean
 }
 
+export type UserSkillDetail = SkillDetail & {
+	userId: string
+}
+
 type SkillStoreState = {
 	masterData: SkillMaster[]
 	currentUserSkills: UserSkill[]
@@ -29,7 +33,7 @@ const state = reactive<SkillStoreState>({
 let loadingCount = 0
 let masterDataLoaded = false
 let masterDataPromise: Promise<SkillMaster[]> | null = null
-let currentUserSkillOwnerId = ''
+let currentUserSkillOwnerKey = ''
 let currentUserSkillsLoaded = false
 let currentUserSkillsPromise: Promise<UserSkill[]> | null = null
 
@@ -86,12 +90,25 @@ const normalizeUserSkill = (userId: string, payload: UserSkill | null | undefine
 	}
 }
 
+const createUserSkillCacheKey = (userIds: string[]) => {
+	return [...new Set(userIds.filter(Boolean))].sort().join('|')
+}
+
 const masterDataById = computed(() => {
 	return new Map(state.masterData.map((skill) => [skill.id, skill]))
 })
 
 const currentOwnedSkills = computed(() => {
 	return state.currentUserSkills.flatMap((userSkill) => userSkill.ownedSkills)
+})
+
+const userOwnedSkills = computed(() => {
+	return state.currentUserSkills.flatMap((userSkill) =>
+		userSkill.ownedSkills.map((ownedSkill) => ({
+			userId: userSkill.userId,
+			...ownedSkill,
+		}))
+	)
 })
 
 const skillDetails = computed<SkillDetail[]>(() => {
@@ -106,6 +123,26 @@ const skillDetails = computed<SkillDetail[]>(() => {
 
 		return {
 			...normalizedMaster,
+			skillId: ownedSkill.skillId,
+			level: ownedSkill.level,
+			masterMissing: !master,
+		}
+	})
+})
+
+const userSkillDetails = computed<UserSkillDetail[]>(() => {
+	return userOwnedSkills.value.map((ownedSkill) => {
+		const master = masterDataById.value.get(ownedSkill.skillId)
+		const normalizedMaster = master
+			? master
+			: {
+					...defaultSkillMaster(),
+					id: ownedSkill.skillId,
+				}
+
+		return {
+			...normalizedMaster,
+			userId: ownedSkill.userId,
 			skillId: ownedSkill.skillId,
 			level: ownedSkill.level,
 			masterMissing: !master,
@@ -144,30 +181,32 @@ const fetchMasterData = async (): Promise<SkillMaster[]> => {
 }
 
 const fetchUserSkills = async (userId: string): Promise<UserSkill[]> => {
-	if (!userId) {
+	const cacheKey = createUserSkillCacheKey([userId])
+
+	if (!cacheKey) {
 		state.currentUserSkills = []
-		currentUserSkillOwnerId = ''
+		currentUserSkillOwnerKey = ''
 		currentUserSkillsLoaded = false
 		return state.currentUserSkills
 	}
 
 	if (
-		currentUserSkillOwnerId === userId &&
+		currentUserSkillOwnerKey === cacheKey &&
 		currentUserSkillsLoaded &&
 		!currentUserSkillsPromise
 	) {
 		return state.currentUserSkills
 	}
 
-	if (currentUserSkillsPromise && currentUserSkillOwnerId === userId) {
+	if (currentUserSkillsPromise && currentUserSkillOwnerKey === cacheKey) {
 		return currentUserSkillsPromise
 	}
 
-	currentUserSkillOwnerId = userId
+	const previousOwnerKey = currentUserSkillOwnerKey
+	currentUserSkillOwnerKey = cacheKey
 
 	currentUserSkillsPromise = withLoading(async () => {
 		const previousUserSkills = [...state.currentUserSkills]
-		const previousOwnerId = currentUserSkillOwnerId
 		const previousLoadedState = currentUserSkillsLoaded
 
 		try {
@@ -179,7 +218,66 @@ const fetchUserSkills = async (userId: string): Promise<UserSkill[]> => {
 			return state.currentUserSkills
 		} catch (error) {
 			state.currentUserSkills = previousUserSkills
-			currentUserSkillOwnerId = previousOwnerId
+			currentUserSkillOwnerKey = previousOwnerKey
+			currentUserSkillsLoaded = previousLoadedState
+			throw error
+		} finally {
+			currentUserSkillsPromise = null
+		}
+	})
+
+	return currentUserSkillsPromise
+}
+
+const fetchUsersSkills = async (userIds: string[]): Promise<UserSkill[]> => {
+	const normalizedUserIds = [...new Set(userIds.filter(Boolean))]
+	const cacheKey = createUserSkillCacheKey(normalizedUserIds)
+
+	if (!cacheKey) {
+		state.currentUserSkills = []
+		currentUserSkillOwnerKey = ''
+		currentUserSkillsLoaded = false
+		return state.currentUserSkills
+	}
+
+	if (
+		currentUserSkillOwnerKey === cacheKey &&
+		currentUserSkillsLoaded &&
+		!currentUserSkillsPromise
+	) {
+		return state.currentUserSkills
+	}
+
+	if (currentUserSkillsPromise && currentUserSkillOwnerKey === cacheKey) {
+		return currentUserSkillsPromise
+	}
+
+	const previousOwnerKey = currentUserSkillOwnerKey
+	currentUserSkillOwnerKey = cacheKey
+
+	currentUserSkillsPromise = withLoading(async () => {
+		const previousUserSkills = [...state.currentUserSkills]
+		const previousLoadedState = currentUserSkillsLoaded
+
+		try {
+			const payloads = await Promise.all(
+				normalizedUserIds.map((userId) =>
+					dbUserSkillsModule.doc(userId).fetch({ force: true })
+				)
+			)
+
+			state.currentUserSkills = payloads
+				.map((payload, index) =>
+					payload?.id
+						? normalizeUserSkill(normalizedUserIds[index], payload)
+						: null
+				)
+				.filter((userSkill): userSkill is UserSkill => userSkill !== null)
+			currentUserSkillsLoaded = true
+			return state.currentUserSkills
+		} catch (error) {
+			state.currentUserSkills = previousUserSkills
+			currentUserSkillOwnerKey = previousOwnerKey
 			currentUserSkillsLoaded = previousLoadedState
 			throw error
 		} finally {
@@ -195,13 +293,15 @@ const setCurrentUserSkills = (userSkills: UserSkill | UserSkill[]) => {
 	state.currentUserSkills = normalizedUserSkills.map((userSkill) =>
 		normalizeUserSkill(userSkill.userId, userSkill)
 	)
-	currentUserSkillOwnerId = state.currentUserSkills[0]?.userId || ''
+	currentUserSkillOwnerKey = createUserSkillCacheKey(
+		state.currentUserSkills.map((userSkill) => userSkill.userId)
+	)
 	currentUserSkillsLoaded = true
 }
 
 const clearCurrentUserSkills = () => {
 	state.currentUserSkills = []
-	currentUserSkillOwnerId = ''
+	currentUserSkillOwnerKey = ''
 	currentUserSkillsLoaded = false
 	currentUserSkillsPromise = null
 }
@@ -210,9 +310,12 @@ export const skillStore = {
 	state,
 	masterDataById,
 	currentOwnedSkills,
+	userOwnedSkills,
 	skillDetails,
+	userSkillDetails,
 	fetchMasterData,
 	fetchUserSkills,
+	fetchUsersSkills,
 	setCurrentUserSkills,
 	clearCurrentUserSkills,
 }
