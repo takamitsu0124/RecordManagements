@@ -1,6 +1,10 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, useAttrs, watch } from 'vue'
 import RMIcon from '../RMIcon/RMIcon.vue'
+
+defineOptions({
+  inheritAttrs: false,
+})
 
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
@@ -18,6 +22,7 @@ const props = defineProps({
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
 }>()
+const attrs = useAttrs()
 
 const drawer = computed({
   get: () => props.modelValue,
@@ -57,7 +62,11 @@ watch(
       ></div>
     </transition>
     <transition name="slide-up">
-      <div v-if="drawer" class="_drawer_default_style" :style="{ '--drawer-height': drawerHeight, '--drawer-z': String(zIndex + 1) }">
+      <div
+        v-if="drawer"
+        :class="['_drawer_default_style', attrs.class]"
+        :style="{ '--drawer-height': drawerHeight, '--drawer-z': String(zIndex + 1) }"
+      >
         <div class="_drawer_position_box">
           <div class="_chat_title">{{ drawerTitle }}</div>
           <button class="_icon_box" type="button" @click="drawer = false">

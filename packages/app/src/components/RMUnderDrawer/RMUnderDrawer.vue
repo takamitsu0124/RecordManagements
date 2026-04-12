@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, useAttrs, watch } from 'vue'
 import RMIcon from '../RMIcon/RMIcon.vue'
+
+defineOptions({
+  inheritAttrs: false,
+})
 
 const props = defineProps({
   modelValue: { type: Boolean },
@@ -24,6 +28,7 @@ const props = defineProps({
 const emit = defineEmits<{
   (e: 'update:modelValue', payload: boolean): void
 }>()
+const attrs = useAttrs()
 
 const value = computed({
   get: () => props.modelValue,
@@ -71,7 +76,7 @@ const drawerClose = () => {
       <div v-if="value" class="_overlay" @click="drawerClose"></div>
     </transition>
     <transition name="sheet-up">
-      <div v-if="value" class="_drawer" :class="panelClass">
+      <div v-if="value" :class="['_drawer', panelClass, attrs.class]">
         <div
           ref="area"
           class="_drawer_area"

@@ -1,6 +1,10 @@
 <script lang="ts" setup>
-import { computed, PropType } from 'vue'
+import { computed, PropType, useAttrs } from 'vue'
 import { PopupColorKinds } from './RMPopupFun'
+
+defineOptions({
+  inheritAttrs: false,
+})
 
 /** props定義 */
 const props = defineProps({
@@ -31,6 +35,7 @@ const emit = defineEmits<{
   (e: 'onRight'): void
   (e: 'update:modelValue', value: boolean): void
 }>()
+const attrs = useAttrs()
 
 const popupStatus = computed({
   get: () => props.modelValue,
@@ -42,7 +47,7 @@ const popupStatus = computed({
 
 <template>
   <Transition style="z-index: 1000000">
-    <div class="_AFC_outline" v-if="popupStatus">
+    <div :class="['_AFC_outline', attrs.class]" v-if="popupStatus">
       <div class="_AFCButton_container">
         <div class="_popup_question">
           <div class="_popup_sentence" v-html="question"></div>

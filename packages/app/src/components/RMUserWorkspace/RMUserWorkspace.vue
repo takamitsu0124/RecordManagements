@@ -1265,7 +1265,6 @@ const emitBack = () => {
 			header="画像プレビュー"
 			:style="{ width: 'min(96vw, 900px)' }"
 			:dismissableMask="true"
-			class="image-preview-dialog"
 		>
 			<div
 				class="image-preview-dialog__shell"

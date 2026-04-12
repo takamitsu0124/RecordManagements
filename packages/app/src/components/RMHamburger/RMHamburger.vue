@@ -1,7 +1,11 @@
 <script lang="ts" setup>
-import { computed, PropType, watch } from 'vue'
+import { computed, PropType, useAttrs, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { activeMenu } from './RMHamburger'
+
+defineOptions({
+	inheritAttrs: false,
+})
 
 type Menu = { name: string; url: string; isShow: boolean }[]
 
@@ -10,6 +14,7 @@ const props = defineProps({
 })
 
 const route = useRoute()
+const attrs = useAttrs()
 const isOpen = defineModel<boolean>('isOpen')
 const bar = computed(() => (isOpen.value ? '72%' : '54%'))
 const emits = defineEmits(['menuClick', 'logout'])
@@ -50,7 +55,7 @@ const closeMenu = () => {
 
 <template>
 	<div
-		:class="['_hamburger_menu_btn', { active: isOpen }]"
+		:class="['_hamburger_menu_btn', attrs.class, { active: isOpen }]"
 		@click="isOpen = !isOpen"
 	>
 		<span></span>
@@ -79,7 +84,7 @@ const closeMenu = () => {
 		</div>
 	</div>
 
-	<div class="_pc_menu">
+	<div :class="['_pc_menu', attrs.class]">
 		<button
 			v-for="menu in visibleMenus"
 			:key="menu.name"
