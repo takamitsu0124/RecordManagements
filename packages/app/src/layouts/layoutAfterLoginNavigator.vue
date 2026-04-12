@@ -41,21 +41,50 @@ const menuClick = (currentMenu: { name: string; url: string; isShow: boolean }) 
       @menuClick="menuClick"
     />
     <main class="after-login-layout__content">
-      <router-view />
+      <div class="after-login-layout__content-shell">
+        <router-view />
+      </div>
     </main>
   </div>
 </template>
 
 <style scoped>
 .after-login-layout {
+  position: relative;
   min-height: 100vh;
-  background: v-bind(backgroundImg);
+  isolation: isolate;
+  overflow-x: clip;
+  background-color: #edf4fb;
+  background-image:
+    linear-gradient(180deg, rgba(239, 246, 255, 0.84), rgba(248, 250, 252, 0.9)),
+    v-bind(backgroundImg);
   background-size: cover;
   background-position: center;
-  background-attachment: fixed;
+}
+
+.after-login-layout::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top right, rgba(161, 194, 225, 0.3), transparent 32%),
+    radial-gradient(circle at left center, rgba(123, 77, 129, 0.14), transparent 28%);
+  pointer-events: none;
 }
 
 .after-login-layout__content {
-  padding-top: 72px;
+  padding-top: calc(var(--rm-header-height) + 8px);
+  padding-bottom: 20px;
+}
+
+.after-login-layout__content-shell {
+  min-height: calc(100vh - var(--rm-header-height));
+}
+
+@media (max-width: 1023px) {
+  .after-login-layout {
+    background-attachment: scroll;
+  }
 }
 </style>

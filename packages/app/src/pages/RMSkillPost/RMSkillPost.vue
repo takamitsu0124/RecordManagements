@@ -2,16 +2,19 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Card from 'primevue/card'
-import Divider from 'primevue/divider'
 import Dialog from 'primevue/dialog'
 import FileUpload from 'primevue/fileupload'
 import InputNumber from 'primevue/inputnumber'
+import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
-import ToggleButton from 'primevue/togglebutton'
 import Button from 'primevue/button'
+import Tag from 'primevue/tag'
 import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { User, SkillRecord, ProficiencyLevel } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
+import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
+import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
+import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { uploadFile, deleteFileByUrl } from '@rm/db/src/fireStorage/fireStorage'
 import draggable from 'vuedraggable'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
@@ -38,6 +41,34 @@ const touchStartX = ref<number | null>(null)
 const currentCarouselImage = computed(
   () => activeCarouselImages.value[carouselSlide.value] ?? ''
 )
+
+const totalUploadedImages = computed(() => {
+  if (!skillRecord.value) return 0
+  return weaponTypes.reduce((total, key) => total + skillRecord.value![key].length, 0)
+})
+
+const filledProficiencyCount = computed(() => {
+  if (!proficiencyLevel.value) return 0
+  return proficiencyKeys.filter((key) => Number(proficiencyLevel.value?.[key] || 0) > 0).length
+})
+
+const detailSummaryItems = computed(() => [
+  {
+    label: '熟練度入力済み',
+    value: `${filledProficiencyCount.value}/${proficiencyKeys.length}`,
+    severity: 'info',
+  },
+  {
+    label: '登録画像数',
+    value: `${totalUploadedImages.value}件`,
+    severity: totalUploadedImages.value > 0 ? 'success' : 'secondary',
+  },
+  {
+    label: '現在のモード',
+    value: isEditMode.value ? '編集モード' : '閲覧モード',
+    severity: isEditMode.value ? 'contrast' : 'secondary',
+  },
+])
 
 const skillTypeTranslations: Record<string, string> = {
   sword: '片手直剣',
@@ -150,6 +181,9 @@ watch(isCarouselVisible, (visible) => {
 })
 
 const imageKey = (url: string) => url
+
+const getSkillRecordCount = (weaponType: keyof SkillRecord) =>
+  skillRecord.value?.[weaponType]?.length ?? 0
 
 onMounted(async () => {
   userId.value = route.params.userId as string
@@ -281,57 +315,128 @@ const onCancel = () => {
     </div>
 
     <div v-else-if="errorMessage" class="rm-state-card">
-      <p class="rm-error">{{ errorMessage }}</p>
-      <RMButton label="戻る" color="primary" @click="onCancel" />
+      <RMEmptyState
+        icon="pi pi-exclamation-circle"
+        title="スキル情報を表示できません"
+        :message="errorMessage"
+      >
+        <template #actions>
+          <RMButton label="戻る" color="primary" @click="onCancel" />
+        </template>
+      </RMEmptyState>
     </div>
 
     <div v-else-if="userDetail && skillRecord && proficiencyLevel" class="skill-post-layout">
-      <Card class="skill-post-card sticky-header">
+      <Card class="skill-post-card">
         <template #content>
           <div class="skill-post-card__header">
-            <div>
-              <div class="skill-post-card__title">スキル・熟練度</div>
-              <div class="skill-post-card__subtitle">{{ userDetail.charaName }}</div>
-            </div>
-            <ToggleButton
-              v-model="isEditMode"
-              onLabel="編集モード"
-              offLabel="閲覧モード"
-              onIcon="pi pi-pencil"
-              offIcon="pi pi-eye"
-            />
+            <RMPageHeader
+              title="スキル・熟練度"
+              :subtitle="userDetail.charaName"
+              :description="isEditMode ? '編集モードでは熟練度の更新、画像追加、並び替え、削除を同じ流れで行えます。' : '通常は閲覧モードです。変更が必要なときだけ編集モードに切り替えてください。'"
+              icon="pi pi-star"
+            >
+              <template #actions>
+                <RMModeToggle v-model="isEditMode" />
+              </template>
+            </RMPageHeader>
+          </div>
+          <div v-if="!isEditMode" class="skill-post-card__notice rm-inline-note">
+            閲覧モードでは現在の熟練度と画像順を確認できます。変更したい場合のみ編集モードを有効にしてください。
           </div>
         </template>
       </Card>
 
-      <form class="skill-post-form" @submit.prevent="onSubmit">
-        <Card class="skill-post-card">
+      <div class="skill-post-dashboard">
+        <Card class="skill-post-summary-card">
           <template #content>
-            <div class="skill-post-section">
-              <div class="rm-section-title">熟練度レベル</div>
-              <div class="proficiency-grid">
-                <div v-for="key in proficiencyKeys" :key="key" class="proficiency-item">
-                  <label class="proficiency-item__label">{{ skillTypeTranslations[key] || key }}</label>
-                  <InputNumber
-                    v-model="proficiencyLevel[key]"
-                    :disabled="!isEditMode"
-                    :min="0"
-                    showButtons
-                    class="proficiency-item__input"
-                  />
+            <div class="skill-post-summary-card__content">
+              <div class="skill-post-summary-card__title">メンバー概要</div>
+              <div class="skill-post-summary-card__subtitle">
+                現在の入力状況を見ながら、右側で熟練度と画像を更新できます。
+              </div>
+
+              <div class="skill-post-summary-grid">
+                <div
+                  v-for="item in detailSummaryItems"
+                  :key="item.label"
+                  class="skill-post-summary-item"
+                >
+                  <div class="skill-post-summary-item__label">{{ item.label }}</div>
+                  <Tag :value="item.value" :severity="item.severity" />
                 </div>
+              </div>
+
+              <div class="skill-post-summary-card__note">
+                画像はカテゴリごとに並び替えできます。保存すると、並び順のまま Firestore と Storage の状態に反映されます。
+              </div>
+
+              <div class="rm-actions skill-post-summary-card__actions">
+                <RMButton label="一覧へ戻る" flat color="grey" @click="onCancel" />
               </div>
             </div>
           </template>
         </Card>
 
-        <Card class="skill-post-card">
-          <template #content>
-            <div class="skill-post-section">
-              <div class="rm-section-title">スキルレコード</div>
-              <div class="weapon-section" v-for="weapon in weaponTypes" :key="weapon">
-                <div class="weapon-section__title">
-                  {{ skillTypeTranslations[weapon] || weapon }}
+        <form class="skill-post-form" @submit.prevent="onSubmit">
+          <Card class="skill-post-card">
+            <template #content>
+              <div class="skill-post-section">
+                <div class="skill-post-section__header">
+                  <div>
+                    <div class="rm-section-title">熟練度レベル</div>
+                    <div class="skill-post-section__description">
+                      武器種ごとの熟練度を見比べやすいカード配置にしています。
+                    </div>
+                  </div>
+                  <Tag :value="`${filledProficiencyCount}/${proficiencyKeys.length} 入力済み`" severity="info" />
+                </div>
+                <div class="proficiency-grid">
+                  <div v-for="key in proficiencyKeys" :key="key" class="proficiency-item">
+                    <div class="proficiency-item__head">
+                      <label class="proficiency-item__label">{{ skillTypeTranslations[key] || key }}</label>
+                      <Tag :value="`${proficiencyLevel[key] ?? 0}`" severity="secondary" />
+                    </div>
+                    <InputNumber
+                      v-model="proficiencyLevel[key]"
+                      :disabled="!isEditMode"
+                      :min="0"
+                      showButtons
+                      class="proficiency-item__input"
+                    />
+                  </div>
+                </div>
+              </div>
+            </template>
+          </Card>
+
+          <Panel class="skill-record-panel">
+            <template #header>
+              <div class="skill-post-section__header skill-post-section__header--panel">
+                <div>
+                  <div class="rm-section-title">スキルレコード</div>
+                  <div class="skill-post-section__description">
+                    各カテゴリの画像を確認し、編集モード中のみ追加・削除・並び替えできます。
+                  </div>
+                </div>
+                <Tag :value="`${totalUploadedImages} 件`" :severity="totalUploadedImages > 0 ? 'success' : 'secondary'" />
+              </div>
+            </template>
+            <div class="weapon-section-grid">
+              <section class="weapon-section" v-for="weapon in weaponTypes" :key="weapon">
+                <div class="weapon-section__header">
+                  <div>
+                    <div class="weapon-section__title">
+                      {{ skillTypeTranslations[weapon] || weapon }}
+                    </div>
+                    <div class="weapon-section__subtitle">
+                      画像 {{ getSkillRecordCount(weapon) }} 件
+                    </div>
+                  </div>
+                  <Tag
+                    :value="`${getSkillRecordCount(weapon)}件`"
+                    :severity="getSkillRecordCount(weapon) > 0 ? 'success' : 'secondary'"
+                  />
                 </div>
 
                 <div v-if="!isEditMode">
@@ -346,7 +451,7 @@ const onCancel = () => {
                       <img :src="url" alt="skill" class="skill-image-item__image" />
                     </button>
                   </div>
-                  <div v-else class="rm-muted">登録されていません</div>
+                  <div v-else class="weapon-section__empty">登録されていません</div>
                 </div>
 
                 <div v-else>
@@ -376,7 +481,7 @@ const onCancel = () => {
                       </div>
                     </template>
                   </draggable>
-                  <div v-else class="rm-muted">登録されていません</div>
+                  <div v-else class="weapon-section__empty">登録されていません</div>
 
                   <FileUpload
                     mode="basic"
@@ -389,18 +494,16 @@ const onCancel = () => {
                     @select="onSkillFilesSelect(weapon, $event)"
                   />
                 </div>
-
-                <Divider />
-              </div>
+              </section>
             </div>
-          </template>
-        </Card>
+          </Panel>
 
-        <div v-if="isEditMode" class="rm-actions skill-post-actions">
-          <RMButton label="キャンセル" flat color="grey" @click="onCancel" />
-          <RMButton label="保存" type="submit" color="primary" />
-        </div>
-      </form>
+          <div v-if="isEditMode" class="rm-actions skill-post-actions">
+            <RMButton label="キャンセル" flat color="grey" @click="onCancel" />
+            <RMButton label="保存" type="submit" color="primary" />
+          </div>
+        </form>
+      </div>
     </div>
 
     <Dialog
@@ -446,8 +549,63 @@ const onCancel = () => {
 
 <style lang="scss" scoped>
 .skill-post-layout {
-  width: min(100%, 960px);
-  margin: 0 auto;
+	width: min(100%, 1220px);
+	margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skill-post-dashboard {
+	display: grid;
+	grid-template-columns: minmax(260px, 310px) minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+}
+
+.skill-post-summary-card__content {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: clamp(14px, 2vw, 18px);
+}
+
+.skill-post-summary-card__title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.skill-post-summary-card__subtitle,
+.skill-post-summary-card__note {
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.skill-post-summary-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.skill-post-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.skill-post-summary-item__label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.skill-post-summary-card__actions {
+  justify-content: flex-start;
 }
 
 .skill-post-form {
@@ -463,42 +621,57 @@ const onCancel = () => {
 
 .skill-post-card__header,
 .skill-post-section {
-  padding: 24px;
+  padding: clamp(14px, 2vw, 18px);
 }
 
 .skill-post-card__header {
+  padding-bottom: 10px;
+}
+
+.skill-post-card__notice {
+  margin: 0 clamp(14px, 2vw, 18px) clamp(14px, 2vw, 18px);
+}
+
+.skill-post-section__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.skill-post-card__title {
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-weight: 800;
+.skill-post-section__header--panel {
+  margin-bottom: 0;
+  width: 100%;
 }
 
-.skill-post-card__subtitle {
+.skill-post-section__description {
   margin-top: 6px;
   color: #64748b;
-}
-
-.sticky-header {
-  position: sticky;
-  top: 86px;
-  z-index: 2;
+  line-height: 1.6;
 }
 
 .proficiency-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .proficiency-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 12px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.proficiency-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .proficiency-item__label {
@@ -511,16 +684,51 @@ const onCancel = () => {
   width: 100%;
 }
 
+.skill-record-panel {
+  overflow: hidden;
+}
+
+.weapon-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
 .weapon-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid #e2e8f0;
+}
+
+.weapon-section__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .weapon-section__title {
   font-size: 1.05rem;
   font-weight: 700;
   color: #334155;
+}
+
+.weapon-section__subtitle {
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.weapon-section__empty {
+  padding: 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  text-align: center;
 }
 
 .skill-image-grid {
@@ -572,8 +780,6 @@ const onCancel = () => {
 }
 
 .skill-post-actions {
-  position: sticky;
-  bottom: 12px;
   padding: 14px 16px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.88);
@@ -606,14 +812,29 @@ const onCancel = () => {
   color: #64748b;
 }
 
+@media (max-width: 1100px) {
+  .skill-post-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .skill-post-section__header,
+  .weapon-section__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 @media (max-width: 767px) {
+
   .skill-post-card__header,
   .skill-post-section {
-    padding: 18px;
+    padding: 14px;
   }
 
-  .sticky-header {
-    top: 78px;
+  .skill-post-summary-card__content {
+    padding: 14px;
   }
 
   .skill-preview-shell {
@@ -623,5 +844,6 @@ const onCancel = () => {
   .skill-preview-nav {
     justify-self: center;
   }
+
 }
 </style>

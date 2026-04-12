@@ -229,7 +229,7 @@ const onCancel = () => {
 }
 
 .guild-edit-card__content {
-  padding: 32px;
+  padding: 22px 18px;
 }
 
 .guild-edit-card__title {
@@ -270,7 +270,7 @@ const onCancel = () => {
 
 @media (max-width: 600px) {
   .guild-edit-card__content {
-    padding: 24px 18px;
+    padding: 16px 14px;
   }
 }
 </style>

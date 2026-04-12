@@ -5,6 +5,7 @@ import { Router } from 'vue-router'
 import { boot } from 'quasar/wrappers'
 import { computed, ref } from 'vue'
 import PrimeVue from 'primevue/config'
+import ToastService from 'primevue/toastservice'
 import Aura from '@primeuix/themes/aura'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError } from 'src/composables/useAppNotifications'
@@ -235,6 +236,7 @@ export default boot(async ({ app, router }) => {
 			},
 		},
 	})
+	app.use(ToastService)
 
 	const { initialAuthStateResolved, getCurrentAuthUser } = checkRouter(router)
 

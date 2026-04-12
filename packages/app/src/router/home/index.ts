@@ -8,6 +8,7 @@ const routes = [
         name: 'RMHome',
         path: '/RMHome',
         component: () => import('src/pages/RMHome/RMHome.vue'),
+        meta: { pageTitle: 'ホーム' },
       },
     ],
   },
