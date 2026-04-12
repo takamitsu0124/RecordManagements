@@ -2,6 +2,7 @@ import { RouteRecordRaw } from 'vue-router'
 import login from './login'
 import home from './home'
 import guild from './guild'
+import calendar from './calendar'
 import register from './register'
 import user from './user'
 
@@ -18,6 +19,7 @@ const routes: RouteRecordRaw[] = [
       ...login,
       ...home,
       ...guild,
+      ...calendar,
       ...register,
       ...user,
       {
