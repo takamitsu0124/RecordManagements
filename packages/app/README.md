@@ -52,6 +52,7 @@ APP_PUBLIC_GOOGLE_CALENDAR_ENABLE_PERSONAL_CALENDAR=false
 - **入れてよいのは public 値だけ**です
 - client secret / refresh token / service account key はここへ置かないでください
 - OAuth / scope / token policy の詳細は root `README.md` を参照してください
+- guild shared calendar ID は env に置かず、guild ドキュメントの `googleCalendarId` で管理します
 
 ### Customize the configuration
 See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js).

@@ -248,3 +248,11 @@ APP_PUBLIC_GOOGLE_CALENDAR_ENABLE_PERSONAL_CALENDAR=false
 - 編集操作に入るときだけ追加で edit scope を要求する
 - guild shared calendar ID は frontend にハードコードせず、認証済み経路から取得する
 - backend が必要になった場合だけ code model + Secret Manager へ拡張し、client secret は browser に渡さない
+
+### #48 実装後の運用メモ
+
+- イベントカレンダー画面は `/RMCalendar` です
+- guild shared calendar は `guild.googleCalendarId` を参照します
+- `guild.googleCalendarId` は `RMGuildEdit` 画面の **共有 Google Calendar ID** 入力から設定します
+- personal calendar は `primary` を使います
+- shared calendar を編集できるのは、Google 側でその calendar に対して編集権限を持つ `guild_admin` / `admin` です
