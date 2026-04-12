@@ -11,6 +11,8 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { dbSkillMasterModule } from '@rm/db/src/fireStore/SkillMaster'
 import { SkillMaster, defaultSkillMaster } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
+import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
+import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 
@@ -192,22 +194,21 @@ const saveSkillMaster = async () => {
 			<Card class="skill-master-admin-card skill-master-admin-card--form">
 				<template #content>
 					<div class="skill-master-admin-card__content">
-						<div class="skill-master-admin-card__hero">
-							<div>
-								<div class="skill-master-admin-card__title">
-									スキルマスター管理
-								</div>
-								<div class="skill-master-admin-card__subtitle">
-									Admin が `skill_master` を単体登録・更新するページです。
-								</div>
-							</div>
-							<Button
-								label="新規入力"
-								severity="secondary"
-								outlined
-								@click="startCreate"
-							/>
-						</div>
+						<RMPageHeader
+							title="スキルマスター管理"
+							subtitle="Admin が skill_master を単体登録・更新するページです。"
+							description="検索・登録・更新の導線を分け、DataTable 側と入力フォーム側で視線が迷わないようにしています。"
+							icon="pi pi-database"
+						>
+							<template #actions>
+								<Button
+									label="新規入力"
+									severity="secondary"
+									outlined
+									@click="startCreate"
+								/>
+							</template>
+						</RMPageHeader>
 
 						<Divider />
 
@@ -300,16 +301,14 @@ const saveSkillMaster = async () => {
 			<Card class="skill-master-admin-card skill-master-admin-card--table">
 				<template #content>
 					<div class="skill-master-admin-card__content">
-						<div class="skill-master-admin-card__hero skill-master-admin-card__hero--compact">
-							<div>
-								<div class="skill-master-admin-card__section-title">登録済みスキル</div>
-								<div class="skill-master-admin-card__section-subtitle">
-									{{ skillCountLabel }}
-								</div>
-							</div>
-						</div>
+						<RMPageHeader
+							title="登録済みスキル"
+							:subtitle="skillCountLabel"
+							description="検索文字、属性、種別の 3 つで絞り込み、結果が 0 件でも状態が分かるようにしています。"
+							icon="pi pi-search"
+						/>
 
-						<div class="skill-master-admin-filter-row">
+						<div class="skill-master-admin-filter-row rm-filter-toolbar">
 							<InputText v-model="searchText" placeholder="ID・名称・属性・種別で検索" />
 							<Dropdown
 								v-model="selectedAttr"
@@ -343,6 +342,13 @@ const saveSkillMaster = async () => {
 							responsiveLayout="scroll"
 							class="skill-master-admin-table"
 						>
+							<template #empty>
+								<RMEmptyState
+									icon="pi pi-search"
+									title="条件に一致するスキルがありません"
+									message="検索文字や属性・種別を見直すと、結果がすぐに再表示されます。"
+								/>
+							</template>
 							<Column field="id" header="ID" />
 							<Column field="name" header="名称" />
 							<Column field="attr" header="属性" />
@@ -373,7 +379,7 @@ const saveSkillMaster = async () => {
 	width: min(100%, 1320px);
 	display: grid;
 	grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-	gap: 20px;
+	gap: 16px;
 	align-items: start;
 }
 
@@ -383,7 +389,7 @@ const saveSkillMaster = async () => {
 }
 
 .skill-master-admin-card__content {
-	padding: 24px;
+	padding: clamp(16px, 2vw, 20px);
 }
 
 .skill-master-admin-card__hero {
@@ -391,28 +397,6 @@ const saveSkillMaster = async () => {
 	justify-content: space-between;
 	align-items: flex-start;
 	gap: 16px;
-}
-
-.skill-master-admin-card__hero--compact {
-	margin-bottom: 18px;
-}
-
-.skill-master-admin-card__title {
-	font-size: clamp(1.7rem, 4vw, 2.1rem);
-	font-weight: 800;
-	color: #1f2937;
-}
-
-.skill-master-admin-card__subtitle,
-.skill-master-admin-card__section-subtitle {
-	margin-top: 6px;
-	color: #64748b;
-}
-
-.skill-master-admin-card__section-title {
-	font-size: 1.2rem;
-	font-weight: 700;
-	color: #1f2937;
 }
 
 .skill-master-admin-form {
@@ -470,27 +454,28 @@ const saveSkillMaster = async () => {
 	display: grid;
 	justify-items: center;
 	gap: 10px;
-	padding: 28px 0;
+	padding: 18px 0;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
 	.skill-master-admin-layout {
 		grid-template-columns: 1fr;
 	}
 }
 
-@media (max-width: 767px) {
-	.skill-master-admin-card__content {
-		padding: 18px;
+@media (max-width: 900px) {
+	.skill-master-admin-filter-row {
+		grid-template-columns: 1fr;
 	}
+}
 
+@media (max-width: 767px) {
 	.skill-master-admin-card__hero {
 		flex-direction: column;
 	}
 
 	.skill-master-admin-grid,
-	.skill-master-admin-grid--gauge,
-	.skill-master-admin-filter-row {
+	.skill-master-admin-grid--gauge {
 		grid-template-columns: 1fr;
 	}
 }

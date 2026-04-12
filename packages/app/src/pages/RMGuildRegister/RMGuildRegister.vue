@@ -122,7 +122,7 @@ const onCancel = () => {
 }
 
 .guild-register-card__content {
-  padding: 32px;
+  padding: 22px 18px;
 }
 
 .guild-register-card__title {
@@ -135,7 +135,7 @@ const onCancel = () => {
 
 @media (max-width: 600px) {
   .guild-register-card__content {
-    padding: 24px 18px;
+    padding: 16px 14px;
   }
 }
 </style>

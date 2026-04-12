@@ -1,222 +1,171 @@
 <script lang="ts" setup>
-import RMCard from 'src/components/RMCard/RMCard.vue'
-import RMLogo from 'src/components/RMLogo/RMLogo.vue'
-import RMButton from 'src/components/RMButton/RMButton.vue'
-import { globalRegisterForm } from './register'
-import { maskPassword, createUser, dbUserCreate } from '@rm/utils'
+import Card from 'primevue/card'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
+import { createUser, dbUserCreate, maskPassword } from '@rm/utils'
+import RMButton from 'src/components/RMButton/RMButton.vue'
+import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { usePopupFun } from 'src/components/RMPopup/RMPopupFun'
+import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { useToast } from 'src/components/RMToast/RMToast'
+import { globalRegisterForm } from './register'
 
-const bgImgPath = ref(
-  'url("https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Fregister_background.jpeg?alt=media&token=2a3fd22a-6f76-4c06-90a0-83152a09179f") no-repeat center'
-)
 const router = useRouter()
 const { registerInfo, defaultRegisterInfo } = globalRegisterForm()
 const uid = ref<string>('')
 const errorMsg = ref<string>('')
 const roleLabels: Record<string, string> = {
-  admin: 'Admin',
-  guild_admin: 'Guild Admin',
-  member: 'General Member',
+	admin: 'Admin',
+	guild_admin: 'Guild Admin',
+	member: 'General Member',
 }
 
 const registerSave = async () => {
-  await useSpinner(async () => {
-    let userCredential = ''
-    try {
-      // auth作成
-      userCredential = await createUser(
-        registerInfo.value.email,
-        registerInfo.value.password
-      )
-      // uidを取得
-      uid.value = userCredential
-    } catch (error) {
-      const errorCode =
-        typeof error === 'object' && error && 'code' in error
-          ? String(error.code)
-          : String(error)
+	await useSpinner(async () => {
+		let userCredential = ''
+		try {
+			userCredential = await createUser(
+				registerInfo.value.email,
+				registerInfo.value.password
+			)
+			uid.value = userCredential
+		} catch (error) {
+			const errorCode =
+				typeof error === 'object' && error && 'code' in error
+					? String(error.code)
+					: String(error)
 
-      if (errorCode === 'auth/email-already-in-use') {
-        errorMsg.value = 'このメールアドレスは既に登録されています'
-      }
-      if (errorCode === 'auth/invalid-email') {
-        errorMsg.value = 'メールアドレスの形式が無効です'
-      }
-      if (errorCode === 'auth/operation-not-allowed') {
-        errorMsg.value = 'メール/パスワードログインが有効になっていません。'
-      }
-      if (errorCode === 'auth/weak-password') {
-        errorMsg.value = 'パスワードが弱すぎます'
-      }
-      if (errorMsg.value) {
-        usePopupFun({
-          question: `${errorMsg.value}`,
-          rightText: '閉じる',
-          rightColor: 'primary',
-          leftColor: 'black',
-          onRightButtonClick: () => {
-            console.log('閉じる')
-          },
-        })
-      }
-    }
-    //  uidがなかったらリターン
-    if (!uid.value) return
+			if (errorCode === 'auth/email-already-in-use') {
+				errorMsg.value = 'このメールアドレスは既に登録されています'
+			}
+			if (errorCode === 'auth/invalid-email') {
+				errorMsg.value = 'メールアドレスの形式が無効です'
+			}
+			if (errorCode === 'auth/operation-not-allowed') {
+				errorMsg.value = 'メール/パスワードログインが有効になっていません。'
+			}
+			if (errorCode === 'auth/weak-password') {
+				errorMsg.value = 'パスワードが弱すぎます'
+			}
+			if (errorMsg.value) {
+				usePopupFun({
+					question: `${errorMsg.value}`,
+					rightText: '閉じる',
+					rightColor: 'primary',
+					leftColor: 'black',
+					onRightButtonClick: () => {
+						console.log('閉じる')
+					},
+				})
+			}
+		}
+		if (!uid.value) return
 
-    try {
-      // データベースユーザーの作成
-      await dbUserCreate(uid.value, registerInfo.value).then(() => {
-        useToast({
-          toastTitle: 'ユーザー登録が完了しました',
-          toastMovingTime: 3,
-        })
-      })
-      registerInfo.value = defaultRegisterInfo()
-      await router.push({ name: 'RMHome' })
-    } catch (error) {
-      console.error(error)
-    }
-  })
+		try {
+			await dbUserCreate(uid.value, registerInfo.value).then(() => {
+				useToast({
+					toastTitle: 'ユーザー登録が完了しました',
+					toastMovingTime: 3,
+				})
+			})
+			registerInfo.value = defaultRegisterInfo()
+			await router.push({ name: 'RMHome' })
+		} catch (error) {
+			console.error(error)
+		}
+	})
 }
 </script>
 
 <template>
-  <div class="_user_register_confirm_outer_container">
-    <div class="_user_register_confirm_inner_container">
-      <div class="_app_logo_area">
-        <RMLogo margin_bottom="10px" />
-      </div>
-      <RMCard
-        class="_user_register_card"
-        :cardShape="'square'"
-        :shadowDirection="'allSide'"
-      >
-        <div class="_register_confirm_container">
-          <div class="_content">
-            <div class="_label">メールアドレス</div>
-            <div class="_value">
-              {{ `　${!!registerInfo.email ? registerInfo.email : '-'}` }}
-            </div>
-          </div>
-          <div class="_content">
-            <div class="_label">パスワード</div>
-            <div class="_value">
-              {{
-                `　${
-                  !!registerInfo.password
-                    ? maskPassword(registerInfo.password)
-                    : '-'
-                }`
-              }}
-            </div>
-          </div>
-          <div class="_content">
-            <div class="_label">表示名</div>
-            <div class="_value">
-              {{ `　${!!registerInfo.name ? registerInfo.name : '-'}` }}
-            </div>
-          </div>
-          <div class="_content">
-            <div class="_label">所属ギルドID</div>
-            <div class="_value">
-              {{ `　${!!registerInfo.guildId ? registerInfo.guildId : '-'}` }}
-            </div>
-          </div>
-          <div class="_content">
-            <div class="_label">権限</div>
-            <div class="_value">
-              {{ `　${roleLabels[registerInfo.role] ?? '-'}` }}
-            </div>
-          </div>
-        </div>
-      </RMCard>
-      <div class="_btn_area">
-        <RMButton
-          class="_select_btn"
-          @click="registerSave"
-          :button-shape="'ellipse'"
-          :button-type="'standard'"
-          label="登録"
-          bgColor="linear-gradient(180deg, #C79BD2, #7B4D81)"
-        />
-        <RMButton
-          class="_select_btn"
-          @click="
-            () => {
-              router.push({ name: 'RMUserRegister' })
-            }
-          "
-          :button-shape="'ellipse'"
-          :button-type="'standard'"
-          label="戻る"
-          bgColor="linear-gradient(180deg, #D3D3D3, #696969)"
-        />
-      </div>
-    </div>
-  </div>
+	<div class="rm-page rm-page--top">
+		<Card class="user-register-confirm-card">
+			<template #content>
+				<div class="user-register-confirm-card__content">
+					<RMPageHeader
+						title="登録内容の確認"
+						subtitle="作成前に内容を最終確認"
+						description="メールアドレス、表示名、所属ギルド、権限を確認してから登録を実行します。"
+						icon="pi pi-check-square"
+					/>
+
+					<div class="user-register-confirm-list">
+						<div class="user-register-confirm-item">
+							<div class="user-register-confirm-item__label">メールアドレス</div>
+							<div class="user-register-confirm-item__value">{{ registerInfo.email || '-' }}</div>
+						</div>
+						<div class="user-register-confirm-item">
+							<div class="user-register-confirm-item__label">パスワード</div>
+							<div class="user-register-confirm-item__value">
+								{{ registerInfo.password ? maskPassword(registerInfo.password) : '-' }}
+							</div>
+						</div>
+						<div class="user-register-confirm-item">
+							<div class="user-register-confirm-item__label">表示名</div>
+							<div class="user-register-confirm-item__value">{{ registerInfo.name || '-' }}</div>
+						</div>
+						<div class="user-register-confirm-item">
+							<div class="user-register-confirm-item__label">所属ギルドID</div>
+							<div class="user-register-confirm-item__value">{{ registerInfo.guildId || '-' }}</div>
+						</div>
+						<div class="user-register-confirm-item">
+							<div class="user-register-confirm-item__label">権限</div>
+							<div class="user-register-confirm-item__value">
+								{{ roleLabels[registerInfo.role] ?? '-' }}
+							</div>
+						</div>
+					</div>
+
+					<div class="rm-actions user-register-confirm-actions">
+						<RMButton
+							label="戻る"
+							flat
+							color="grey"
+							@click="router.push({ name: 'RMUserRegister' })"
+						/>
+						<RMButton label="登録" color="primary" @click="registerSave" />
+					</div>
+				</div>
+			</template>
+		</Card>
+	</div>
 </template>
 
 <style lang="sass" scoped>
-// SP
-._user_register_confirm_outer_container
-  background: v-bind(bgImgPath)
-  background-size: cover
-  display: block
-  overflow: scroll
-  position: fixed
-  left: 0
-  right: 0
-  bottom: 0
-  top: 0
-._user_register_confirm_inner_container
-  padding: 5px
-  width: 100%
-._app_logo_area
-  display: flex
-  justify-content: center
-  align-items: center
-._user_register_card
-  margin: 5px 20px
-._register_confirm_container
-  display: flex
-  flex-direction: column
-  justify-content: center
-  padding: 10px
-._content
-  display: flex
-  flex-direction: column
-  padding: 14px
-  border-bottom: 1px solid #ddd
-._label
-  font-size: 14px
-  color: #333
-  margin-bottom: 4px
-  font-weight: bold
-._value
-  font-size: 16px
-  color: #555
-  background-color: #f9f9f9
-  padding: 8px
-  border-radius: 4px
-  border: 1px solid #ddd
-._btn_area
-  display: flex
-  gap: 10px
-  margin: 20px auto
-// PC
-@media screen and (min-width: 768px)
-  ._user_register_confirm_inner_container
-    padding: 50px 400px
-    position: fixed
-    left: 0
-    bottom: 40px
-    width: 100%
-  ._btn_area
-    display: flex
-    gap: 30px
-    margin: 30px auto
+.user-register-confirm-card
+	width: min(100%, 820px)
+	overflow: hidden
+
+.user-register-confirm-card__content
+	display: flex
+	flex-direction: column
+	gap: 16px
+	padding: clamp(16px, 2vw, 22px)
+
+.user-register-confirm-list
+	display: grid
+	gap: 12px
+
+.user-register-confirm-item
+	display: grid
+	gap: 6px
+	padding: 14px
+	border-radius: 18px
+	border: 1px solid #e2e8f0
+	background: rgba(248, 250, 252, 0.9)
+
+.user-register-confirm-item__label
+	font-size: 14px
+	font-weight: 700
+	color: #475569
+
+.user-register-confirm-item__value
+	color: #1f2937
+	line-height: 1.6
+	word-break: break-word
+
+@media (max-width: 767px)
+	.user-register-confirm-actions
+		flex-direction: column
+		align-items: stretch
 </style>

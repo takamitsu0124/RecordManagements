@@ -1,238 +1,177 @@
 <script lang="ts" setup>
+import Card from 'primevue/card'
 import Dropdown from 'primevue/dropdown'
-import { AppRole } from '@rm/types'
-import { globalRegisterForm } from './register'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import RMInput from 'src/components/RMInput/RMInput.vue'
+import { AppRole } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
-import RMLogo from 'src/components/RMLogo/RMLogo.vue'
+import RMInput from 'src/components/RMInput/RMInput.vue'
+import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
+import { globalRegisterForm } from './register'
 
-const { registerInfo, defaultRegisterInfo, validateRegisterInfo } =
-  globalRegisterForm()
+const { registerInfo, defaultRegisterInfo, validateRegisterInfo } = globalRegisterForm()
 const router = useRouter()
 const errors = ref<{ field: string; message: string }>({
-  field: '',
-  message: '',
+	field: '',
+	message: '',
 })
-const bgImgPath = ref(
-  'url("https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Fregister_background.jpeg?alt=media&token=2a3fd22a-6f76-4c06-90a0-83152a09179f") no-repeat center'
-)
 const onFocus = ref<number>(0)
 const roleOptions: { label: string; value: AppRole }[] = [
-  { label: 'General Member', value: 'member' },
-  { label: 'Guild Admin', value: 'guild_admin' },
-  { label: 'Admin', value: 'admin' },
+	{ label: 'General Member', value: 'member' },
+	{ label: 'Guild Admin', value: 'guild_admin' },
+	{ label: 'Admin', value: 'admin' },
 ]
 
 const registerConfirm = () => {
-  errors.value.message = validateRegisterInfo(registerInfo.value)?.message ?? ''
-  errors.value.field = validateRegisterInfo(registerInfo.value)?.field ?? ''
-  if (errors.value.message === '')
-    router.push({ name: 'RMUserRegisterConfirm' })
-  else return
+	errors.value.message = validateRegisterInfo(registerInfo.value)?.message ?? ''
+	errors.value.field = validateRegisterInfo(registerInfo.value)?.field ?? ''
+	if (errors.value.message === '') {
+		router.push({ name: 'RMUserRegisterConfirm' })
+	}
 }
 
 const resetRegisterForm = () => {
-  registerInfo.value = defaultRegisterInfo()
-  errors.value = {
-    field: '',
-    message: '',
-  }
+	registerInfo.value = defaultRegisterInfo()
+	errors.value = {
+		field: '',
+		message: '',
+	}
 }
 </script>
 
 <template>
-  <div class="_user_register_outer_container">
-    <div class="_user_register_inner_container">
-      <div class="_user_register_form">
-        <div class="_app_logo_area">
-          <RMLogo margin_bottom="20px" />
-        </div>
-        <RMInput
-          v-model="registerInfo.email"
-          :class="['_register_input', { _input_active: onFocus === 1 }]"
-          label="メールアドレス"
-          type="text"
-          requiredText="※必須"
-          placeholder="sample@gmail.com"
-          shadow
-          @onFocus="onFocus = 1"
-          @onBlur="onFocus = 0"
-          :error2="errors.field === 'email'"
-        />
-        <RMInput
-          v-model="registerInfo.password"
-          :class="['_register_input', { _input_active: onFocus === 2 }]"
-          label="パスワード"
-          type="password"
-          requiredText="※必須"
-          placeholder="aa1234"
-          shadow
-          @onFocus="onFocus = 2"
-          @onBlur="onFocus = 0"
-          :error2="errors.field === 'password'"
-        />
-        <RMInput
-          v-model="registerInfo.name"
-          :class="['_register_input', { _input_active: onFocus === 3 }]"
-          label="表示名"
-          type="text"
-          requiredText="※必須"
-          placeholder="displayName"
-          shadow
-          @onFocus="onFocus = 3"
-          @onBlur="onFocus = 0"
-          :error2="errors.field === 'name'"
-        />
-        <RMInput
-          v-model="registerInfo.guildId"
-          :class="['_register_input', { _input_active: onFocus === 4 }]"
-          label="所属ギルドID"
-          type="text"
-          placeholder="guild-id (任意)"
-          shadow
-          @onFocus="onFocus = 4"
-          @onBlur="onFocus = 0"
-        />
-        <div class="_role_area">
-          <div class="_role_label">権限</div>
-          <Dropdown
-            v-model="registerInfo.role"
-            :options="roleOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="_role_dropdown"
-            placeholder="権限を選択"
-          />
-        </div>
-        <div class="_error_area" v-if="errors.message">
-          {{ errors.message }}
-        </div>
-        <div class="_error_area" v-else></div>
-        <div class="_to_login_area">
-          <div
-            class="_to_login"
-            @click="
-              () => {
-                router.push({ name: 'RMHome' })
-              }
-            "
-          >
-            ホームへ
-          </div>
-        </div>
-        <div class="_btn_area">
-          <RMButton
-            class="_select_btn"
-            @click="registerConfirm"
-            :button-shape="'ellipse'"
-            :button-type="'standard'"
-            label="登録確認"
-            bgColor="linear-gradient(180deg, #C79BD2, #7B4D81)"
-          />
-          <RMButton
-            class="_select_btn"
-            @click="resetRegisterForm"
-            :button-shape="'ellipse'"
-            :button-type="'standard'"
-            label="キャンセル"
-            bgColor="linear-gradient(180deg, #D3D3D3, #696969)"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
+	<div class="rm-page rm-page--top">
+		<Card class="user-register-card">
+			<template #content>
+				<div class="user-register-card__content">
+					<RMPageHeader
+						title="ユーザー登録"
+						subtitle="Admin 専用"
+						description="メールアドレス、表示名、所属ギルド、権限を確認しながら登録内容を作成します。"
+						icon="pi pi-user-plus"
+					/>
+
+					<div class="rm-form-grid rm-form-grid--two">
+						<RMInput
+							v-model="registerInfo.email"
+							:class="{ _input_active: onFocus === 1 }"
+							label="メールアドレス"
+							type="text"
+							requiredText="※必須"
+							placeholder="sample@gmail.com"
+							shadow
+							@onFocus="onFocus = 1"
+							@onBlur="onFocus = 0"
+							:error2="errors.field === 'email'"
+						/>
+						<RMInput
+							v-model="registerInfo.password"
+							:class="{ _input_active: onFocus === 2 }"
+							label="パスワード"
+							type="password"
+							requiredText="※必須"
+							placeholder="aa1234"
+							shadow
+							@onFocus="onFocus = 2"
+							@onBlur="onFocus = 0"
+							:error2="errors.field === 'password'"
+						/>
+						<RMInput
+							v-model="registerInfo.name"
+							:class="{ _input_active: onFocus === 3 }"
+							label="表示名"
+							type="text"
+							requiredText="※必須"
+							placeholder="displayName"
+							shadow
+							@onFocus="onFocus = 3"
+							@onBlur="onFocus = 0"
+							:error2="errors.field === 'name'"
+						/>
+						<RMInput
+							v-model="registerInfo.guildId"
+							:class="{ _input_active: onFocus === 4 }"
+							label="所属ギルドID"
+							type="text"
+							placeholder="guild-id (任意)"
+							shadow
+							@onFocus="onFocus = 4"
+							@onBlur="onFocus = 0"
+						/>
+					</div>
+
+					<div class="user-register-role">
+						<div class="user-register-role__label">権限</div>
+						<Dropdown
+							v-model="registerInfo.role"
+							:options="roleOptions"
+							optionLabel="label"
+							optionValue="value"
+							class="user-register-role__dropdown"
+							placeholder="権限を選択"
+						/>
+					</div>
+
+					<p v-if="errors.message" class="user-register-error">{{ errors.message }}</p>
+
+					<div class="rm-actions user-register-actions">
+						<RMButton
+							label="ホームへ"
+							flat
+							color="grey"
+							@click="router.push({ name: 'RMHome' })"
+						/>
+						<RMButton label="入力をクリア" flat color="grey" @click="resetRegisterForm" />
+						<RMButton label="登録確認" color="primary" @click="registerConfirm" />
+					</div>
+				</div>
+			</template>
+		</Card>
+	</div>
 </template>
 
 <style lang="sass" scoped>
-// SP
-._user_register_outer_container
-  background: v-bind(bgImgPath)
-  background-size: cover
-  display: block
-  overflow: scroll
-  position: fixed
-  left: 0
-  right: 0
-  bottom: 0
-  top: 0
-._user_register_inner_container
-  padding: 10px
-  width: 100%
-._user_register_form
-  height: 100%
-  padding: 20px
-  > div
-    margin: 10px 0
-._app_logo_area
-  display: flex
-  justify-content: center
-  align-items: center
-._error_area
-  height: 20px
-  font-size: 16px
-  font-weight: bold
-  color: #d20000
-  text-align: center
-._to_login_area
-  display: flex
-  justify-content: center
-  align-items: center
-  padding-top: 10px
-  width: 100%
-._to_login
-  color: blue
-  font-size: 20px
-  text-decoration: underline
-  cursor: pointer
-  width: fit-content
+.user-register-card
+	width: min(100%, 960px)
+	overflow: hidden
 
-._role_area
-  display: flex
-  flex-direction: column
-  gap: 8px
+.user-register-card__content
+	display: flex
+	flex-direction: column
+	gap: 16px
+	padding: clamp(16px, 2vw, 22px)
 
-._role_label
-  font-size: 14px
-  font-weight: bold
+.user-register-role
+	display: flex
+	flex-direction: column
+	gap: 8px
+	padding: 14px
+	border-radius: 18px
+	border: 1px solid #e2e8f0
+	background: rgba(248, 250, 252, 0.88)
 
-._role_dropdown
-  width: 100%
+.user-register-role__label
+	font-size: 14px
+	font-weight: 700
+	color: #475569
 
-._btn_area
-  display: flex
-  gap: 10px
-  margin-bottom: 20px
-._select_btn
-  width: 100% !important
-  height: 50px !important
-  margin-top: 20px
-  user-select: none
+.user-register-role__dropdown
+	width: 100%
+
+.user-register-error
+	margin: 0
+	padding: 12px 14px
+	border-radius: 16px
+	background: rgba(239, 68, 68, 0.08)
+	border: 1px solid rgba(239, 68, 68, 0.16)
+	color: #b91c1c
+	font-weight: 700
+
 ._input_active::v-deep(._standard_or_shadow_width)
-  outline: 1px solid #707070
-// PC
-@media screen and (min-width: 768px)
-  ._user_register_inner_container
-    padding: 50px 400px
-    position: fixed
-    left: 0
-    bottom: 40px
-    width: 100%
-  ._user_register_form
-    height: 100%
-    padding: 30px
-    display: flex
-    flex-direction: column
-    justify-content: center
-    align-items: center
-    > div
-      margin: 10px 0
-  ._register_input
-    width: 100%
-  ._btn_area
-    width: 100%
-    display: flex
-    gap: 10px
-    margin-bottom: 20px
+	outline: 1px solid #707070
+
+@media (max-width: 767px)
+	.user-register-actions
+		flex-direction: column
+		align-items: stretch
 </style>

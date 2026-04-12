@@ -1,11 +1,13 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Divider from 'primevue/divider'
 import Dropdown from 'primevue/dropdown'
+import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
-import ToggleButton from 'primevue/togglebutton'
+import Tag from 'primevue/tag'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@rm/db'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
@@ -13,7 +15,10 @@ import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { AppRole, AppUser, Guild, User } from '@rm/types'
 import { canManageGuildMembers, globalLoginUserData, hasAdmin } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
+import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMIcon from 'src/components/RMIcon/RMIcon.vue'
+import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
+import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import {
 	notifyError,
@@ -45,6 +50,10 @@ const currentGuildId = computed(() =>
 )
 
 const canEditGuild = computed(() => canManageGuildMembers.value)
+
+const guildScopedUsers = computed(() =>
+	guildUsers.value.filter((user) => user.guildId === currentGuildId.value)
+)
 
 const roleOptions = computed(() => {
 	if (hasAdmin.value) {
@@ -95,7 +104,7 @@ const approvedMembers = computed<GuildUserRow[]>(() => {
 const pendingMembers = computed<GuildUserRow[]>(() => {
 	const guildMember = guildDetail.value?.guildMember ?? {}
 
-	return guildUsers.value
+	return guildScopedUsers.value
 		.filter(
 			(user) =>
 				user.guildId === currentGuildId.value &&
@@ -110,6 +119,39 @@ const pendingMembers = computed<GuildUserRow[]>(() => {
 		}))
 		.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ja'))
 })
+
+const summaryItems = computed(() => [
+	{
+		label: '承認済みメンバー',
+		value: `${approvedMembers.value.length}人`,
+		icon: 'pi pi-check-circle',
+		tone: 'approved',
+	},
+	{
+		label: '承認待ち',
+		value: `${pendingMembers.value.length}人`,
+		icon: 'pi pi-clock',
+		tone: 'pending',
+	},
+	{
+		label: 'guildId 登録ユーザー',
+		value: `${guildScopedUsers.value.length}人`,
+		icon: 'pi pi-users',
+		tone: 'users',
+	},
+	{
+		label: '現在の表示モード',
+		value: isEditMode.value && canManageGuildMembers.value ? '管理モード' : '閲覧モード',
+		icon: isEditMode.value && canManageGuildMembers.value ? 'pi pi-pencil' : 'pi pi-eye',
+		tone: 'mode',
+	},
+])
+
+const managerGuide = computed(() =>
+	hasAdmin.value
+		? 'Admin は承認、権限変更、ギルド編集までこの画面から進められます。'
+		: 'Guild Admin は自ギルドの承認と権限変更をこの画面から管理できます。'
+)
 
 const syncRoleDrafts = () => {
 	const nextDrafts: Record<string, AppRole> = {}
@@ -328,6 +370,12 @@ const canChangeRole = (member: GuildUserRow) => {
 	if (!hasAdmin.value && member.role === 'admin') return false
 	return true
 }
+
+const roleSeverity = (role: AppRole) => {
+	if (role === 'admin') return 'danger'
+	if (role === 'guild_admin') return 'info'
+	return 'secondary'
+}
 </script>
 
 <template>
@@ -338,197 +386,328 @@ const canChangeRole = (member: GuildUserRow) => {
 		</div>
 
 		<div v-else-if="errorMessage" class="rm-state-card">
-			<p class="rm-error">{{ errorMessage }}</p>
-			<RMButton label="ホームに戻る" color="primary" @click="router.push('/')" />
+			<RMEmptyState
+				icon="pi pi-exclamation-circle"
+				title="ギルド情報を表示できません"
+				:message="errorMessage"
+			>
+				<template #actions>
+					<RMButton label="ホームに戻る" color="primary" @click="router.push('/')" />
+				</template>
+			</RMEmptyState>
 		</div>
 
 		<Card v-else-if="guildDetail" class="guild-detail-card">
 			<template #content>
 				<div class="guild-detail-card__content">
-					<div class="guild-detail-card__header">
-						<div>
-							<div class="guild-detail-card__title">{{ guildDetail.guildName }}</div>
-							<div class="guild-detail-card__id">ID: {{ guildDetail.id }}</div>
-						</div>
-						<ToggleButton
-							v-model="isEditMode"
-							onLabel="管理モード"
-							offLabel="閲覧モード"
-							onIcon="pi pi-pencil"
-							offIcon="pi pi-eye"
-							class="guild-detail-card__toggle"
-							:disabled="!canManageGuildMembers"
-						/>
-					</div>
+					<RMPageHeader
+						:title="guildDetail.guildName"
+						:subtitle="`ID: ${guildDetail.id}`"
+						:description="isEditMode && canManageGuildMembers ? '管理モードでは承認・権限変更・メンバー導線をそのまま操作できます。' : '通常は閲覧モードです。管理権限がある場合のみトグルで管理モードへ切り替えられます。'"
+						icon="pi pi-users"
+					>
+						<template #actions>
+							<RMModeToggle
+								v-model="isEditMode"
+								onLabel="管理モード"
+								offLabel="閲覧モード"
+								:disabled="!canManageGuildMembers"
+							/>
+						</template>
+					</RMPageHeader>
 
-					<p v-if="!canManageGuildMembers" class="guild-detail-card__notice">
-						この画面は閲覧専用です。メンバー承認・権限変更・ギルド編集は Guild
-						Admin 以上が実行できます。
-					</p>
-
-					<p v-else class="guild-detail-card__notice guild-detail-card__notice--manager">
-						{{ hasAdmin ? 'Admin はこのギルドのメンバー承認と権限変更を管理できます。' : 'Guild Admin は自ギルド内メンバーの承認と権限変更を管理できます。' }}
-					</p>
-
-					<Divider />
-
-					<div class="guild-detail-grid">
-						<div class="guild-detail-field">
-							<div class="guild-detail-label">ギルド説明</div>
-							<div>{{ guildDetail.guildMemo || '説明なし' }}</div>
+					<div class="guild-detail-hero">
+						<div
+							class="guild-detail-card__notice"
+							:class="{ 'guild-detail-card__notice--manager': canManageGuildMembers }"
+						>
+							{{ canManageGuildMembers
+								? managerGuide
+								: 'この画面は閲覧専用です。メンバー承認・権限変更・ギルド編集は Guild Admin 以上が実行できます。' }}
 						</div>
-						<div class="guild-detail-field">
-							<div class="guild-detail-label">状況</div>
-							<div>{{ guildDetail.situation || '不明' }}</div>
-						</div>
-						<div class="guild-detail-field">
-							<div class="guild-detail-label">創設日</div>
-							<div>{{ formatGuildFoundingDate(guildDetail.guildFoundingDateAt) }}</div>
-						</div>
-						<div class="guild-detail-field">
-							<div class="guild-detail-label">ゲーム内ギルドID</div>
-							<div>{{ guildDetail.guildIdInGame || '未登録' }}</div>
-						</div>
-						<div class="guild-detail-field">
-							<div class="guild-detail-label">公式メンバー数</div>
-							<div>{{ guildDetail.officialMembers }}人</div>
-						</div>
-					</div>
 
-					<Divider />
-
-					<div>
-						<div class="rm-section-title">承認済みメンバー</div>
-						<div v-if="approvedMembers.length > 0" class="guild-member-list">
+						<div class="guild-summary-grid">
 							<div
-								v-for="member in approvedMembers"
-								:key="member.uid"
-								class="guild-member-item"
-								:class="{ 'guild-member-item--editable': isEditMode }"
+								v-for="item in summaryItems"
+								:key="item.label"
+								class="guild-summary-card"
+								:class="`guild-summary-card--${item.tone}`"
 							>
-								<button
-									type="button"
-									class="guild-member-item__profile"
-									@click="goToPostSkill(member.uid)"
+								<div class="guild-summary-card__icon">
+									<i :class="item.icon" />
+								</div>
+								<div class="guild-summary-card__body">
+									<div class="guild-summary-card__label">{{ item.label }}</div>
+									<div class="guild-summary-card__value">{{ item.value }}</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<Divider />
+
+					<div class="guild-detail-overview-grid">
+						<Panel class="guild-overview-panel">
+							<template #header>
+								<div class="guild-panel-header">
+									<div>
+										<div class="guild-panel-header__title">ギルド概要</div>
+										<div class="guild-panel-header__subtitle">
+											運営に必要な基本情報を一覧で確認できます。
+										</div>
+									</div>
+								</div>
+							</template>
+							<div class="guild-detail-grid">
+								<div class="guild-detail-field guild-detail-field--memo">
+									<div class="guild-detail-label">ギルド説明</div>
+									<div class="guild-detail-value guild-detail-value--memo">
+										{{ guildDetail.guildMemo || '説明なし' }}
+									</div>
+								</div>
+								<div class="guild-detail-field">
+									<div class="guild-detail-label">状況</div>
+									<div class="guild-detail-value">{{ guildDetail.situation || '不明' }}</div>
+								</div>
+								<div class="guild-detail-field">
+									<div class="guild-detail-label">創設日</div>
+									<div class="guild-detail-value">
+										{{ formatGuildFoundingDate(guildDetail.guildFoundingDateAt) }}
+									</div>
+								</div>
+								<div class="guild-detail-field">
+									<div class="guild-detail-label">ゲーム内ギルドID</div>
+									<div class="guild-detail-value">
+										{{ guildDetail.guildIdInGame || '未登録' }}
+									</div>
+								</div>
+								<div class="guild-detail-field">
+									<div class="guild-detail-label">公式メンバー数</div>
+									<div class="guild-detail-value">{{ guildDetail.officialMembers }}人</div>
+								</div>
+							</div>
+						</Panel>
+
+						<Panel class="guild-overview-panel">
+							<template #header>
+								<div class="guild-panel-header">
+									<div>
+										<div class="guild-panel-header__title">運用メモ</div>
+										<div class="guild-panel-header__subtitle">
+											この画面で何ができるかを役割ごとに整理しています。
+										</div>
+									</div>
+								</div>
+							</template>
+							<div class="guild-operations">
+								<div class="guild-operations__item">
+									<div class="guild-operations__title">閲覧モード</div>
+									<p class="guild-operations__text">
+										ギルド概要、承認状況、ロール構成を確認するためのモードです。
+									</p>
+								</div>
+								<div class="guild-operations__item">
+									<div class="guild-operations__title">管理モード</div>
+									<p class="guild-operations__text">
+										承認済みメンバーからスキル画面へ進み、承認や権限変更をまとめて行えます。
+									</p>
+								</div>
+								<div class="guild-operations__item">
+									<div class="guild-operations__title">アクセス範囲</div>
+									<p class="guild-operations__text">
+										{{ canManageGuildMembers
+											? '現在の権限でこのギルドの運用操作が可能です。'
+											: '現在の権限では閲覧のみ可能です。編集操作は表示されても実行できません。' }}
+									</p>
+								</div>
+							</div>
+						</Panel>
+					</div>
+
+					<Divider />
+
+					<div class="guild-member-sections">
+						<Panel class="guild-members-panel">
+							<template #header>
+								<div class="guild-panel-header">
+									<div>
+										<div class="guild-panel-header__title">承認済みメンバー</div>
+										<div class="guild-panel-header__subtitle">
+											現在運用中のメンバー一覧です。
+										</div>
+									</div>
+									<Tag
+										:value="`${approvedMembers.length}人`"
+										severity="success"
+										class="guild-panel-header__tag"
+									/>
+								</div>
+							</template>
+							<div class="guild-panel-note">
+								管理モード中は各メンバーからスキル・熟練度の編集画面へ移動できます。
+							</div>
+							<div v-if="approvedMembers.length > 0" class="guild-member-list">
+								<div
+									v-for="member in approvedMembers"
+									:key="member.uid"
+									class="guild-member-item"
+									:class="{ 'guild-member-item--editable': isEditMode }"
 								>
-									<div class="guild-member-item__icon">
-										<RMIcon name="person" />
-									</div>
-									<div class="guild-member-item__body">
-										<div class="guild-member-item__name">{{ member.displayName }}</div>
-										<div class="guild-member-item__meta">
-											<span class="guild-member-item__badge guild-member-item__badge--approved">
-												承認済み
-											</span>
-											<span class="guild-member-item__badge">
-												{{ roleLabels[member.role] }}
-											</span>
-											<span
-												v-if="member.uid === globalLoginUserData.id"
-												class="guild-member-item__badge guild-member-item__badge--self"
-											>
-												自分
-											</span>
+									<div class="guild-member-item__main">
+										<div class="guild-member-item__identity">
+											<div class="guild-member-item__icon">
+												<RMIcon name="person" />
+											</div>
+											<div class="guild-member-item__body">
+												<div class="guild-member-item__head">
+													<div class="guild-member-item__name">{{ member.displayName }}</div>
+													<div class="guild-member-item__meta">
+														<Tag value="承認済み" severity="success" />
+														<Tag
+															:value="roleLabels[member.role]"
+															:severity="roleSeverity(member.role)"
+														/>
+														<Tag
+															v-if="member.uid === globalLoginUserData.id"
+															value="自分"
+															severity="info"
+														/>
+													</div>
+												</div>
+												<div class="guild-member-item__subtext">
+													{{ isEditMode && canManageGuildMembers
+														? '管理モード中は、このメンバーのスキル・熟練度編集画面へ進めます。'
+														: '承認済みメンバーとして運用対象に含まれています。' }}
+												</div>
+											</div>
 										</div>
+										<Button
+											v-if="isEditMode && canManageGuildMembers"
+											label="スキル管理"
+											outlined
+											severity="contrast"
+											class="guild-member-item__link"
+											@click="goToPostSkill(member.uid)"
+										/>
 									</div>
-									<RMIcon
-										v-if="isEditMode"
-										name="arrow_forward_ios"
-										class="guild-member-item__arrow"
-									/>
-								</button>
 
-								<div v-if="canManageGuildMembers" class="guild-member-item__management">
-									<Dropdown
-										v-model="roleDrafts[member.uid]"
-										:options="roleOptions"
-										optionLabel="label"
-										optionValue="value"
-										placeholder="ロールを選択"
-										class="guild-member-item__dropdown"
-										:disabled="!canChangeRole(member)"
-									/>
-									<RMButton
-										label="権限を保存"
-										color="primary"
-										width="140px"
-										:isDisable="!canChangeRole(member) || roleDrafts[member.uid] === member.role"
-										@click="saveRole(member)"
-									/>
-									<RMButton
-										label="承認解除"
-										flat
-										color="grey"
-										width="120px"
-										@click="revokeApproval(member)"
-									/>
+									<div v-if="canManageGuildMembers" class="guild-member-item__management">
+										<Dropdown
+											v-model="roleDrafts[member.uid]"
+											:options="roleOptions"
+											optionLabel="label"
+											optionValue="value"
+											placeholder="ロールを選択"
+											class="guild-member-item__dropdown"
+											:disabled="!canChangeRole(member)"
+										/>
+										<RMButton
+											label="権限を保存"
+											color="primary"
+											width="140px"
+											:isDisable="!canChangeRole(member) || roleDrafts[member.uid] === member.role"
+											@click="saveRole(member)"
+										/>
+										<RMButton
+											label="承認解除"
+											flat
+											color="grey"
+											width="120px"
+											@click="revokeApproval(member)"
+										/>
+									</div>
 								</div>
 							</div>
-						</div>
-						<p v-else class="rm-muted">承認済みメンバーがいません。</p>
-					</div>
+							<RMEmptyState
+								v-else
+								icon="pi pi-user-minus"
+								title="承認済みメンバーがいません"
+								message="guildMember に追加されると、この一覧に表示されます。"
+							/>
+						</Panel>
 
-					<Divider v-if="canManageGuildMembers" />
-
-					<div v-if="canManageGuildMembers">
-						<div class="rm-section-title">承認待ちメンバー</div>
-						<div v-if="isMemberLoading" class="guild-detail-card__substate">
-							<ProgressSpinner strokeWidth="5" style="width: 40px; height: 40px" />
-							<p class="rm-muted">承認待ちメンバーを読み込み中...</p>
-						</div>
-						<div v-else-if="pendingMembers.length > 0" class="guild-member-list">
-							<div
-								v-for="member in pendingMembers"
-								:key="member.uid"
-								class="guild-member-item guild-member-item--pending"
-							>
-								<div class="guild-member-item__profile guild-member-item__profile--static">
-									<div class="guild-member-item__icon">
-										<RMIcon name="pending" />
-									</div>
-									<div class="guild-member-item__body">
-										<div class="guild-member-item__name">{{ member.displayName }}</div>
-										<div class="guild-member-item__meta">
-											<span class="guild-member-item__badge guild-member-item__badge--pending">
-												承認待ち
-											</span>
-											<span class="guild-member-item__badge">
-												{{ roleLabels[member.role] }}
-											</span>
+						<Panel v-if="canManageGuildMembers" class="guild-members-panel">
+							<template #header>
+								<div class="guild-panel-header">
+									<div>
+										<div class="guild-panel-header__title">承認待ちメンバー</div>
+										<div class="guild-panel-header__subtitle">
+											users.guildId はあるが guildMember に未登録のユーザーです。
 										</div>
 									</div>
+									<Tag
+										:value="`${pendingMembers.length}人`"
+										severity="warn"
+										class="guild-panel-header__tag"
+									/>
 								</div>
+							</template>
+							<div v-if="isMemberLoading" class="guild-detail-card__substate">
+								<ProgressSpinner strokeWidth="5" style="width: 40px; height: 40px" />
+								<p class="rm-muted">承認待ちメンバーを読み込み中...</p>
+							</div>
+							<div v-else-if="pendingMembers.length > 0" class="guild-member-list">
+								<div
+									v-for="member in pendingMembers"
+									:key="member.uid"
+									class="guild-member-item guild-member-item--pending"
+								>
+									<div class="guild-member-item__main">
+										<div class="guild-member-item__identity">
+											<div class="guild-member-item__icon guild-member-item__icon--pending">
+												<RMIcon name="pending" />
+											</div>
+											<div class="guild-member-item__body">
+												<div class="guild-member-item__head">
+													<div class="guild-member-item__name">{{ member.displayName }}</div>
+													<div class="guild-member-item__meta">
+														<Tag value="承認待ち" severity="warn" />
+														<Tag
+															:value="roleLabels[member.role]"
+															:severity="roleSeverity(member.role)"
+														/>
+													</div>
+												</div>
+												<div class="guild-member-item__subtext">
+													ロールを確認してから承認すると、そのまま運用対象に追加されます。
+												</div>
+											</div>
+										</div>
+									</div>
 
-								<div class="guild-member-item__management">
-									<Dropdown
-										v-model="roleDrafts[member.uid]"
-										:options="roleOptions"
-										optionLabel="label"
-										optionValue="value"
-										placeholder="ロールを選択"
-										class="guild-member-item__dropdown"
-										:disabled="!canChangeRole(member)"
-									/>
-									<RMButton
-										label="権限を保存"
-										color="primary"
-										width="140px"
-										:isDisable="!canChangeRole(member) || roleDrafts[member.uid] === member.role"
-										@click="saveRole(member)"
-									/>
-									<RMButton
-										label="承認"
-										color="primary"
-										width="120px"
-										@click="approveMember(member)"
-									/>
+									<div class="guild-member-item__management">
+										<Dropdown
+											v-model="roleDrafts[member.uid]"
+											:options="roleOptions"
+											optionLabel="label"
+											optionValue="value"
+											placeholder="ロールを選択"
+											class="guild-member-item__dropdown"
+											:disabled="!canChangeRole(member)"
+										/>
+										<RMButton
+											label="権限を保存"
+											color="primary"
+											width="140px"
+											:isDisable="!canChangeRole(member) || roleDrafts[member.uid] === member.role"
+											@click="saveRole(member)"
+										/>
+										<RMButton
+											label="承認"
+											color="primary"
+											width="120px"
+											@click="approveMember(member)"
+										/>
+									</div>
 								</div>
 							</div>
-						</div>
-						<p v-else class="rm-muted">
-							承認待ちメンバーはいません。`users.guildId` が一致していて
-							`guildMember` に未登録のユーザーがここに表示されます。
-						</p>
+							<RMEmptyState
+								v-else
+								icon="pi pi-check-circle"
+								title="承認待ちメンバーはいません"
+								message="新しく同じ guildId を持つユーザーが作成されると、ここに表示されます。"
+							/>
+						</Panel>
 					</div>
 
 					<div class="rm-actions guild-detail-actions">
@@ -548,36 +727,23 @@ const canChangeRole = (member: GuildUserRow) => {
 
 <style lang="scss" scoped>
 .guild-detail-card {
-  width: min(100%, 860px);
-  border-radius: 24px;
-  overflow: hidden;
+  width: min(100%, 1180px);
 }
 
 .guild-detail-card__content {
-  padding: 28px;
-}
-
-.guild-detail-card__header {
+  padding: clamp(16px, 2vw, 22px);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 16px;
-  align-items: center;
-  justify-content: space-between;
 }
 
-.guild-detail-card__title {
-  font-size: clamp(1.8rem, 4vw, 2.25rem);
-  font-weight: 800;
-  color: #1f2937;
-}
-
-.guild-detail-card__id {
-  margin-top: 6px;
-  color: #64748b;
+.guild-detail-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .guild-detail-card__notice {
-  margin-top: 16px;
   padding: 12px 16px;
   border-radius: 16px;
   background: #f8fafc;
@@ -591,6 +757,105 @@ const canChangeRole = (member: GuildUserRow) => {
   color: #1d4ed8;
 }
 
+.guild-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.guild-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+}
+
+.guild-summary-card__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(75, 105, 130, 0.12);
+  color: var(--rm-primary);
+  font-size: 1.2rem;
+}
+
+.guild-summary-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guild-summary-card__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.guild-summary-card__value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.guild-summary-card--approved {
+  border-color: #bbf7d0;
+}
+
+.guild-summary-card--pending {
+  border-color: #fde68a;
+}
+
+.guild-summary-card--mode {
+  border-color: #bfdbfe;
+}
+
+.guild-detail-overview-grid,
+.guild-member-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.guild-overview-panel,
+.guild-members-panel {
+  height: 100%;
+}
+
+.guild-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.guild-panel-header__title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.guild-panel-header__subtitle {
+  margin-top: 4px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.guild-panel-note {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  line-height: 1.7;
+}
+
 .guild-detail-card__substate {
   display: grid;
   justify-items: center;
@@ -600,15 +865,19 @@ const canChangeRole = (member: GuildUserRow) => {
 
 .guild-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 .guild-detail-field {
-  padding: 16px;
+  padding: 12px 13px;
   border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+}
+
+.guild-detail-field--memo {
+  grid-column: 1 / -1;
 }
 
 .guild-detail-label {
@@ -618,23 +887,57 @@ const canChangeRole = (member: GuildUserRow) => {
   color: #475569;
 }
 
+.guild-detail-value {
+  color: #1f2937;
+  line-height: 1.7;
+}
+
+.guild-detail-value--memo {
+  min-height: 64px;
+}
+
+.guild-operations {
+  display: grid;
+  gap: 12px;
+}
+
+.guild-operations__item {
+  padding: 12px 13px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.guild-operations__title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.guild-operations__text {
+  margin: 8px 0 0;
+  color: #64748b;
+  line-height: 1.7;
+}
+
 .guild-member-list {
   display: grid;
   gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .guild-member-item {
   display: grid;
   gap: 14px;
-  padding: 14px 16px;
-  border-radius: 18px;
+  padding: 13px 14px;
+  border-radius: 20px;
   border: 1px solid #e2e8f0;
-  background: rgba(248, 250, 252, 0.85);
+  background: rgba(248, 250, 252, 0.92);
   text-align: left;
 }
 
 .guild-member-item--pending {
-  background: rgba(255, 251, 235, 0.88);
+  background: rgba(255, 251, 235, 0.96);
   border-color: #fcd34d;
 }
 
@@ -649,63 +952,54 @@ const canChangeRole = (member: GuildUserRow) => {
   box-shadow: 0 14px 26px rgba(15, 23, 42, 0.08);
 }
 
-.guild-member-item__profile {
+.guild-member-item__main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 14px;
-  width: 100%;
-  padding: 0;
-  border: none;
-  background: transparent;
-  text-align: left;
 }
 
-.guild-member-item__profile--static {
-  cursor: default;
+.guild-member-item__identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
 }
 
-.guild-member-item--editable .guild-member-item__profile {
-  cursor: pointer;
+.guild-member-item__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 14px;
+  background: #e2e8f0;
+  color: #475569;
 }
 
-.guild-member-item__icon,
-.guild-member-item__arrow {
-  color: #64748b;
+.guild-member-item__icon--pending {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .guild-member-item__body {
   flex: 1;
+  min-width: 0;
+}
+
+.guild-member-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .guild-member-item__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
-}
-
-.guild-member-item__badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #e2e8f0;
-  color: #475569;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.guild-member-item__badge--approved {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.guild-member-item__badge--pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.guild-member-item__badge--self {
-  background: #dbeafe;
-  color: #1d4ed8;
 }
 
 .guild-member-item__name {
@@ -713,12 +1007,23 @@ const canChangeRole = (member: GuildUserRow) => {
   color: #1f2937;
 }
 
+.guild-member-item__subtext {
+  margin-top: 8px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.guild-member-item__link {
+  flex: 0 0 auto;
+  min-width: 120px;
+}
+
 .guild-member-item__management {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .guild-member-item__dropdown {
@@ -726,20 +1031,35 @@ const canChangeRole = (member: GuildUserRow) => {
 }
 
 .guild-detail-actions {
-  margin-top: 24px;
+  margin-top: 4px;
+}
+
+@media (max-width: 1023px) {
+  .guild-member-item__main {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 767px) {
   .guild-detail-card__content {
-    padding: 20px;
+    padding: 16px;
   }
 
-  .guild-detail-card__toggle {
+  .guild-member-list {
+    grid-template-columns: 1fr;
+  }
+
+  .guild-member-item__identity {
+    width: 100%;
+  }
+
+  .guild-member-item__link {
     width: 100%;
   }
 
   .guild-member-item__management {
-    justify-content: stretch;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .guild-member-item__dropdown {
