@@ -1,2 +1,11 @@
 node_modules
 package-lock.json
+.env
+.env.*
+.env.local
+.env.*.local
+packages/app/.env
+packages/app/.env.*
+packages/app/.env.local
+packages/app/.env.*.local
+!packages/app/.env.example
