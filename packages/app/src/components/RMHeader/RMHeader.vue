@@ -21,10 +21,10 @@ const currentPageTitle = computed(() => {
 })
 
 const currentPageDescription = computed(() => {
-  if (route.name === 'RMSkillPost') return 'メンバーごとの登録内容を更新'
+  if (route.name === 'RMSkillPost') return 'メンバーの所持スキルと画像順を更新'
   if (route.name === 'RMGuildDetail') return '承認状況とメンバー運用を確認'
   if (route.name === 'RMSkillMasterAdmin') return '検索・登録・更新をまとめて管理'
-  if (route.name === 'RMUserEdit') return 'プロフィールと入力内容を確認'
+  if (route.name === 'RMUserEdit') return 'プロフィール・所持スキル・画像をまとめて確認'
   return 'ギルド運営に必要な操作へすばやく移動'
 })
 

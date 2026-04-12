@@ -743,7 +743,7 @@ const attrSeverity = (attr: string) => {
 								<div class="guild-operations__item">
 									<div class="guild-operations__title">管理モード</div>
 									<p class="guild-operations__text">
-										承認済みメンバーのカードや一覧から、そのままスキル・熟練度編集画面へ進めます。
+										承認済みメンバーごとに、所持スキルと画像管理だけへ絞った画面を開けます。
 									</p>
 								</div>
 							</div>
@@ -803,7 +803,7 @@ const attrSeverity = (attr: string) => {
 										</div>
 										<Button
 											v-if="isEditMode && canManageGuildMembers"
-											label="スキル管理"
+											label="スキル・画像を編集"
 											outlined
 											severity="contrast"
 											size="small"
@@ -1043,7 +1043,7 @@ const attrSeverity = (attr: string) => {
 								</div>
 							</template>
 							<div class="guild-panel-note">
-								管理モード中は、各メンバーからスキル・熟練度の編集画面へ移動できます。
+								管理モード中は、各メンバーの所持スキル・画像管理だけを開けます。
 							</div>
 							<div v-if="approvedMembers.length > 0" class="guild-member-list">
 								<div
@@ -1076,7 +1076,7 @@ const attrSeverity = (attr: string) => {
 												<div class="guild-member-item__subtext">
 													{{
 														isEditMode && canManageGuildMembers
-															? '管理モード中は、このメンバーのスキル・熟練度編集画面へ進めます。'
+															? '管理モード中は、このメンバーの所持スキル・画像管理画面へ進めます。'
 															: '承認済みメンバーとして運用対象に含まれています。'
 													}}
 												</div>
@@ -1084,7 +1084,7 @@ const attrSeverity = (attr: string) => {
 										</div>
 										<Button
 											v-if="isEditMode && canManageGuildMembers"
-											label="スキル管理"
+											label="スキル・画像を編集"
 											outlined
 											severity="contrast"
 											class="guild-member-item__link"
