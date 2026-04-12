@@ -6,6 +6,7 @@
     "build:app": "npm run build -w app",
     "deploy:app": "npm run build -w app && firebase use recordmanagements-756bf && firebase deploy --only hosting:app",
     "skill-master:import": "node ./scripts/skill-master/import.mjs",
+    "schema-migration:migrate": "node ./scripts/schema-migration/migrate.mjs",
     "dev:vapp": "npm run dev -w vite-project",
     "build:vapp": "npm run build -w vite-project"
   },
