@@ -1,0 +1,30 @@
+{
+  "roleOverrides": {
+    "sample-guild-admin-uid": "guild_admin"
+  },
+  "users": {
+    "sample-user-uid": {
+      "bucketMappings": {
+        "sword": [
+          "skill-fire-sword-001",
+          {
+            "skillId": "skill-fire-sword-link-002",
+            "levelSource": "sword"
+          }
+        ],
+        "weaponConnect": [
+          {
+            "skillId": "skill-dark-sword-connect-003",
+            "levelSource": "sword"
+          }
+        ],
+        "ability": [
+          {
+            "skillId": "skill-light-ability-001",
+            "level": 0
+          }
+        ]
+      }
+    }
+  }
+}
