@@ -29,6 +29,8 @@ export type User = {
   birthDateAt: Date | null
   /** 最終ログイン日 */
   lastLoginDateAt: Date | null
+  /** マイページ画像一覧 */
+  imageUrls: string[]
   /** ロール */
   role: '管理者' | 'エンドユーザー'
   /**
@@ -121,6 +123,7 @@ export function defaultUser(): User {
     },
     birthDateAt: null,
     lastLoginDateAt: null,
+    imageUrls: [],
     role: 'エンドユーザー',
     skillRecord: {
       sword: [],

@@ -9,7 +9,7 @@ const routes: RouteRecordRaw[] = [
 			name: 'RMUserEdit',
 			path: ':userId/edit',
 			component: () => import('src/pages/RMUserEdit/RMUserEdit.vue'),
-			meta: { pageTitle: 'マイプロフィール' },
+			meta: { pageTitle: 'マイページ' },
 		},
     ],
   },
