@@ -56,6 +56,18 @@ const goToCalendar = () => {
   router.push({ name: 'RMCalendar' })
 }
 
+const goToGuildSchedule = () => {
+  if (!globalLoginUserData.value.guildId) {
+    notifyError('所属ギルド情報が見つかりません。')
+    return
+  }
+
+  router.push({
+    name: 'RMGuildSchedule',
+    params: { guildId: globalLoginUserData.value.guildId },
+  })
+}
+
 const homeActions = computed(() => {
   const actions = [
     {
@@ -123,6 +135,14 @@ const homeActions = computed(() => {
       icon: 'touch_app',
       label: '表示する',
       onClick: selectGuild,
+    })
+    actions.push({
+      key: 'guild-schedule',
+      title: 'ギルド日程調整',
+      description: '日ごとの参加可・未定・参加不可を入力し、集計と内訳を確認します。',
+      icon: 'event_available',
+      label: '開く',
+      onClick: goToGuildSchedule,
     })
   }
 

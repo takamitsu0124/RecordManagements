@@ -457,6 +457,18 @@ const clearSkillFilters = () => {
 	}
 }
 
+const goToGuildSchedule = () => {
+	if (!currentGuildId.value) {
+		notifyError('ギルド日程調整を開くための guildId が見つかりません。')
+		return
+	}
+
+	router.push({
+		name: 'RMGuildSchedule',
+		params: { guildId: currentGuildId.value },
+	})
+}
+
 const goToEditGuild = () => {
 	if (!canEditGuild.value) {
 		notifyError('ギルド情報を編集する権限がありません。')
@@ -633,6 +645,12 @@ const attrSeverity = (attr: string) => {
 						icon="pi pi-users"
 					>
 						<template #actions>
+							<Button
+								label="日程調整"
+								outlined
+								severity="contrast"
+								@click="goToGuildSchedule"
+							/>
 							<RMModeToggle
 								v-model="isEditMode"
 								onLabel="管理モード"

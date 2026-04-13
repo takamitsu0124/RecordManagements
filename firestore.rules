@@ -109,6 +109,31 @@ service cloud.firestore {
 			return isAdmin() || (isGuildAdmin() && canReadGuild(guildId));
 		}
 
+		function isApprovedGuildMember(guildId) {
+			return isSignedIn() && guildId != null && guildId != '' && hasGuildDoc(guildId) && guildDoc(guildId).guildMember[authUid()] != null;
+		}
+
+		function canReadGuildSchedule(guildId) {
+			return isAdmin() || isApprovedGuildMember(guildId) || ownsCreatedGuild(guildId);
+		}
+
+		function canCreateOwnGuildSchedule(responseId) {
+			return request.resource.data.id == responseId &&
+				request.resource.data.userId == authUid() &&
+				request.resource.data.guildId == currentUserGuildId() &&
+				request.resource.data.guildId != '' &&
+				canReadGuildSchedule(request.resource.data.guildId);
+		}
+
+		function canUpdateOwnGuildSchedule() {
+			return resource.data.userId == authUid() &&
+				request.resource.data.id == resource.data.id &&
+				request.resource.data.userId == resource.data.userId &&
+				request.resource.data.guildId == resource.data.guildId &&
+				request.resource.data.diff(resource.data).affectedKeys().hasOnly(['entries', 'updatedAt', 'updatedBy']) &&
+				canReadGuildSchedule(resource.data.guildId);
+		}
+
 		function isCurrentUsersGuildMember(uid) {
 			return hasUsersDoc(uid) && currentUserGuildId() != null && usersDoc(uid).guildId == currentUserGuildId();
 		}
@@ -337,6 +362,18 @@ service cloud.firestore {
 				]);
 
 			allow delete: if isAdmin();
+		}
+
+		match /guild_schedule_responses/{responseId} {
+			allow read: if isSignedIn() && canReadGuildSchedule(resource.data.guildId);
+
+			allow create: if isSignedIn() && canCreateOwnGuildSchedule(responseId);
+
+			allow update: if isSignedIn() && canUpdateOwnGuildSchedule();
+
+			allow delete: if isSignedIn() &&
+				resource.data.userId == authUid() &&
+				canReadGuildSchedule(resource.data.guildId);
 		}
 	}
 }
