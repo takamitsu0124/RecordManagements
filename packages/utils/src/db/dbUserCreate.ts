@@ -12,7 +12,7 @@ export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
       email: info.email,
       displayName: info.name,
       guildId: info.guildId,
-      role: info.role,
+      role: info.role
     })
   } catch (e) {
     useToast({
@@ -21,6 +21,10 @@ export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
       toastMovingTime: 3,
       isCheckCircle: false
     })
+    console.error(
+      'Failed to create synced user documents:',
+      getSyncUserDocumentsErrorDetails(e) || e
+    )
     throw e
   }
 }

@@ -170,9 +170,9 @@ export default configure(function (ctx) {
       // if using workbox in InjectManifest mode
       // chainWebpackCustomSW (/* chain */) {},
 
-        manifest: {
-          name: 'RecordManagement',
-          short_name: 'RecordManagement',
+      manifest: {
+        name: 'RecordManagement',
+        short_name: 'RecordManagement',
         description: '',
         display: 'standalone',
         orientation: 'portrait',

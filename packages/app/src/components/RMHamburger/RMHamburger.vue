@@ -4,13 +4,13 @@ import { useRoute } from 'vue-router'
 import { activeMenu } from './RMHamburger'
 
 defineOptions({
-	inheritAttrs: false,
+  inheritAttrs: false,
 })
 
 type Menu = { name: string; url: string; isShow: boolean }[]
 
 const props = defineProps({
-	menu: { type: Object as PropType<Menu>, required: true },
+  menu: { type: Object as PropType<Menu>, required: true },
 })
 
 const route = useRoute()
@@ -22,88 +22,98 @@ const emits = defineEmits(['menuClick', 'logout'])
 const visibleMenus = computed(() => props.menu.filter((menu) => menu.isShow))
 
 const syncActiveMenu = () => {
-	const matchedMenu = visibleMenus.value.find(
-		(menu) => menu.url && route.path.startsWith(menu.url)
-	)
-	const metaTitle = route.meta.pageTitle
-	activeMenu.value =
-		matchedMenu?.name || (typeof metaTitle === 'string' ? metaTitle : null)
+  const matchedMenu = visibleMenus.value.find(
+    (menu) => menu.url && route.path.startsWith(menu.url)
+  )
+  const metaTitle = route.meta.pageTitle
+  activeMenu.value =
+    matchedMenu?.name || (typeof metaTitle === 'string' ? metaTitle : null)
 }
 
 watch(
-	() => route.path,
-	() => {
-		syncActiveMenu()
-	},
-	{ immediate: true }
+  () => route.path,
+  () => {
+    syncActiveMenu()
+  },
+  { immediate: true }
 )
 
 const spHandleClick = (menu: { name: string; url: string }) => {
-	activeMenu.value = menu.name
-	if (menu.name === 'ログアウト') {
-		emits('logout')
-	} else {
-		emits('menuClick', menu)
-	}
-	isOpen.value = false
+  activeMenu.value = menu.name
+  if (menu.name === 'ログアウト') {
+    emits('logout')
+  } else {
+    emits('menuClick', menu)
+  }
+  isOpen.value = false
 }
 
-const pcHandleClick = (menu: { name: string; url: string; isShow: boolean }) => {
-	if (menu.name === 'ログアウト') {
-		emits('logout')
-	} else {
-		emits('menuClick', menu)
-	}
+const pcHandleClick = (menu: {
+  name: string
+  url: string
+  isShow: boolean
+}) => {
+  if (menu.name === 'ログアウト') {
+    emits('logout')
+  } else {
+    emits('menuClick', menu)
+  }
 }
 
 const closeMenu = () => {
-	isOpen.value = false
+  isOpen.value = false
 }
 </script>
 
 <template>
-	<div
-		:class="['_hamburger_menu_btn', attrs.class, { active: isOpen }]"
-		@click="isOpen = !isOpen"
-	>
-		<span></span>
-		<span></span>
-		<div class="_open_text">{{ isOpen ? '' : 'MENU' }}</div>
-	</div>
+  <div
+    :class="['_hamburger_menu_btn', attrs.class, { active: isOpen }]"
+    @click="isOpen = !isOpen"
+  >
+    <span></span>
+    <span></span>
+    <div class="_open_text">{{ isOpen ? '' : 'MENU' }}</div>
+  </div>
 
-	<div v-if="isOpen" class="_menu_open" @click="closeMenu">
-		<div class="_menu_panel" @click.stop>
-			<div class="_menu_panel_title">メニュー</div>
-			<div class="_menu">
-				<button
-					v-for="menu in visibleMenus"
-					:key="menu.name"
-					type="button"
-					@click="spHandleClick(menu)"
-					:class="[
-						'_menu_item',
-						{ active: activeMenu === menu.name, logout: menu.name === 'ログアウト' },
-					]"
-				>
-					<span>{{ menu.name }}</span>
-					<i v-if="menu.name !== 'ログアウト'" class="pi pi-chevron-right"></i>
-				</button>
-			</div>
-		</div>
-	</div>
+  <div v-if="isOpen" class="_menu_open" @click="closeMenu">
+    <div class="_menu_panel" @click.stop>
+      <div class="_menu_panel_title">メニュー</div>
+      <div class="_menu">
+        <button
+          v-for="menu in visibleMenus"
+          :key="menu.name"
+          type="button"
+          @click="spHandleClick(menu)"
+          :class="[
+            '_menu_item',
+            {
+              active: activeMenu === menu.name,
+              logout: menu.name === 'ログアウト',
+            },
+          ]"
+        >
+          <span>{{ menu.name }}</span>
+          <i v-if="menu.name !== 'ログアウト'" class="pi pi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 
-	<div :class="['_pc_menu', attrs.class]">
-		<button
-			v-for="menu in visibleMenus"
-			:key="menu.name"
-			type="button"
-			class="_pc_menu_container"
-			:class="{ active: activeMenu === menu.name, logout: menu.name === 'ログアウト' }"
-			@click="pcHandleClick(menu)"
-		>
-			{{ menu.name }}
-		</button>
-	</div>
+  <div :class="['_pc_menu', attrs.class]">
+    <button
+      v-for="menu in visibleMenus"
+      :key="menu.name"
+      type="button"
+      class="_pc_menu_container"
+      :class="{
+        active: activeMenu === menu.name,
+        logout: menu.name === 'ログアウト',
+      }"
+      @click="pcHandleClick(menu)"
+    >
+      {{ menu.name }}
+    </button>
+  </div>
 </template>
 
 <style lang="sass" scoped>
