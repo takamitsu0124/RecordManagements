@@ -63,10 +63,12 @@ const legacySkillBuckets = [
 
 const proficiencySources = ['sword', 'rapier', 'club', 'dagger', 'axe', 'spear', 'bow', 'shield']
 const appRoles = ['admin', 'guild_admin', 'member']
+const userSituations = ['現役', '隠居', '引退', '']
 
 const legacySkillBucketSet = new Set(legacySkillBuckets)
 const proficiencySourceSet = new Set(proficiencySources)
 const appRoleSet = new Set(appRoles)
+const userSituationSet = new Set(userSituations)
 
 function parseArgs(argv) {
 	const args = {
@@ -158,6 +160,11 @@ function normalizeArrayOfStrings(value) {
 		.filter(Boolean)
 }
 
+function normalizeUserSituation(value) {
+	const normalizedValue = normalizeString(value)
+	return userSituationSet.has(normalizedValue) ? normalizedValue : '現役'
+}
+
 function normalizeOwnedSkills(value) {
 	if (!Array.isArray(value)) {
 		return []
@@ -215,12 +222,18 @@ function normalizeLegacyUser(rawDoc, userId) {
 		...rawDoc,
 		id: userId,
 		charaName: normalizeString(rawDoc?.charaName),
+		charaNameKana: normalizeString(rawDoc?.charaNameKana),
 		guildId: normalizeString(rawDoc?.guildId),
+		affiliationDate: rawDoc?.affiliationDate || null,
+		affiliationNum: normalizeNonNegativeInteger(rawDoc?.affiliationNum),
+		situation: normalizeUserSituation(rawDoc?.situation),
+		gameStartDateAt: rawDoc?.gameStartDateAt || null,
 		role: normalizeString(rawDoc?.role),
 		contact: {
 			email: normalizeString(contact.email),
 			phone: normalizeString(contact.phone),
 		},
+		birthDateAt: rawDoc?.birthDateAt || null,
 		imageUrls: normalizeArrayOfStrings(rawDoc?.imageUrls),
 		skillRecord: normalizeLegacySkillRecord(rawDoc?.skillRecord),
 		proficiencyLevel: normalizeLegacyProficiency(rawDoc?.proficiencyLevel),
@@ -240,7 +253,15 @@ function normalizeExistingAppUser(rawDoc, userId) {
 		uid: normalizeString(rawDoc.uid) || userId,
 		email: normalizeString(rawDoc.email),
 		displayName: normalizeString(rawDoc.displayName),
+		displayNameKana: normalizeString(rawDoc.displayNameKana),
 		guildId: normalizeString(rawDoc.guildId),
+		affiliationDate: rawDoc?.affiliationDate || null,
+		affiliationNum: normalizeNonNegativeInteger(rawDoc?.affiliationNum),
+		situation: normalizeUserSituation(rawDoc?.situation),
+		gameStartDateAt: rawDoc?.gameStartDateAt || null,
+		birthDateAt: rawDoc?.birthDateAt || null,
+		phone: normalizeString(rawDoc?.phone),
+		imageUrls: normalizeArrayOfStrings(rawDoc?.imageUrls),
 		role,
 	}
 }
@@ -264,6 +285,63 @@ function mapLegacyRoleToAppRole(role) {
 
 function choosePreferredString(primaryValue, fallbackValue) {
 	return normalizeString(primaryValue) || normalizeString(fallbackValue)
+}
+
+function choosePreferredNumber(primaryValue, fallbackValue) {
+	if (typeof primaryValue === 'number' && Number.isFinite(primaryValue) && primaryValue > 0) {
+		return Math.max(0, Math.round(primaryValue))
+	}
+
+	return normalizeNonNegativeInteger(fallbackValue)
+}
+
+function choosePreferredTimestamp(primaryValue, fallbackValue) {
+	return primaryValue || fallbackValue || null
+}
+
+function choosePreferredStringArray(primaryValue, fallbackValue) {
+	const primary = normalizeArrayOfStrings(primaryValue)
+	if (primary.length > 0) {
+		return primary
+	}
+
+	return normalizeArrayOfStrings(fallbackValue)
+}
+
+function compareOptionalTimestamp(a, b) {
+	if (a === null && b === null) {
+		return true
+	}
+
+	if (!a && !b) {
+		return true
+	}
+
+	const resolveComparableValue = (value) => {
+		if (!value) {
+			return null
+		}
+
+		if (value instanceof Date) {
+			return value.getTime()
+		}
+
+		if (typeof value.toMillis === 'function') {
+			return value.toMillis()
+		}
+
+		return String(value)
+	}
+
+	return resolveComparableValue(a) === resolveComparableValue(b)
+}
+
+function compareStringArrays(a, b) {
+	if (a.length !== b.length) {
+		return false
+	}
+
+	return a.every((value, index) => value === b[index])
 }
 
 function getLegacyBucketsWithImages(legacyUser) {
@@ -291,7 +369,15 @@ function compareAppUsers(a, b) {
 		a.uid === b.uid &&
 		a.email === b.email &&
 		a.displayName === b.displayName &&
+		a.displayNameKana === b.displayNameKana &&
 		a.guildId === b.guildId &&
+		a.affiliationNum === b.affiliationNum &&
+		a.situation === b.situation &&
+		a.phone === b.phone &&
+		compareOptionalTimestamp(a.affiliationDate, b.affiliationDate) &&
+		compareOptionalTimestamp(a.gameStartDateAt, b.gameStartDateAt) &&
+		compareOptionalTimestamp(a.birthDateAt, b.birthDateAt) &&
+		compareStringArrays(a.imageUrls, b.imageUrls) &&
 		a.role === b.role
 	)
 }
@@ -598,7 +684,30 @@ function buildUserPlan({
 			existingAppUser?.displayName,
 			legacyUser.charaName
 		),
+		displayNameKana: choosePreferredString(
+			existingAppUser?.displayNameKana,
+			legacyUser.charaNameKana
+		),
 		guildId: choosePreferredString(existingAppUser?.guildId, legacyUser.guildId),
+		affiliationDate: choosePreferredTimestamp(
+			existingAppUser?.affiliationDate,
+			legacyUser.affiliationDate
+		),
+		affiliationNum: choosePreferredNumber(
+			existingAppUser?.affiliationNum,
+			legacyUser.affiliationNum
+		),
+		situation: choosePreferredString(existingAppUser?.situation, legacyUser.situation) || '現役',
+		gameStartDateAt: choosePreferredTimestamp(
+			existingAppUser?.gameStartDateAt,
+			legacyUser.gameStartDateAt
+		),
+		birthDateAt: choosePreferredTimestamp(
+			existingAppUser?.birthDateAt,
+			legacyUser.birthDateAt
+		),
+		phone: choosePreferredString(existingAppUser?.phone, legacyUser.contact.phone),
+		imageUrls: choosePreferredStringArray(existingAppUser?.imageUrls, legacyImageUrls),
 		role:
 			roleOverride ||
 			existingAppUser?.role ||
@@ -689,7 +798,15 @@ function createAppUserPayload(plan, authUid) {
 		uid: plan.nextAppUser.uid,
 		email: plan.nextAppUser.email,
 		displayName: plan.nextAppUser.displayName,
+		displayNameKana: plan.nextAppUser.displayNameKana,
 		guildId: plan.nextAppUser.guildId,
+		affiliationDate: plan.nextAppUser.affiliationDate,
+		affiliationNum: plan.nextAppUser.affiliationNum,
+		situation: plan.nextAppUser.situation,
+		gameStartDateAt: plan.nextAppUser.gameStartDateAt,
+		birthDateAt: plan.nextAppUser.birthDateAt,
+		phone: plan.nextAppUser.phone,
+		imageUrls: plan.nextAppUser.imageUrls,
 		role: plan.nextAppUser.role,
 		updatedAt: serverTimestamp(),
 		updatedBy: authUid,
@@ -771,7 +888,7 @@ function summarizePlans(plans) {
 		userSkillsUnchanged: 0,
 		userSkillsSkip: 0,
 		appendedOwnedSkills: 0,
-		legacyImageRefs: 0,
+		migratedImageRefs: 0,
 		legacyBucketsReviewed: 0,
 		errors: [],
 		warnings: [],
@@ -786,7 +903,7 @@ function summarizePlans(plans) {
 		if (plan.userSkillChange === 'unchanged') summary.userSkillsUnchanged += 1
 		if (plan.userSkillChange === 'skip') summary.userSkillsSkip += 1
 		summary.appendedOwnedSkills += plan.appendedOwnedSkills
-		summary.legacyImageRefs += plan.legacyImageUrls.length
+		summary.migratedImageRefs += plan.nextAppUser.imageUrls.length
 		summary.legacyBucketsReviewed += plan.legacyBucketsWithImages.length
 		summary.errors.push(...plan.errors)
 		summary.warnings.push(...plan.warnings)
@@ -808,7 +925,7 @@ function printSummary({ args, mapping, summary }) {
 		`user_skills => insert:${summary.userSkillsInsert} update:${summary.userSkillsUpdate} unchanged:${summary.userSkillsUnchanged} skip:${summary.userSkillsSkip}`
 	)
 	console.log(`Backfilled ownedSkills: ${summary.appendedOwnedSkills}`)
-	console.log(`Preserved legacy image references: ${summary.legacyImageRefs}`)
+	console.log(`Backfilled users.imageUrls: ${summary.migratedImageRefs}`)
 	console.log(`Legacy buckets reviewed: ${summary.legacyBucketsReviewed}`)
 
 	if (args.validateOnly) {
@@ -868,7 +985,7 @@ async function main() {
 				userSkillsUnchanged: 0,
 				userSkillsSkip: 0,
 				appendedOwnedSkills: 0,
-				legacyImageRefs: 0,
+				migratedImageRefs: 0,
 				legacyBucketsReviewed: 0,
 				errors: [],
 				warnings: [],
@@ -950,7 +1067,7 @@ async function main() {
 		await commitWrites(db, 'user_skills', userSkillWrites)
 
 		console.log(
-			`Applied migration. users=${appUserWrites.length}, user_skills=${userSkillWrites.length}, preserved_legacy_images=${summary.legacyImageRefs}`
+			`Applied migration. users=${appUserWrites.length}, user_skills=${userSkillWrites.length}, users_image_refs=${summary.migratedImageRefs}`
 		)
 	} finally {
 		await signOut(auth)

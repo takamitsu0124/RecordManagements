@@ -8,9 +8,7 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js
 
-/* eslint-disable @typescript-eslint/no-var-requires */
-
-const { configure } = require('quasar/wrappers')
+import { configure } from 'quasar/wrappers'
 
 const publicEnvKeys = [
   'APP_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID',
@@ -24,7 +22,7 @@ const publicEnv = Object.fromEntries(
   publicEnvKeys.map((key) => [key, process.env[key] || ''])
 )
 
-module.exports = configure(function (ctx) {
+export default configure(function (ctx) {
   return {
     // https://v2.quasar.dev/quasar-cli-webpack/supporting-ts
     supportTS: {

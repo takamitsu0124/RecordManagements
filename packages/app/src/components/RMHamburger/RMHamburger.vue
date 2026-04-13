@@ -40,12 +40,20 @@ watch(
 
 const spHandleClick = (menu: { name: string; url: string }) => {
 	activeMenu.value = menu.name
-	menu.name === 'ログアウト' ? emits('logout') : emits('menuClick', menu)
+	if (menu.name === 'ログアウト') {
+		emits('logout')
+	} else {
+		emits('menuClick', menu)
+	}
 	isOpen.value = false
 }
 
 const pcHandleClick = (menu: { name: string; url: string; isShow: boolean }) => {
-	menu.name === 'ログアウト' ? emits('logout') : emits('menuClick', menu)
+	if (menu.name === 'ログアウト') {
+		emits('logout')
+	} else {
+		emits('menuClick', menu)
+	}
 }
 
 const closeMenu = () => {

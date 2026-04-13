@@ -19,10 +19,6 @@ service cloud.firestore {
 			return /databases/$(database)/documents/users/$(uid);
 		}
 
-		function legacyUsersPath(uid) {
-			return /databases/$(database)/documents/user/$(uid);
-		}
-
 		function guildPath(guildId) {
 			return /databases/$(database)/documents/guild/$(guildId);
 		}
@@ -31,16 +27,8 @@ service cloud.firestore {
 			return exists(usersPath(uid));
 		}
 
-		function hasLegacyUserDoc(uid) {
-			return exists(legacyUsersPath(uid));
-		}
-
 		function usersDoc(uid) {
 			return get(usersPath(uid)).data;
-		}
-
-		function legacyUserDoc(uid) {
-			return get(legacyUsersPath(uid)).data;
 		}
 
 		function hasGuildDoc(guildId) {
@@ -56,10 +44,6 @@ service cloud.firestore {
 				? null
 				: hasUsersDoc(authUid())
 					? usersDoc(authUid()).role
-					: hasLegacyUserDoc(authUid())
-						? legacyUserDoc(authUid()).role == '管理者'
-							? 'admin'
-							: 'member'
 						: null;
 		}
 
@@ -68,8 +52,6 @@ service cloud.firestore {
 				? null
 				: hasUsersDoc(authUid())
 					? usersDoc(authUid()).guildId
-					: hasLegacyUserDoc(authUid())
-						? legacyUserDoc(authUid()).guildId
 						: null;
 		}
 
@@ -138,19 +120,39 @@ service cloud.firestore {
 			return hasUsersDoc(uid) && currentUserGuildId() != null && usersDoc(uid).guildId == currentUserGuildId();
 		}
 
-		function isCurrentLegacyUsersGuildMember(uid) {
-			return hasLegacyUserDoc(uid) && currentUserGuildId() != null && legacyUserDoc(uid).guildId == currentUserGuildId();
-		}
-
 		function preservesUserIdentity(uid) {
 			return request.resource.data.uid == resource.data.uid &&
 				request.resource.data.id == resource.data.id &&
 				request.resource.data.email == resource.data.email;
 		}
 
-		function preservesLegacyIdentity(uid) {
-			return request.resource.data.id == resource.data.id &&
-				request.resource.data.contact.email == resource.data.contact.email;
+		function hasValidUserSituation(value) {
+			return value == '現役' ||
+				value == '隠居' ||
+				value == '引退' ||
+				value == '';
+		}
+
+		function hasValidOptionalTimestamp(value) {
+			return value == null || value is timestamp;
+		}
+
+		function hasValidAppUserData(data, uid) {
+			return data.uid == uid &&
+				data.id == uid &&
+				data.email is string &&
+				data.displayName is string &&
+				data.displayNameKana is string &&
+				data.guildId is string &&
+				data.affiliationNum is int &&
+				data.affiliationNum >= 0 &&
+				hasValidUserSituation(data.situation) &&
+				hasValidOptionalTimestamp(data.affiliationDate) &&
+				hasValidOptionalTimestamp(data.gameStartDateAt) &&
+				hasValidOptionalTimestamp(data.birthDateAt) &&
+				data.phone is string &&
+				data.imageUrls is list &&
+				isValidAppRole(data.role);
 		}
 
 		function hasValidOptionalGoogleCalendarId(data) {
@@ -176,19 +178,6 @@ service cloud.firestore {
 				);
 		}
 
-		function isLegacyGuildClaimForOwnCreatedGuild(uid) {
-			let nextGuildId = request.resource.data.guildId;
-
-			return isSelf(uid) &&
-				resource.data.guildId == '' &&
-				nextGuildId != '' &&
-				ownsCreatedGuild(nextGuildId) &&
-				isGuildMember(nextGuildId) &&
-				request.resource.data.id == resource.data.id &&
-				request.resource.data.role == resource.data.role &&
-				request.resource.data.diff(resource.data).affectedKeys().hasOnly(['guildId', 'updatedAt', 'updatedBy']);
-		}
-
 		match /skill_master/{skillId} {
 			allow read: if isSignedIn();
 			allow create, update, delete: if isAdmin();
@@ -201,42 +190,55 @@ service cloud.firestore {
 				(isGuildAdmin() && resource.data.guildId == currentUserGuildId())
 			);
 
-			allow create: if isSignedIn() && request.resource.data.uid == uid && request.resource.data.id == uid && isValidAppRole(request.resource.data.role) && (
-				isAdmin() ||
-				(
-					isSelf(uid) &&
-					!hasUsersDoc(uid) &&
-					hasLegacyUserDoc(uid) &&
-					request.resource.data.guildId == legacyUserDoc(uid).guildId &&
-					request.resource.data.role == (
-						legacyUserDoc(uid).role == '管理者' ? 'admin' : 'member'
-					)
-				)
-			);
+			allow create: if isAdmin() &&
+				hasValidAppUserData(request.resource.data, uid);
 
 			allow update: if isSignedIn() && (
 				(
 					isAdmin() &&
-					request.resource.data.uid == resource.data.uid &&
-					request.resource.data.id == resource.data.id &&
-					isValidAppRole(request.resource.data.role)
+					preservesUserIdentity(uid) &&
+					hasValidAppUserData(request.resource.data, uid)
 				) ||
 				(
 					isSelf(uid) &&
+					hasValidAppUserData(request.resource.data, uid) &&
 					preservesUserIdentity(uid) &&
 					request.resource.data.guildId == resource.data.guildId &&
 					request.resource.data.role == resource.data.role &&
-					request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'updatedAt', 'updatedBy'])
+					request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+						'displayName',
+						'displayNameKana',
+						'affiliationDate',
+						'affiliationNum',
+						'situation',
+						'gameStartDateAt',
+						'phone',
+						'birthDateAt',
+						'imageUrls',
+						'updatedAt',
+						'updatedBy'
+					])
 				) ||
 				isGuildClaimForOwnCreatedGuild(uid) ||
 				(
 					isGuildAdmin() &&
+					hasValidAppUserData(request.resource.data, uid) &&
 					resource.data.guildId == currentUserGuildId() &&
 					resource.data.role != 'admin' &&
 					preservesUserIdentity(uid) &&
 					request.resource.data.guildId == resource.data.guildId &&
 					request.resource.data.role != 'admin' &&
 					request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt', 'updatedBy'])
+				) ||
+				(
+					isGuildAdmin() &&
+					hasValidAppUserData(request.resource.data, uid) &&
+					resource.data.guildId == currentUserGuildId() &&
+					resource.data.role != 'admin' &&
+					preservesUserIdentity(uid) &&
+					request.resource.data.guildId == resource.data.guildId &&
+					request.resource.data.role == resource.data.role &&
+					request.resource.data.diff(resource.data).affectedKeys().hasOnly(['imageUrls', 'updatedAt', 'updatedBy'])
 				)
 			);
 
@@ -269,71 +271,9 @@ service cloud.firestore {
 			);
 		}
 
-		/*
-		 * Legacy collections are still used by the current UI.
-		 * Keep them protected until issue #51 removes the compatibility layer.
-		 */
 		match /user/{uid} {
-			allow read: if isSignedIn() && (
-				isAdmin() ||
-				isSelf(uid) ||
-				(isGuildAdmin() && isCurrentLegacyUsersGuildMember(uid))
-			);
-
-			allow create: if isSignedIn() && request.resource.data.id == uid && (
-				isAdmin() ||
-				(
-					isSelf(uid) &&
-					!hasLegacyUserDoc(uid) &&
-					request.resource.data.role == 'エンドユーザー'
-				)
-			);
-
-			allow update: if isSignedIn() && (
-				(
-					isAdmin() &&
-					request.resource.data.id == resource.data.id
-				) ||
-				(
-					isSelf(uid) &&
-					preservesLegacyIdentity(uid) &&
-					request.resource.data.guildId == resource.data.guildId &&
-					request.resource.data.role == resource.data.role &&
-					request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-						'iconUrl',
-						'charaName',
-						'charaNameKana',
-						'affiliationDate',
-						'affiliationNum',
-						'situation',
-						'gameStartDateAt',
-						'contact',
-						'birthDateAt',
-						'lastLoginDateAt',
-						'skillRecord',
-						'proficiencyLevel',
-						'updatedAt',
-						'updatedBy'
-					])
-				) ||
-				isLegacyGuildClaimForOwnCreatedGuild(uid) ||
-				(
-					isGuildAdmin() &&
-					isCurrentLegacyUsersGuildMember(uid) &&
-					resource.data.role != '管理者' &&
-					preservesLegacyIdentity(uid) &&
-					request.resource.data.guildId == resource.data.guildId &&
-					request.resource.data.role == resource.data.role &&
-					request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-						'skillRecord',
-						'proficiencyLevel',
-						'updatedAt',
-						'updatedBy'
-					])
-				)
-			);
-
-			allow delete: if isAdmin();
+			allow read: if isAdmin();
+			allow create, update, delete: if false;
 		}
 
 		match /guild/{guildId} {

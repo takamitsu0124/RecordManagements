@@ -15,8 +15,7 @@ import Tag from 'primevue/tag'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db, dbUsersModule } from '@rm/db'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
-import { dbUserModule } from '@rm/db/src/fireStore/User'
-import { AppRole, AppUser, Guild, User } from '@rm/types'
+import { AppRole, AppUser, Guild } from '@rm/types'
 import { canManageGuildMembers, globalLoginUserData, hasAdmin } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
@@ -361,10 +360,6 @@ const updateLocalGuildMembers = (guildMember: Guild['guildMember']) => {
 	}
 }
 
-const toLegacyRole = (role: AppRole): User['role'] => {
-	return role === 'admin' ? '管理者' : 'エンドユーザー'
-}
-
 const loadGuildUsers = async () => {
 	if (!currentGuildId.value) return
 
@@ -573,14 +568,15 @@ const saveRole = async (member: GuildUserRow) => {
 		try {
 			await dbUsersModule.doc(member.uid).merge({ role: nextRole })
 
-			const legacyUser = await dbUserModule.doc(member.uid).fetch({ force: true })
-			if (legacyUser?.id) {
-				await dbUserModule.doc(member.uid).merge({ role: toLegacyRole(nextRole) })
-			}
-
 			guildUsers.value = guildUsers.value.map((user) =>
 				user.uid === member.uid ? { ...user, role: nextRole } : user
 			)
+			if (globalLoginUserData.value.id === member.uid) {
+				globalLoginUserData.value = {
+					...globalLoginUserData.value,
+					role: nextRole,
+				}
+			}
 			roleDrafts.value[member.uid] = nextRole
 			notifySuccess(`${member.displayName} さんの権限を更新しました。`)
 		} catch (error) {

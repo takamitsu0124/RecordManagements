@@ -8,8 +8,24 @@ export type AppUser = {
 	email: string
 	/** Display name */
 	displayName: string
+	/** Display name in Kana */
+	displayNameKana: string
 	/** Belonging guild ID */
 	guildId: string
+	/** Belonging number inside guild */
+	affiliationNum: number
+	/** Player situation */
+	situation: '現役' | '隠居' | '引退' | ''
+	/** Guild affiliation date */
+	affiliationDate: Date | null
+	/** Game start date */
+	gameStartDateAt: Date | null
+	/** Birth date */
+	birthDateAt: Date | null
+	/** Contact phone */
+	phone: string
+	/** Managed image URLs */
+	imageUrls: string[]
 	/** Access role */
 	role: AppRole
 } & DefaultType
@@ -24,7 +40,15 @@ export function defaultAppUser(): AppUser {
 		uid: '',
 		email: '',
 		displayName: '',
+		displayNameKana: '',
 		guildId: '',
+		affiliationNum: 0,
+		situation: '現役',
+		affiliationDate: null,
+		gameStartDateAt: null,
+		birthDateAt: null,
+		phone: '',
+		imageUrls: [],
 		role: defaultAppRole(),
 	}
 }

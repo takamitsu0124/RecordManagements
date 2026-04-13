@@ -13,7 +13,6 @@ import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import Draggable from 'vuedraggable'
 import {
-	dbUserModule,
 	dbUsersModule,
 	dbUserSkillsModule,
 	deleteFileByUrl,
@@ -23,12 +22,9 @@ import {
 	AppUser,
 	OwnedSkill,
 	SkillMaster,
-	SkillRecord,
-	User,
 	UserSkill,
 	defaultAppUser,
 	defaultSkillMaster,
-	defaultUser,
 	defaultUserSkill,
 } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -36,6 +32,7 @@ import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
+import { globalLoginUserData, hasAdmin } from 'src/boot/main'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError, notifyInfo, notifySuccess } from 'src/composables/useAppNotifications'
 import { useSkillStore } from 'src/store'
@@ -58,6 +55,38 @@ type OwnedSkillRow = OwnedSkill & {
 	image: string
 	masterMissing: boolean
 }
+
+type WorkspaceProfile = {
+	charaName: string
+	charaNameKana: string
+	guildId: string
+	affiliationDate: Date | null
+	affiliationNum: number
+	situation: AppUser['situation']
+	gameStartDateAt: Date | null
+	contact: {
+		email: string
+		phone: string
+	}
+	birthDateAt: Date | null
+	imageUrls: string[]
+}
+
+const defaultWorkspaceProfile = (): WorkspaceProfile => ({
+	charaName: '',
+	charaNameKana: '',
+	guildId: '',
+	affiliationDate: null,
+	affiliationNum: 0,
+	situation: '現役',
+	gameStartDateAt: null,
+	contact: {
+		email: '',
+		phone: '',
+	},
+	birthDateAt: null,
+	imageUrls: [],
+})
 
 const props = withDefaults(
 	defineProps<{
@@ -90,35 +119,15 @@ const emit = defineEmits<{
 const skillStore = useSkillStore()
 
 const situationOptions = ['現役', '隠居', '引退', '']
-const legacyImageKeys: Array<keyof SkillRecord> = [
-	'sword',
-	'rapier',
-	'club',
-	'dagger',
-	'axe',
-	'spear',
-	'bow',
-	'shield',
-	'ability',
-	'abilityRecollection',
-	'abilityAccele',
-	'weaponRecollection',
-	'weaponMod',
-	'weaponConnect',
-	'weaponAccele',
-	'burst_FullBurst',
-	'free',
-]
 
 const isLoading = ref(true)
 const isEditMode = ref(false)
 const errorMessage = ref<string | null>(null)
-const legacyUserExists = ref(false)
 const appUserExists = ref(false)
 const userSkillExists = ref(false)
 
-const user = ref<User>(defaultUser())
-const originalUser = ref<User>(defaultUser())
+const user = ref<WorkspaceProfile>(defaultWorkspaceProfile())
+const originalUser = ref<WorkspaceProfile>(defaultWorkspaceProfile())
 const appUser = ref<AppUser>(defaultAppUser())
 const originalAppUser = ref<AppUser>(defaultAppUser())
 const ownedSkills = ref<OwnedSkill[]>([])
@@ -148,11 +157,12 @@ const currentCarouselImage = computed(
 )
 
 const pageSubtitle = computed(
-	() => user.value.charaName || appUser.value.displayName || '登録内容未設定'
+	() => user.value.charaName || '登録内容未設定'
 )
 const showProfile = computed(() => props.includeProfile)
 const isCompactMode = computed(() => props.compactMode)
 const activeCompactSection = ref<'skills' | 'images'>('skills')
+const canEditGuildId = computed(() => hasAdmin.value)
 
 const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
 	ownedSkills.value.map((ownedSkill, index) => {
@@ -186,21 +196,8 @@ const createImageId = () =>
 	globalThis.crypto?.randomUUID?.() ||
 	`image-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 
-const cloneSkillRecord = (payload?: Partial<SkillRecord> | null): SkillRecord => {
-	const base = defaultUser().skillRecord
-	const merged = {
-		...base,
-		...(payload || {}),
-	}
-
-	return legacyImageKeys.reduce((result, key) => {
-		result[key] = Array.isArray(merged[key]) ? [...merged[key]] : []
-		return result
-	}, {} as SkillRecord)
-}
-
-const cloneUser = (payload?: Partial<User> | null): User => {
-	const base = defaultUser()
+const cloneUser = (payload?: Partial<WorkspaceProfile> | null): WorkspaceProfile => {
+	const base = defaultWorkspaceProfile()
 	const nextUser = {
 		...base,
 		...(payload || {}),
@@ -211,11 +208,6 @@ const cloneUser = (payload?: Partial<User> | null): User => {
 		contact: {
 			...base.contact,
 			...(payload?.contact || {}),
-		},
-		skillRecord: cloneSkillRecord(payload?.skillRecord),
-		proficiencyLevel: {
-			...base.proficiencyLevel,
-			...(payload?.proficiencyLevel || {}),
 		},
 		imageUrls: Array.isArray(payload?.imageUrls)
 			? payload!.imageUrls.filter((url): url is string => typeof url === 'string')
@@ -228,6 +220,26 @@ const cloneAppUser = (payload?: Partial<AppUser> | null): AppUser => ({
 	...(payload || {}),
 	role: payload?.role || 'member',
 })
+
+const createUserProfileFromAppUser = (
+	payload?: Partial<AppUser> | null
+): WorkspaceProfile => {
+	return cloneUser({
+		charaName: payload?.displayName || '',
+		charaNameKana: payload?.displayNameKana || '',
+		guildId: payload?.guildId || '',
+		affiliationDate: payload?.affiliationDate || null,
+		affiliationNum: payload?.affiliationNum || 0,
+		situation: payload?.situation || '現役',
+		gameStartDateAt: payload?.gameStartDateAt || null,
+		contact: {
+			email: payload?.email || '',
+			phone: payload?.phone || '',
+		},
+		birthDateAt: payload?.birthDateAt || null,
+		imageUrls: payload?.imageUrls || [],
+	})
+}
 
 const cloneOwnedSkills = (payload: OwnedSkill[]): OwnedSkill[] => {
 	const seenSkillIds = new Set<string>()
@@ -272,7 +284,7 @@ const dateToModel = (value: Date | null | undefined) => {
 
 const modelToDate = (value: string | null) => (value ? new Date(value) : null)
 
-const syncDateModels = (payload: User) => {
+const syncDateModels = (payload: WorkspaceProfile) => {
 	affiliationDateStr.value = dateToModel(payload.affiliationDate)
 	gameStartDateAtStr.value = dateToModel(payload.gameStartDateAt)
 	birthDateAtStr.value = dateToModel(payload.birthDateAt)
@@ -290,14 +302,8 @@ const cleanupObjectUrls = (items: ImageItem[]) => {
 	})
 }
 
-const extractImageUrls = (payload: User) => {
-	const rawUrls =
-		payload.imageUrls.length > 0
-			? payload.imageUrls
-			: legacyImageKeys.flatMap((key) =>
-					Array.isArray(payload.skillRecord[key]) ? payload.skillRecord[key] : []
-				)
-
+const extractImageUrls = (payload: WorkspaceProfile) => {
+	const rawUrls = payload.imageUrls
 	const seenUrls = new Set<string>()
 
 	return rawUrls.filter((url) => {
@@ -334,28 +340,6 @@ const createPendingImageItem = (file: File): ImageItem => {
 		label: file.name,
 	}
 }
-
-const createFallbackUser = (userId: string, currentAppUser: AppUser | null) =>
-	cloneUser({
-		...defaultUser(),
-		id: userId,
-		charaName: currentAppUser?.displayName || '',
-		guildId: currentAppUser?.guildId || '',
-		contact: {
-			email: currentAppUser?.email || '',
-			phone: '',
-		},
-	})
-
-const createFallbackAppUser = (userId: string, currentUser: User | null) => ({
-	...defaultAppUser(),
-	id: userId,
-	uid: userId,
-	email: currentUser?.contact.email || '',
-	displayName: currentUser?.charaName || '',
-	guildId: currentUser?.guildId || '',
-	role: 'member' as const,
-})
 
 const resetSkillSearch = () => {
 	skillSearchInput.value = ''
@@ -397,30 +381,18 @@ const loadWorkspace = async () => {
 		await skillStore.fetchMasterData()
 		await skillStore.fetchUserSkills(props.userId)
 
-		const [legacyPayload, appPayload] = await Promise.all([
-			dbUserModule.doc(props.userId).fetch({ force: true }),
-			dbUsersModule.doc(props.userId).fetch({ force: true }),
-		])
+		const appPayload = await dbUsersModule.doc(props.userId).fetch({ force: true })
 
-		if (!legacyPayload?.id && !appPayload?.id) {
-			errorMessage.value = '指定されたユーザーが見つかりませんでした。'
+		if (!appPayload?.id) {
+			errorMessage.value =
+				'users コレクションにユーザー情報が見つかりませんでした。移行手順を実行してから再度確認してください。'
 			return
 		}
 
-		legacyUserExists.value = Boolean(legacyPayload?.id)
 		appUserExists.value = Boolean(appPayload?.id)
 
-		const nextAppUser = appPayload?.id
-			? cloneAppUser(appPayload)
-			: cloneAppUser(createFallbackAppUser(props.userId, legacyPayload || null))
-		const nextUser = legacyPayload?.id
-			? cloneUser(legacyPayload)
-			: props.includeProfile
-				? createFallbackUser(props.userId, nextAppUser)
-				: cloneUser({
-						...defaultUser(),
-						id: props.userId,
-					})
+		const nextAppUser = cloneAppUser(appPayload)
+		const nextUser = createUserProfileFromAppUser(nextAppUser)
 		const nextUserSkill = skillStore.state.currentUserSkills.find(
 			(userSkill) => userSkill.userId === props.userId
 		)
@@ -652,7 +624,6 @@ const onSubmit = async () => {
 
 			const nextUser = cloneUser({
 				...user.value,
-				id: props.userId,
 				imageUrls: resolvedImageUrls,
 				charaName: user.value.charaName.trim(),
 				charaNameKana: user.value.charaNameKana.trim(),
@@ -666,16 +637,38 @@ const onSubmit = async () => {
 				},
 				birthDateAt: modelToDate(birthDateAtStr.value),
 			})
-			const nextAppUser = props.includeProfile
-				? cloneAppUser({
-						...appUser.value,
-						id: props.userId,
-						uid: props.userId,
-						displayName: nextUser.charaName || appUser.value.displayName,
-						email: nextUser.contact.email || appUser.value.email,
-						guildId: nextUser.guildId,
-					})
-				: null
+			const nextAppUser = cloneAppUser({
+				...appUser.value,
+				id: props.userId,
+				uid: props.userId,
+				displayName: nextUser.charaName || appUser.value.displayName,
+				displayNameKana: nextUser.charaNameKana,
+				email: appUser.value.email,
+				guildId: canEditGuildId.value ? nextUser.guildId : appUser.value.guildId,
+				affiliationDate: nextUser.affiliationDate,
+				affiliationNum: nextUser.affiliationNum,
+				situation: nextUser.situation,
+				gameStartDateAt: nextUser.gameStartDateAt,
+				birthDateAt: nextUser.birthDateAt,
+				phone: nextUser.contact.phone,
+				imageUrls: resolvedImageUrls,
+			})
+			const nextUsersPayload = props.includeProfile
+				? {
+						displayName: nextAppUser.displayName,
+						displayNameKana: nextAppUser.displayNameKana,
+						affiliationDate: nextAppUser.affiliationDate,
+						affiliationNum: nextAppUser.affiliationNum,
+						situation: nextAppUser.situation,
+						gameStartDateAt: nextAppUser.gameStartDateAt,
+						birthDateAt: nextAppUser.birthDateAt,
+						phone: nextAppUser.phone,
+						imageUrls: nextAppUser.imageUrls,
+						...(canEditGuildId.value ? { guildId: nextAppUser.guildId } : {}),
+					}
+				: {
+						imageUrls: nextAppUser.imageUrls,
+					}
 			const nextUserSkill: UserSkill = {
 				...defaultUserSkill(),
 				id: props.userId,
@@ -690,51 +683,21 @@ const onSubmit = async () => {
 				userSkillExists.value = true
 			}
 
-			if (props.includeProfile && nextAppUser) {
-				if (appUserExists.value) {
-					await dbUsersModule.doc(props.userId).merge({
-						displayName: nextAppUser.displayName,
-						email: nextAppUser.email,
-						guildId: nextAppUser.guildId,
-					})
-				} else {
-					await dbUsersModule.doc(props.userId).insert(nextAppUser)
-					appUserExists.value = true
-				}
-			}
-
-			if (legacyUserExists.value) {
-				await dbUserModule.doc(props.userId).merge({
-					...(props.includeProfile
-						? {
-								charaName: nextUser.charaName,
-								charaNameKana: nextUser.charaNameKana,
-								guildId: nextUser.guildId,
-								affiliationDate: nextUser.affiliationDate,
-								affiliationNum: nextUser.affiliationNum,
-								situation: nextUser.situation,
-								gameStartDateAt: nextUser.gameStartDateAt,
-								contact: nextUser.contact,
-								birthDateAt: nextUser.birthDateAt,
-							}
-						: {}),
-					imageUrls: resolvedImageUrls,
-				})
+			if (appUserExists.value) {
+				await dbUsersModule.doc(props.userId).merge(nextUsersPayload)
 			} else {
-				if (props.includeProfile) {
-					await dbUserModule.doc(props.userId).insert(nextUser)
-				} else {
-					await dbUserModule.doc(props.userId).merge({
-						imageUrls: resolvedImageUrls,
-					})
-				}
-				legacyUserExists.value = true
+				await dbUsersModule.doc(props.userId).insert(nextAppUser)
+				appUserExists.value = true
 			}
 			persistedImageUrls = true
 
-			if (nextAppUser) {
-				appUser.value = nextAppUser
-				originalAppUser.value = cloneAppUser(nextAppUser)
+			appUser.value = nextAppUser
+			originalAppUser.value = cloneAppUser(nextAppUser)
+			if (globalLoginUserData.value.id === props.userId) {
+				globalLoginUserData.value = {
+					...globalLoginUserData.value,
+					...nextAppUser,
+				}
 			}
 
 			if (userSkillExists.value || normalizedOwnedSkills.length > 0) {
@@ -903,7 +866,7 @@ const emitBack = () => {
 									v-model="user.guildId"
 									label="所属ギルドID"
 									shadow
-									:disabled="!isEditMode"
+									:disabled="!isEditMode || !canEditGuildId"
 								/>
 								<RMInput
 									v-model="user.affiliationNum"
@@ -967,7 +930,7 @@ const emitBack = () => {
 									label="登録メールアドレス"
 									type="email"
 									shadow
-									:disabled="!isEditMode"
+									:disabled="true"
 								/>
 								<RMInput
 									v-model="user.contact.phone"

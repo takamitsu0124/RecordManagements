@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
-import { dbUserModule } from '@rm/db/src/fireStore/User'
 import { dbUsersModule, writeDocWithRandomId } from '@rm/db'
 import { defaultGuild, Guild } from '@rm/types'
 import { globalLoginUserData } from 'src/boot/main'
@@ -41,26 +40,21 @@ const onSubmit = async () => {
 
       const createdGuild = await writeDocWithRandomId(dbGuildModule, newGuild)
 
-      notifySuccess('ギルドが正常に登録されました。')
+        notifySuccess('ギルドが正常に登録されました。')
 
-      if (createdGuild?.id && creatorId) {
-        if (globalLoginUserData.value.role !== 'admin') {
-          await Promise.all([
-            dbUsersModule.doc(creatorId).merge({
+        if (createdGuild?.id && creatorId) {
+          if (globalLoginUserData.value.role !== 'admin') {
+            await dbUsersModule.doc(creatorId).merge({
               guildId: createdGuild.id,
               role: 'guild_admin',
-            }),
-            dbUserModule.doc(creatorId).merge({
-              guildId: createdGuild.id,
-            }),
-          ])
+            })
 
-          globalLoginUserData.value = {
-            ...globalLoginUserData.value,
-            guildId: createdGuild.id,
-            role: 'guild_admin',
+            globalLoginUserData.value = {
+              ...globalLoginUserData.value,
+              guildId: createdGuild.id,
+              role: 'guild_admin',
+            }
           }
-        }
 
         router.push({
           name: 'RMGuildDetail',

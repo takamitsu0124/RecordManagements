@@ -69,7 +69,6 @@ module.exports = {
 
   // add your custom rules here
   rules: {
-    
     'prefer-promise-reject-errors': 'off',
 
     quotes: ['warn', 'single', { avoidEscape: true }],
@@ -79,6 +78,7 @@ module.exports = {
 
     // in plain CommonJS modules, you can't use `import foo = require('foo')` to pass this rule, so it has to be disabled
     '@typescript-eslint/no-var-requires': 'off',
+    '@typescript-eslint/no-require-imports': 'off',
 
     // The core 'no-unused-vars' rules (in the eslint:recommended ruleset)
     // does not work with type definitions

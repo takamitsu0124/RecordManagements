@@ -33,8 +33,8 @@ onMounted(() => {
   toastMove.value = true
 
   return setTimeout(() => {
-    ;(toastMove.value = false), props.toastMovingTime * 1000
-  })
+    toastMove.value = false
+  }, props.toastMovingTime * 1000)
 })
 // トーストの表示時間をpropsの値から文字列の秒数に変換
 const toastFadeTime = ref<string>()
