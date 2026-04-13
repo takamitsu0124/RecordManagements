@@ -3,9 +3,9 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
-import { dbUserModule } from '@rm/db/src/fireStore/User'
-import { dbUsersModule, writeDocWithRandomId } from '@rm/db'
+import { writeDocWithRandomId } from '@rm/db'
 import { defaultGuild, Guild } from '@rm/types'
+import { getSyncUserDocumentsErrorDetails, syncUserDocuments } from '@rm/utils'
 import { globalLoginUserData } from 'src/boot/main'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -41,19 +41,25 @@ const onSubmit = async () => {
 
       const createdGuild = await writeDocWithRandomId(dbGuildModule, newGuild)
 
-      notifySuccess('ギルドが正常に登録されました。')
-
       if (createdGuild?.id && creatorId) {
         if (globalLoginUserData.value.role !== 'admin') {
-          await Promise.all([
-            dbUsersModule.doc(creatorId).merge({
-              guildId: createdGuild.id,
-              role: 'guild_admin',
-            }),
-            dbUserModule.doc(creatorId).merge({
-              guildId: createdGuild.id,
-            }),
-          ])
+          await syncUserDocuments({
+            uid: creatorId,
+            operation: 'guild-register-claim',
+            appUser: {
+              mode: 'merge',
+              payload: {
+                guildId: createdGuild.id,
+                role: 'guild_admin',
+              },
+            },
+            legacyUser: {
+              mode: 'merge',
+              payload: {
+                guildId: createdGuild.id,
+              },
+            },
+          })
 
           globalLoginUserData.value = {
             ...globalLoginUserData.value,
@@ -62,6 +68,7 @@ const onSubmit = async () => {
           }
         }
 
+        notifySuccess('ギルドが正常に登録されました。')
         router.push({
           name: 'RMGuildDetail',
           params: { guildId: createdGuild.id },
@@ -69,10 +76,16 @@ const onSubmit = async () => {
         return
       }
 
+      notifySuccess('ギルドが正常に登録されました。')
       router.push({ name: 'RMHome' })
     } catch (error) {
-      notifyError('ギルドの登録に失敗しました。')
-      console.error('Guild registration failed:', error)
+      const syncErrorDetails = getSyncUserDocumentsErrorDetails(error)
+      notifyError(
+        syncErrorDetails
+          ? 'ギルド作成後の users / user 同期に失敗しました。'
+          : 'ギルドの登録に失敗しました。'
+      )
+      console.error('Guild registration failed:', syncErrorDetails || error)
     }
   })
 }
@@ -86,7 +99,10 @@ const onCancel = () => {
   <div class="rm-page rm-page--center">
     <Card class="guild-register-card">
       <template #content>
-        <form class="rm-form-stack guild-register-card__content" @submit.prevent="onSubmit">
+        <form
+          class="rm-form-stack guild-register-card__content"
+          @submit.prevent="onSubmit"
+        >
           <div class="guild-register-card__title">ギルド登録</div>
 
           <RMInput

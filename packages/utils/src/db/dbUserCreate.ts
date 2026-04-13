@@ -1,39 +1,54 @@
-import { defaultAppUser, defaultUser } from '@rm/types'
-import { dbUserModule, dbUsersModule } from '@rm/db'
-import { RegisterInfo } from 'src/pages/RMUserRegister/register'
-import { useToast } from 'src/components/RMToast/RMToast'
+import { defaultAppUser, defaultUser } from "@rm/types";
+import { RegisterInfo } from "src/pages/RMUserRegister/register";
+import { useToast } from "src/components/RMToast/RMToast";
+import {
+  getSyncUserDocumentsErrorDetails,
+  syncUserDocuments,
+} from "./syncUserDocuments";
 
 export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
   try {
-    await Promise.all([
-      dbUsersModule.doc(uid).insert({
-        ...defaultAppUser(),
-        id: uid,
-        uid,
-        email: info.email,
-        displayName: info.name,
-        guildId: info.guildId,
-        role: info.role,
-      }),
-      dbUserModule.doc(uid).insert({
-        ...defaultUser(),
-        id: uid,
-        charaName: info.name,
-        guildId: info.guildId,
-        role: info.role === 'admin' ? '管理者' : 'エンドユーザー',
-        contact: {
+    await syncUserDocuments({
+      uid,
+      operation: "dbUserCreate",
+      appUser: {
+        mode: "insert",
+        payload: {
+          ...defaultAppUser(),
+          id: uid,
+          uid,
           email: info.email,
-          phone: '',
+          displayName: info.name,
+          guildId: info.guildId,
+          role: info.role,
         },
-      }),
-    ])
+      },
+      legacyUser: {
+        mode: "insert",
+        payload: {
+          ...defaultUser(),
+          id: uid,
+          charaName: info.name,
+          guildId: info.guildId,
+          role: info.role === "admin" ? "管理者" : "エンドユーザー",
+          contact: {
+            email: info.email,
+            phone: "",
+          },
+        },
+      },
+    });
   } catch (e) {
     useToast({
-      toastTitle: 'ユーザー登録に失敗しました',
-      toastColor: 'red',
+      toastTitle: "ユーザー登録に失敗しました",
+      toastColor: "red",
       toastMovingTime: 3,
-      isCheckCircle: false
-    })
-    throw e
+      isCheckCircle: false,
+    });
+    console.error(
+      "Failed to create synced user documents:",
+      getSyncUserDocumentsErrorDetails(e) || e
+    );
+    throw e;
   }
-}
+};
