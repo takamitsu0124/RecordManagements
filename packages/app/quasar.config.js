@@ -172,9 +172,9 @@ module.exports = configure(function (ctx) {
       // if using workbox in InjectManifest mode
       // chainWebpackCustomSW (/* chain */) {},
 
-      manifest: {
-        name: 'Quasar App',
-        short_name: 'Quasar App',
+        manifest: {
+          name: 'RecordManagement',
+          short_name: 'RecordManagement',
         description: '',
         display: 'standalone',
         orientation: 'portrait',

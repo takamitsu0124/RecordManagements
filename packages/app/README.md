@@ -1,6 +1,6 @@
-# Quasar App (app)
+# RecordManagement (app)
 
-A Quasar Project
+RecordManagement application
 
 ## Install the dependencies
 ```bash
