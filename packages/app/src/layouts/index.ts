@@ -26,6 +26,13 @@ export const menu = computed<{ name: string; url: string; isShow?: boolean }[]>(
 				: '',
 			isShow: hasGuildId.value,
 		},
+		{
+			name: 'ギルド日程調整',
+			url: globalLoginUserData.value.guildId
+				? `/guild/${globalLoginUserData.value.guildId}/schedule`
+				: '',
+			isShow: hasGuildId.value,
+		},
 		{ name: 'イベントカレンダー', url: '/RMCalendar', isShow: canOpenCalendar.value },
 		{ name: 'ユーザー登録', url: '/RMUserRegister', isShow: hasAdmin.value },
 		{ name: 'スキルマスター管理', url: '/RMSkillMasterAdmin', isShow: hasAdmin.value },

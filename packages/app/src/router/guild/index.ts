@@ -32,6 +32,12 @@ const routes = [
         component: () => import('src/pages/RMGuildEdit/RMGuildEdit.vue'),
         meta: { roles: ['admin', 'guild_admin'], pageTitle: 'ギルド編集' },
       },
+      {
+        name: 'RMGuildSchedule',
+        path: '/guild/:guildId/schedule',
+        component: () => import('src/pages/RMGuildSchedule/RMGuildSchedule.vue'),
+        meta: { pageTitle: 'ギルド日程調整' },
+      },
       // スキル投稿 (追加)
       {
         name: 'RMSkillPost',
