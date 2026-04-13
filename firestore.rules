@@ -153,6 +153,10 @@ service cloud.firestore {
 				request.resource.data.contact.email == resource.data.contact.email;
 		}
 
+		function hasValidOptionalGoogleCalendarId(data) {
+			return !data.keys().hasAny(['googleCalendarId']) || data.googleCalendarId is string;
+		}
+
 		function isGuildClaimForOwnCreatedGuild(uid) {
 			let nextGuildId = request.resource.data.guildId;
 			let nextRole = request.resource.data.role;
@@ -336,6 +340,7 @@ service cloud.firestore {
 			allow read: if isSignedIn() && canReadGuild(guildId);
 
 			allow create: if isSignedIn() &&
+				hasValidOptionalGoogleCalendarId(request.resource.data) &&
 				request.resource.data.createdBy == authUid() &&
 				request.resource.data.guildMember.keys().hasOnly([authUid()]) &&
 				request.resource.data.officialMembers == 1 &&
@@ -346,6 +351,7 @@ service cloud.firestore {
 				);
 
 			allow update: if isSignedIn() &&
+				hasValidOptionalGoogleCalendarId(request.resource.data) &&
 				canManageGuild(guildId) &&
 				request.resource.data.diff(resource.data).affectedKeys().hasOnly([
 					'guildName',
@@ -356,6 +362,7 @@ service cloud.firestore {
 					'officialMembers',
 					'guildMemo',
 					'guildLogo',
+					'googleCalendarId',
 					'guildMember',
 					'updatedAt',
 					'updatedBy'

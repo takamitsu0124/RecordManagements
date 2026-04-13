@@ -254,5 +254,6 @@ APP_PUBLIC_GOOGLE_CALENDAR_ENABLE_PERSONAL_CALENDAR=false
 - イベントカレンダー画面は `/RMCalendar` です
 - guild shared calendar は `guild.googleCalendarId` を参照します
 - `guild.googleCalendarId` は `RMGuildEdit` 画面の **共有 Google Calendar ID** 入力から設定します
+- `guild.googleCalendarId` は **未設定時は空文字** を許容し、画面保存時は trim 後の文字列を保存します
 - personal calendar は `primary` を使います
 - shared calendar を編集できるのは、Google 側でその calendar に対して編集権限を持つ `guild_admin` / `admin` です
