@@ -33,7 +33,6 @@ export const createCalendar = (yearValue: number, monthValue: number) => {
         day: String(i - (isMonthStartDayOfWeekNumber - 1)),
       })
     } else {
-      weekOneDays.value.push
       weekOneDays.value.push({
         year: ' ',
         month: ' ',
