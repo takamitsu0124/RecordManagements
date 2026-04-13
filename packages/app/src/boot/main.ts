@@ -1,6 +1,6 @@
 import { onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth'
-import { AppRole, AppUser, User, defaultAppUser } from '@rm/types'
-import { auth, dbUserModule, dbUsersModule } from '@rm/db'
+import { AppRole, AppUser, defaultAppUser } from '@rm/types'
+import { auth, dbUsersModule } from '@rm/db'
 import { Router } from 'vue-router'
 import { boot } from 'quasar/wrappers'
 import { computed, ref } from 'vue'
@@ -49,10 +49,6 @@ const getLandingRoute = (user: FirebaseAuthUser | null) => {
 	return user ? { name: 'RMHome' } : { name: 'RMPreLogin' }
 }
 
-const mapLegacyRoleToAppRole = (role: User['role'] | undefined): AppRole => {
-	return role === '管理者' ? 'admin' : 'member'
-}
-
 const createFallbackAppUser = (authUser: FirebaseAuthUser | null): AppUser => {
 	return {
 		...defaultAppUser(),
@@ -60,25 +56,6 @@ const createFallbackAppUser = (authUser: FirebaseAuthUser | null): AppUser => {
 		uid: authUser?.uid ?? '',
 		email: authUser?.email ?? '',
 		displayName: authUser?.displayName ?? authUser?.email ?? '',
-	}
-}
-
-const buildAppUserFromLegacyUser = (
-	authUser: FirebaseAuthUser,
-	legacyUser: User
-): AppUser => {
-	return {
-		...defaultAppUser(),
-		id: authUser.uid,
-		uid: authUser.uid,
-		email: legacyUser.contact.email || authUser.email || '',
-		displayName: legacyUser.charaName || authUser.displayName || authUser.email || '',
-		guildId: legacyUser.guildId || '',
-		role: mapLegacyRoleToAppRole(legacyUser.role),
-		createdAt: legacyUser.createdAt,
-		createdBy: legacyUser.createdBy,
-		updatedAt: legacyUser.updatedAt,
-		updatedBy: legacyUser.updatedBy,
 	}
 }
 
@@ -95,14 +72,6 @@ const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
 			displayName:
 				appUser.displayName || authUser.displayName || authUser.email || '',
 		}
-	}
-
-	const legacyUser = await dbUserModule.doc(authUser.uid).fetch({ force: true })
-
-	if (legacyUser?.id) {
-		const migratedAppUser = buildAppUserFromLegacyUser(authUser, legacyUser)
-		await dbUsersModule.doc(authUser.uid).insert(migratedAppUser)
-		return migratedAppUser
 	}
 
 	return createFallbackAppUser(authUser)

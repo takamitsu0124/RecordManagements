@@ -1,54 +1,30 @@
-import { defaultAppUser, defaultUser } from "@rm/types";
-import { RegisterInfo } from "src/pages/RMUserRegister/register";
-import { useToast } from "src/components/RMToast/RMToast";
-import {
-  getSyncUserDocumentsErrorDetails,
-  syncUserDocuments,
-} from "./syncUserDocuments";
+import { defaultAppUser } from '@rm/types'
+import { dbUsersModule } from '@rm/db'
+import { RegisterInfo } from 'src/pages/RMUserRegister/register'
+import { useToast } from 'src/components/RMToast/RMToast'
 
 export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
   try {
-    await syncUserDocuments({
+    await dbUsersModule.doc(uid).insert({
+      ...defaultAppUser(),
+      id: uid,
       uid,
-      operation: "dbUserCreate",
-      appUser: {
-        mode: "insert",
-        payload: {
-          ...defaultAppUser(),
-          id: uid,
-          uid,
-          email: info.email,
-          displayName: info.name,
-          guildId: info.guildId,
-          role: info.role,
-        },
-      },
-      legacyUser: {
-        mode: "insert",
-        payload: {
-          ...defaultUser(),
-          id: uid,
-          charaName: info.name,
-          guildId: info.guildId,
-          role: info.role === "admin" ? "管理者" : "エンドユーザー",
-          contact: {
-            email: info.email,
-            phone: "",
-          },
-        },
-      },
-    });
+      email: info.email,
+      displayName: info.name,
+      guildId: info.guildId,
+      role: info.role
+    })
   } catch (e) {
     useToast({
-      toastTitle: "ユーザー登録に失敗しました",
-      toastColor: "red",
+      toastTitle: 'ユーザー登録に失敗しました',
+      toastColor: 'red',
       toastMovingTime: 3,
-      isCheckCircle: false,
-    });
+      isCheckCircle: false
+    })
     console.error(
-      "Failed to create synced user documents:",
+      'Failed to create synced user documents:',
       getSyncUserDocumentsErrorDetails(e) || e
-    );
-    throw e;
+    )
+    throw e
   }
-};
+}

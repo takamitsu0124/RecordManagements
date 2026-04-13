@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
-import { writeDocWithRandomId } from '@rm/db'
+import { dbUsersModule, writeDocWithRandomId } from '@rm/db'
 import { defaultGuild, Guild } from '@rm/types'
 import { getSyncUserDocumentsErrorDetails, syncUserDocuments } from '@rm/utils'
 import { globalLoginUserData } from 'src/boot/main'
@@ -41,24 +41,13 @@ const onSubmit = async () => {
 
       const createdGuild = await writeDocWithRandomId(dbGuildModule, newGuild)
 
+      notifySuccess('ギルドが正常に登録されました。')
+
       if (createdGuild?.id && creatorId) {
         if (globalLoginUserData.value.role !== 'admin') {
-          await syncUserDocuments({
-            uid: creatorId,
-            operation: 'guild-register-claim',
-            appUser: {
-              mode: 'merge',
-              payload: {
-                guildId: createdGuild.id,
-                role: 'guild_admin',
-              },
-            },
-            legacyUser: {
-              mode: 'merge',
-              payload: {
-                guildId: createdGuild.id,
-              },
-            },
+          await dbUsersModule.doc(creatorId).merge({
+            guildId: createdGuild.id,
+            role: 'guild_admin',
           })
 
           globalLoginUserData.value = {

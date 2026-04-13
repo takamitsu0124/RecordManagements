@@ -15,8 +15,7 @@ import Tag from 'primevue/tag'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@rm/db'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
-import { AppRole, AppUser, Guild, User } from '@rm/types'
-import { getSyncUserDocumentsErrorDetails, syncUserDocuments } from '@rm/utils'
+import { AppRole, AppUser, Guild } from '@rm/types'
 import {
   canManageGuildMembers,
   globalLoginUserData,
@@ -398,10 +397,6 @@ const updateLocalGuildMembers = (guildMember: Guild['guildMember']) => {
   }
 }
 
-const toLegacyRole = (role: AppRole): User['role'] => {
-  return role === 'admin' ? '管理者' : 'エンドユーザー'
-}
-
 const loadGuildUsers = async () => {
   if (!currentGuildId.value) return
 
@@ -624,17 +619,18 @@ const saveRole = async (member: GuildUserRow) => {
       guildUsers.value = guildUsers.value.map((user) =>
         user.uid === member.uid ? { ...user, role: nextRole } : user
       )
+      if (globalLoginUserData.value.id === member.uid) {
+        globalLoginUserData.value = {
+          ...globalLoginUserData.value,
+          role: nextRole,
+        }
+      }
       roleDrafts.value[member.uid] = nextRole
       notifySuccess(`${member.displayName} さんの権限を更新しました。`)
     } catch (error) {
-      const syncErrorDetails = getSyncUserDocumentsErrorDetails(error)
       roleDrafts.value[member.uid] = member.role
-      notifyError(
-        syncErrorDetails
-          ? 'users / user の権限同期に失敗しました。'
-          : '権限の更新に失敗しました。'
-      )
-      console.error('Update role failed:', syncErrorDetails || error)
+      notifyError('権限の更新に失敗しました。')
+      console.error('Update role failed:', error)
     }
   })
 }

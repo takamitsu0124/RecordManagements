@@ -54,7 +54,7 @@ type SkillMaster = {
 
 ## legacy schema migration flow
 
-Issue #51 に対応するため、旧 `user` / `guild` / `skillRecord` / `proficiencyLevel` から、新しい `users` / `user_skills` 運用へ安全に移す CLI を追加しています。
+Issue #51 に対応するため、旧 `user` / `guild` / `skillRecord` / `proficiencyLevel` から、新しい `users` / `user_skills` 運用へ安全に移す CLI を追加しています。現在の app runtime は `users` / `user_skills` を正本として扱い、legacy `user` は migration/backfill 用の参照元としてだけ残しています。
 
 ```bash
 npm run schema-migration:migrate -- --validate-only --mapping-file ./secure/migration-map.json
@@ -71,12 +71,19 @@ FIREBASE_AUTH_EMAIL=admin@example.com FIREBASE_AUTH_PASSWORD=secret npm run sche
 | Legacy source | New destination | Rule |
 | --- | --- | --- |
 | `user/{uid}.charaName` | `users/{uid}.displayName` | 既存 `users.displayName` を優先し、空なら legacy から補完 |
+| `user/{uid}.charaNameKana` | `users/{uid}.displayNameKana` | 既存 `users.displayNameKana` を優先し、空なら legacy から補完 |
 | `user/{uid}.contact.email` | `users/{uid}.email` | 既存 `users.email` を優先し、空なら legacy から補完 |
 | `user/{uid}.guildId` | `users/{uid}.guildId` | 既存 `users.guildId` を優先し、空なら legacy から補完。`guild` に存在しない ID は blocking error |
 | `user/{uid}.role` | `users/{uid}.role` | `管理者 -> admin`、それ以外は `member`。`guild_admin` は legacy から自動判定できないため `roleOverrides` で明示 |
+| `user/{uid}.affiliationDate` | `users/{uid}.affiliationDate` | 既存 `users.affiliationDate` を優先し、空なら legacy から補完 |
+| `user/{uid}.affiliationNum` | `users/{uid}.affiliationNum` | 既存 `users.affiliationNum` を優先。未設定相当なら legacy から補完 |
+| `user/{uid}.situation` | `users/{uid}.situation` | `現役 / 隠居 / 引退 / ''` のみ許可し、既存値を優先 |
+| `user/{uid}.gameStartDateAt` | `users/{uid}.gameStartDateAt` | 既存 `users.gameStartDateAt` を優先し、空なら legacy から補完 |
+| `user/{uid}.contact.phone` | `users/{uid}.phone` | 既存 `users.phone` を優先し、空なら legacy から補完 |
+| `user/{uid}.birthDateAt` | `users/{uid}.birthDateAt` | 既存 `users.birthDateAt` を優先し、空なら legacy から補完 |
+| `user/{uid}.imageUrls` / `skillRecord` 内画像参照 | `users/{uid}.imageUrls` | 既存 `users.imageUrls` を優先。空の場合だけ legacy `imageUrls`、さらに空なら `skillRecord` から平坦化して backfill |
 | `user/{uid}.skillRecord.*` | `user_skills/{uid}.ownedSkills[]` | 画像だけでは `skillId` を安全に推測できないため、mapping JSON で bucket ごとに `skill_master` ID を指定 |
 | `user/{uid}.proficiencyLevel.*` | `user_skills/{uid}.ownedSkills[].level` | `level` 明示値を優先。未指定時は `levelSource`、さらに未指定時は bucket と同名の熟練度を使用。該当なしは `0` |
-| `user/{uid}.imageUrls` / `skillRecord` 内画像参照 | 旧 `user` を継続利用 | 現行 app はプロフィール/画像で legacy `user` も参照しているため、**並行運用中は削除しない** |
 | `guild/{guildId}` | 既存 `guild` を継続利用 | 今回の migration では delete / rewrite しない。`users.guildId` の整合確認だけ行う |
 
 ### ownedSkills 変換ルール
@@ -117,6 +124,8 @@ CLI の挙動:
 - `user_skills` が既に存在するユーザーは、新側を優先し、mapping がない bucket は warning 扱い
 - mapping 内の `skillId` は `skill_master` に存在しないと apply できない
 - 既存 `user_skills` にある `skillId` は上書きせず、migration は**不足分だけ backfill**
+- `users.imageUrls` が空で legacy に画像参照がある場合は、`users.imageUrls` に backfill する
+- `users` のプロフィール項目 (`displayNameKana`, `affiliationDate`, `affiliationNum`, `situation`, `gameStartDateAt`, `phone`, `birthDateAt`) も legacy から backfill 対象
 - Firestore への書き込みは `--apply` を付けたときだけ実行される
 
 ### 運用手順
@@ -138,17 +147,18 @@ CLI の挙動:
 
 ### 並行運用ポリシー
 
-- `users` は認証・ロール・ギルド所属の新しい参照先
-- `user_skills` は所持スキルの新しい参照先
-- `user` はプロフィール・画像参照の暫定参照先として残す
+- `users` は認証後表示名・プロフィール・画像・ロール・ギルド所属の唯一の参照先
+- `user_skills` は所持スキルの唯一の参照先
+- `user` は app runtime からは参照せず、migration / backfill / operator 確認用の legacy ソースとしてだけ残す
 - `guild` は現行の所属管理ソースとして残す
 
-### 旧画面依存を段階的に外す見通し
+### 移行後の確認観点
 
-1. `users` / `user_skills` の migration を完了する
-2. プロフィール・画像の保存先を legacy `user` から新 schema へ分離する
-3. `packages/app/src/boot/main.ts` の login 時 legacy backfill を除去する
-4. `RMUserWorkspace` の legacy `skillRecord` / 画像 fallback を除去する
+1. `users/{uid}.displayName` / `guildId` / `role` がログイン後 UI と一致している
+2. `users/{uid}.imageUrls` だけでマイページとギルド向け画像管理画面が成立する
+3. `user_skills/{uid}.ownedSkills` だけで所持スキル表示/更新が成立する
+4. `packages/app/src/boot/main.ts` に legacy `user` backfill が残っていない
+5. `RMUserWorkspace` が legacy `skillRecord` / 画像 fallback を使っていない
 
 ## Google Calendar OAuth / secret management
 

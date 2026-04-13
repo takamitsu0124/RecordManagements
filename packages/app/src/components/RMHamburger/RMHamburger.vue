@@ -55,10 +55,9 @@ const pcHandleClick = (menu: {
 }) => {
   if (menu.name === 'ログアウト') {
     emits('logout')
-    return
+  } else {
+    emits('menuClick', menu)
   }
-
-  emits('menuClick', menu)
 }
 
 const closeMenu = () => {
