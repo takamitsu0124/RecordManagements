@@ -30,7 +30,7 @@ import {
   defaultSkillMaster,
   defaultUserSkill,
 } from '@rm/types'
-import { getSyncUserDocumentsErrorDetails, syncUserDocuments } from '@rm/utils'
+import { getSyncUserDocumentsErrorDetails } from '@rm/utils'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
