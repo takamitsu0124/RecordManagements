@@ -9,3 +9,4 @@ packages/app/.env.*
 packages/app/.env.local
 packages/app/.env.*.local
 !packages/app/.env.example
+recordmanagements-756bf-firebase-adminsdk-g78ip-14eca293e2.json

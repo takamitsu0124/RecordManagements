@@ -1,0 +1,13 @@
+uid,email,role,guildId,charaName,createdAt
+"2YtCs1mSqVXQIiQ3ubHvVHQkG6G3","oga.nextiv@gmail.com","member","mO32NSBk5KRT9ct1agaN","テスト","2025-10-27T15:35:44.071Z"
+"2lcpSXL2z8fAQIEs3ZieHfsuGsJ3","oga.nextiv@gmail.com","admin","mO32NSBk5KRT9ct1agaN","らぴす","2026-04-11T16:09:19.764Z"
+"3eBIje9YbjhwzYWCWv7Js75St4g1","testuser1@example.com","guild_admin","guild-alpha","",""
+"IAcw4NEVxecQxQrnEYfJyg232B03","testuser6@example.com","member","guild-beta","",""
+"K4MabeUN6Lee7A2MIXH9uyTxKAw2","testuser4@example.com","member","guild-alpha","",""
+"OJ5L99CeJ2RDx6IkVbTYTOlV1y32","rm-test-member-2-20260413-024218@example.com","member","ioq4FaV60icfiyNWGzKo","テスト Member 2","2026-04-13T02:47:22.451Z"
+"T4Bz9UB3GZQoX8ltXBICgVged9C2","testuser2@example.com","guild_admin","guild-alpha","",""
+"Td8THPkc7xeSvAyHSMApNIYycpr2","rm-test-member-1-20260413-024218@example.com","member","ioq4FaV60icfiyNWGzKo","テスト Member 1","2026-04-13T02:47:20.778Z"
+"hjQewLeTMSNe1FmdfL6aLDxcVeY2","testuser3@example.com","guild_admin","guild-beta","",""
+"imANESjGunV3HTuIYllGiYJvE712","testuser5@example.com","member","guild-beta","",""
+"mY0e3fjkjYdvIHGXgtInFujKuZm2","rm-test-guild-admin-2-20260413-024218@example.com","guild_admin","ioq4FaV60icfiyNWGzKo","テスト Guild Admin 2","2026-04-13T02:47:19.562Z"
+"v8mNHDGiwIfLfJHqTK46zXuWSY22","rm-test-guild-admin-1-20260413-024218@example.com","guild_admin","ioq4FaV60icfiyNWGzKo","テスト Guild Admin 1","2026-04-13T02:47:18.201Z"
