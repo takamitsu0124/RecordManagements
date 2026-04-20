@@ -236,6 +236,7 @@ const homeActions = computed(() => {
 .home-action-card__description {
   margin: 0;
   flex: 1;
+  min-height: calc(1.7em * 2);
   line-height: 1.7;
   color: var(--rm-text-soft);
 }
