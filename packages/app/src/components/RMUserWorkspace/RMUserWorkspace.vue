@@ -1,9 +1,5 @@
 <script lang="ts" setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import AutoComplete, {
-  AutoCompleteCompleteEvent,
-  AutoCompleteOptionSelectEvent,
-} from 'primevue/autocomplete'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
@@ -61,6 +57,13 @@ type OwnedSkillRow = OwnedSkill & {
   type: string
   image: string
   masterMissing: boolean
+}
+
+type SkillCatalogStatus = 'all' | 'owned' | 'unowned'
+
+type SkillCatalogRow = SkillMaster & {
+  isOwned: boolean
+  ownedLevel: number
 }
 
 type WorkspaceProfile = {
@@ -149,8 +152,10 @@ const originalAffiliationDateStr = ref<string | null>(null)
 const originalGameStartDateAtStr = ref<string | null>(null)
 const originalBirthDateAtStr = ref<string | null>(null)
 
-const skillSearchInput = ref<SkillMaster | string | null>('')
-const skillSearchSuggestions = ref<SkillMaster[]>([])
+const skillCatalogQuery = ref('')
+const skillCatalogAttr = ref('all')
+const skillCatalogType = ref('all')
+const skillCatalogStatus = ref<SkillCatalogStatus>('unowned')
 const imageUploadKey = ref(0)
 
 const isCarouselVisible = ref(false)
@@ -196,9 +201,61 @@ const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
 const ownedSkillIdSet = computed(
   () => new Set(ownedSkills.value.map((skill) => skill.skillId))
 )
+const ownedSkillLevelById = computed(
+  () => new Map(ownedSkills.value.map((skill) => [skill.skillId, skill.level]))
+)
 const imageCountLabel = computed(() => `${imageItems.value.length}件`)
 const modeLabel = computed(() =>
   isEditMode.value ? '編集モード' : '閲覧モード'
+)
+const skillCatalogPreviewLimit = 60
+
+const skillCatalogAttrOptions = computed(() =>
+  [...new Set(skillStore.state.masterData.map((skill) => skill.attr.trim()))]
+    .filter((value): value is string => value !== '')
+    .sort((a, b) => a.localeCompare(b, 'ja'))
+)
+
+const skillCatalogTypeOptions = computed(() =>
+  [...new Set(skillStore.state.masterData.map((skill) => skill.type.trim()))]
+    .filter((value): value is string => value !== '')
+    .sort((a, b) => a.localeCompare(b, 'ja'))
+)
+
+const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
+  const query = skillCatalogQuery.value.trim().toLowerCase()
+
+  return skillStore.state.masterData
+    .map((skill) => {
+      const isOwned = ownedSkillIdSet.value.has(skill.id)
+
+      return {
+        ...skill,
+        isOwned,
+        ownedLevel: ownedSkillLevelById.value.get(skill.id) ?? 0,
+      }
+    })
+    .filter((skill) => {
+      if (skillCatalogStatus.value === 'owned' && !skill.isOwned) return false
+      if (skillCatalogStatus.value === 'unowned' && skill.isOwned) return false
+      if (skillCatalogAttr.value !== 'all' && skill.attr !== skillCatalogAttr.value)
+        return false
+      if (skillCatalogType.value !== 'all' && skill.type !== skillCatalogType.value)
+        return false
+      if (!query) return true
+
+      return [skill.id, skill.name, skill.attr, skill.type].some((value) =>
+        value.toLowerCase().includes(query)
+      )
+    })
+})
+
+const visibleSkillCatalogRows = computed(() =>
+  filteredSkillCatalogRows.value.slice(0, skillCatalogPreviewLimit)
+)
+
+const hiddenSkillCatalogCount = computed(() =>
+  Math.max(0, filteredSkillCatalogRows.value.length - visibleSkillCatalogRows.value.length)
 )
 
 const createImageId = () =>
@@ -370,9 +427,11 @@ const createPendingImageItem = (file: File): ImageItem => {
   }
 }
 
-const resetSkillSearch = () => {
-  skillSearchInput.value = ''
-  skillSearchSuggestions.value = []
+const resetSkillFilters = () => {
+  skillCatalogQuery.value = ''
+  skillCatalogAttr.value = 'all'
+  skillCatalogType.value = 'all'
+  skillCatalogStatus.value = 'unowned'
 }
 
 const resetDraft = () => {
@@ -388,7 +447,7 @@ const resetDraft = () => {
   gameStartDateAtStr.value = originalGameStartDateAtStr.value
   birthDateAtStr.value = originalBirthDateAtStr.value
   imageUploadKey.value += 1
-  resetSkillSearch()
+  resetSkillFilters()
   activeCompactSection.value = 'skills'
 }
 
@@ -402,7 +461,7 @@ const loadWorkspace = async () => {
   try {
     isLoading.value = true
     errorMessage.value = null
-    resetSkillSearch()
+    resetSkillFilters()
     cleanupObjectUrls(imageItems.value)
     selectedImageItems.value = []
     deletedPersistedImageUrls.value = []
@@ -456,30 +515,9 @@ const loadWorkspace = async () => {
   }
 }
 
-const onSkillSearch = (event: AutoCompleteCompleteEvent) => {
-  if (!isEditMode.value) {
-    skillSearchSuggestions.value = []
-    return
-  }
-
-  const query = event.query.trim().toLowerCase()
-
-  skillSearchSuggestions.value = skillStore.state.masterData
-    .filter((skill) => !ownedSkillIdSet.value.has(skill.id))
-    .filter((skill) => {
-      if (!query) return true
-
-      return [skill.id, skill.name, skill.attr, skill.type].some((value) =>
-        value.toLowerCase().includes(query)
-      )
-    })
-    .slice(0, 20)
-}
-
 const addOwnedSkill = (skill: SkillMaster) => {
   if (ownedSkillIdSet.value.has(skill.id)) {
     notifyInfo('そのスキルは既に追加されています。')
-    resetSkillSearch()
     return
   }
 
@@ -487,17 +525,21 @@ const addOwnedSkill = (skill: SkillMaster) => {
     skillId: skill.id,
     level: 0,
   })
-  resetSkillSearch()
-}
-
-const onSkillSelect = (event: AutoCompleteOptionSelectEvent) => {
-  addOwnedSkill(event.value as SkillMaster)
 }
 
 const removeOwnedSkill = (skillId: string) => {
   ownedSkills.value = ownedSkills.value.filter(
     (skill) => skill.skillId !== skillId
   )
+}
+
+const toggleOwnedSkill = (skill: SkillMaster) => {
+  if (ownedSkillIdSet.value.has(skill.id)) {
+    removeOwnedSkill(skill.id)
+    return
+  }
+
+  addOwnedSkill(skill)
 }
 
 const onImageFilesSelect = (event: { files?: File[] }) => {
@@ -790,7 +832,7 @@ const onSubmit = async () => {
       syncDateModels(nextUser)
       imageUploadKey.value += 1
       isEditMode.value = false
-      resetSkillSearch()
+      resetSkillFilters()
       activeCompactSection.value = 'skills'
       notifySuccess('保存しました。')
     } catch (error) {
@@ -1030,8 +1072,7 @@ const emitBack = () => {
               <div>
                 <div class="rm-section-title">所持スキル</div>
                 <div class="user-workspace-section__description">
-                  `skill_master`
-                  を検索して追加し、同じ画面で熟練度を更新できます。
+                  編集モードでは一覧を見ながら所持スキルをチェックでき、同じ画面で熟練度も更新できます。
                 </div>
               </div>
               <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
@@ -1039,36 +1080,190 @@ const emitBack = () => {
 
             <Divider />
 
-            <div class="skill-search-box">
-              <div class="user-workspace-field__label">
-                スキルを検索して追加
+            <div v-if="isEditMode" class="skill-checker">
+              <div class="skill-checker__intro">
+                <div class="skill-checker__title">一覧からチェック</div>
+                <p class="skill-checker__description">
+                  持っているスキルをタップすると追加、もう一度タップすると解除できます。細かい熟練度は下の一覧でまとめて調整してください。
+                </p>
               </div>
-              <AutoComplete
-                v-model="skillSearchInput"
-                :suggestions="skillSearchSuggestions"
-                optionLabel="name"
-                forceSelection
-                class="skill-search-box__input"
-                :disabled="!isEditMode"
+
+              <RMInput
+                v-model="skillCatalogQuery"
+                search
+                shadow
+                class="skill-checker__search"
                 placeholder="スキル名・ID・属性・種別で検索"
-                @complete="onSkillSearch"
-                @option-select="onSkillSelect"
+              />
+
+              <div class="skill-checker__filter-group">
+                <div class="skill-checker__filter-label">表示</div>
+                <div class="skill-checker__filter-actions">
+                  <Button
+                    type="button"
+                    label="未チェック"
+                    size="small"
+                    :severity="
+                      skillCatalogStatus === 'unowned' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogStatus !== 'unowned'"
+                    @click="skillCatalogStatus = 'unowned'"
+                  />
+                  <Button
+                    type="button"
+                    label="チェック済み"
+                    size="small"
+                    :severity="
+                      skillCatalogStatus === 'owned' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogStatus !== 'owned'"
+                    @click="skillCatalogStatus = 'owned'"
+                  />
+                  <Button
+                    type="button"
+                    label="すべて"
+                    size="small"
+                    :severity="
+                      skillCatalogStatus === 'all' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogStatus !== 'all'"
+                    @click="skillCatalogStatus = 'all'"
+                  />
+                </div>
+              </div>
+
+              <div class="skill-checker__filter-group">
+                <div class="skill-checker__filter-label">属性</div>
+                <div class="skill-checker__filter-actions">
+                  <Button
+                    type="button"
+                    label="すべて"
+                    size="small"
+                    :severity="
+                      skillCatalogAttr === 'all' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogAttr !== 'all'"
+                    @click="skillCatalogAttr = 'all'"
+                  />
+                  <Button
+                    v-for="attr in skillCatalogAttrOptions"
+                    :key="attr"
+                    type="button"
+                    :label="attr"
+                    size="small"
+                    :severity="
+                      skillCatalogAttr === attr ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogAttr !== attr"
+                    @click="skillCatalogAttr = attr"
+                  />
+                </div>
+              </div>
+
+              <div class="skill-checker__filter-group">
+                <div class="skill-checker__filter-label">種別</div>
+                <div class="skill-checker__filter-actions">
+                  <Button
+                    type="button"
+                    label="すべて"
+                    size="small"
+                    :severity="
+                      skillCatalogType === 'all' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogType !== 'all'"
+                    @click="skillCatalogType = 'all'"
+                  />
+                  <Button
+                    v-for="type in skillCatalogTypeOptions"
+                    :key="type"
+                    type="button"
+                    :label="type"
+                    size="small"
+                    :severity="
+                      skillCatalogType === type ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogType !== type"
+                    @click="skillCatalogType = type"
+                  />
+                </div>
+              </div>
+
+              <div class="skill-checker__summary">
+                <div class="skill-checker__summary-tags">
+                  <Tag
+                    :value="`候補 ${filteredSkillCatalogRows.length}件`"
+                    severity="secondary"
+                  />
+                  <Tag
+                    :value="`チェック済み ${ownedSkillRows.length}件`"
+                    severity="success"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  label="絞り込みをクリア"
+                  text
+                  size="small"
+                  @click="resetSkillFilters"
+                />
+              </div>
+
+              <div
+                v-if="visibleSkillCatalogRows.length === 0"
+                class="user-workspace-empty"
               >
-                <template #option="{ option }">
-                  <div class="skill-search-box__option">
-                    <div class="skill-search-box__option-name">
-                      {{ option.name }}
-                    </div>
-                    <div class="skill-search-box__option-meta">
-                      <span>{{ option.attr }}</span>
-                      <span>{{ option.type }}</span>
-                      <span>{{ option.id }}</span>
+                条件に合うスキルがありません。検索条件をゆるめてください。
+              </div>
+
+              <div v-else class="skill-catalog-grid">
+                <button
+                  v-for="skill in visibleSkillCatalogRows"
+                  :key="skill.id"
+                  type="button"
+                  class="skill-catalog-card"
+                  :class="{ 'skill-catalog-card--owned': skill.isOwned }"
+                  :aria-pressed="skill.isOwned"
+                  @click="toggleOwnedSkill(skill)"
+                >
+                  <div class="skill-catalog-card__media">
+                    <img
+                      v-if="skill.image"
+                      :src="skill.image"
+                      alt=""
+                      class="skill-catalog-card__image"
+                    />
+                    <div v-else class="skill-catalog-card__placeholder">
+                      No image
                     </div>
                   </div>
-                </template>
-              </AutoComplete>
-              <p class="skill-search-box__help">
-                重複追加は自動で防止されます。候補を選ぶとすぐに所持一覧へ追加されます。
+                  <div class="skill-catalog-card__body">
+                    <div class="skill-catalog-card__head">
+                      <div class="skill-catalog-card__name">
+                        {{ skill.name }}
+                      </div>
+                      <Tag
+                        :value="skill.isOwned ? 'チェック済み' : '未チェック'"
+                        :severity="skill.isOwned ? 'success' : 'secondary'"
+                      />
+                    </div>
+                    <div class="skill-catalog-card__meta">{{ skill.id }}</div>
+                    <div class="skill-catalog-card__tags">
+                      <Tag :value="skill.attr" severity="secondary" />
+                      <Tag :value="skill.type" severity="secondary" />
+                    </div>
+                    <div class="skill-catalog-card__hint">
+                      {{
+                        skill.isOwned
+                          ? `熟練度 ${skill.ownedLevel} / タップで解除`
+                          : 'タップで所持に追加'
+                      }}
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <p v-if="hiddenSkillCatalogCount > 0" class="skill-checker__help">
+                候補が多いため先頭 {{ visibleSkillCatalogRows.length }} 件だけ表示しています。検索や絞り込みを追加すると探しやすくなります。
               </p>
             </div>
 
@@ -1076,10 +1271,20 @@ const emitBack = () => {
               v-if="ownedSkillRows.length === 0"
               class="user-workspace-empty"
             >
-              まだ所持スキルは登録されていません。
+              {{
+                isEditMode
+                  ? 'まだ所持スキルは選ばれていません。上の一覧から持っているスキルをチェックしてください。'
+                  : 'まだ所持スキルは登録されていません。'
+              }}
             </div>
 
             <div v-else class="owned-skill-list">
+              <div v-if="isEditMode" class="owned-skill-list__header">
+                <div class="owned-skill-list__title">チェック済み一覧</div>
+                <div class="owned-skill-list__subtitle">
+                  ここでは熟練度の調整と不要なスキルの削除ができます。
+                </div>
+              </div>
               <article
                 v-for="skill in ownedSkillRows"
                 :key="skill.skillId"
@@ -1468,41 +1673,160 @@ const emitBack = () => {
 }
 
 .user-workspace-dropdown,
-.skill-search-box__input,
+.skill-checker__search,
 .owned-skill-item__input {
   width: 100%;
 }
 
-.skill-search-box {
+.skill-checker {
   padding: 14px;
   border-radius: 18px;
   background: rgba(248, 250, 252, 0.88);
   border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.skill-search-box__help {
-  margin: 10px 0 0;
+.skill-checker__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skill-checker__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+.skill-checker__description,
+.skill-checker__help {
+  margin: 0;
   color: #64748b;
   line-height: 1.6;
 }
 
-.skill-search-box__option {
+.skill-checker__filter-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
-.skill-search-box__option-name {
+.skill-checker__filter-label {
+  font-size: 0.9rem;
   font-weight: 700;
-  color: #334155;
+  color: #475569;
 }
 
-.skill-search-box__option-meta {
+.skill-checker__filter-actions,
+.skill-checker__summary-tags,
+.skill-catalog-card__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 0.82rem;
+}
+
+.skill-checker__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skill-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.skill-catalog-card {
+  width: 100%;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.skill-catalog-card:hover {
+  transform: translateY(-1px);
+  border-color: #94a3b8;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.skill-catalog-card--owned {
+  border-color: #86efac;
+  background: rgba(240, 253, 244, 0.96);
+}
+
+.skill-catalog-card__media {
+  display: flex;
+}
+
+.skill-catalog-card__image,
+.skill-catalog-card__placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+}
+
+.skill-catalog-card__image {
+  object-fit: cover;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.skill-catalog-card__placeholder {
+  display: grid;
+  place-items: center;
+  background: #e2e8f0;
   color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.skill-catalog-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skill-catalog-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.skill-catalog-card__name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.skill-catalog-card__meta {
+  font-size: 0.8rem;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.skill-catalog-card__hint {
+  color: #475569;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .user-workspace-empty {
@@ -1518,6 +1842,24 @@ const emitBack = () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
+}
+
+.owned-skill-list__header {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.owned-skill-list__title {
+  font-weight: 800;
+  color: #334155;
+}
+
+.owned-skill-list__subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .owned-skill-item {
@@ -1813,13 +2155,31 @@ const emitBack = () => {
   }
 
   .user-workspace-section section,
-  .skill-search-box,
+  .skill-checker,
   .image-toolbox {
     padding: 12px;
   }
 
   .user-workspace-focus-switch__actions :deep(.p-button) {
     width: 100%;
+  }
+
+  .skill-checker__summary {
+    align-items: stretch;
+  }
+
+  .skill-checker__summary :deep(.p-button) {
+    width: 100%;
+  }
+
+  .skill-catalog-card {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .skill-catalog-card__image,
+  .skill-catalog-card__placeholder {
+    width: 64px;
+    height: 64px;
   }
 
   .owned-skill-item {
