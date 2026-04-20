@@ -5,6 +5,7 @@
     "dev:app": "npm run dev -w app",
     "build:app": "npm run build -w app",
     "deploy:app": "npm run build -w app && firebase use recordmanagements-756bf && firebase deploy --only hosting:app",
+    "skill-master:upload-images": "node ./scripts/skill-master/upload-images.mjs",
     "skill-master:import": "node ./scripts/skill-master/import.mjs",
     "schema-migration:migrate": "node ./scripts/schema-migration/migrate.mjs",
     "dev:vapp": "npm run dev -w vite-project",
@@ -21,6 +22,7 @@
     "copy-anything": "^4.0.2"
   },
   "devDependencies": {
+    "firebase-admin": "^13.8.0",
     "firebase-tools": "^15.14.0",
     "lerna": "^8.1.7"
   }
