@@ -96,6 +96,7 @@ const props = withDefaults(
     userId: string
     includeProfile?: boolean
     compactMode?: boolean
+    fallbackAppUser?: Partial<AppUser> | null
     pageTitle?: string
     pageIcon?: string
     viewDescription?: string
@@ -105,6 +106,7 @@ const props = withDefaults(
   {
     includeProfile: true,
     compactMode: false,
+    fallbackAppUser: null,
     pageTitle: 'マイページ',
     pageIcon: 'pi pi-user',
     viewDescription:
@@ -246,6 +248,26 @@ const createUserProfileFromAppUser = (
     birthDateAt: payload?.birthDateAt || null,
     imageUrls: payload?.imageUrls || [],
   })
+}
+
+const resolveFallbackWorkspaceAppUser = (): AppUser | null => {
+  if (props.userId === globalLoginUserData.value.id && globalLoginUserData.value.id) {
+    return cloneAppUser({
+      ...globalLoginUserData.value,
+      id: props.userId,
+      uid: props.userId,
+    })
+  }
+
+  if (props.fallbackAppUser) {
+    return cloneAppUser({
+      id: props.userId,
+      uid: props.userId,
+      ...props.fallbackAppUser,
+    })
+  }
+
+  return null
 }
 
 const cloneOwnedSkills = (payload: OwnedSkill[]): OwnedSkill[] => {
@@ -392,15 +414,19 @@ const loadWorkspace = async () => {
       .doc(props.userId)
       .fetch({ force: true })
 
-    if (!appPayload?.id) {
-      errorMessage.value =
-        'users コレクションにユーザー情報が見つかりませんでした。移行手順を実行してから再度確認してください。'
+    const nextAppUser = appPayload?.id
+      ? cloneAppUser(appPayload)
+      : resolveFallbackWorkspaceAppUser()
+
+    if (!nextAppUser) {
+      errorMessage.value = props.includeProfile
+        ? 'users コレクションにユーザー情報が見つかりませんでした。対象ユーザーに一度ログインしてもらってから再度確認してください。'
+        : 'users コレクションにユーザー情報が見つかりませんでした。対象ユーザーの基本情報が未作成のため、この画面を開けません。'
       return
     }
 
     appUserExists.value = Boolean(appPayload?.id)
 
-    const nextAppUser = cloneAppUser(appPayload)
     const nextUser = createUserProfileFromAppUser(nextAppUser)
     const nextUserSkill = skillStore.state.currentUserSkills.find(
       (userSkill) => userSkill.userId === props.userId

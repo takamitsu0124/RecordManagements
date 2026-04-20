@@ -59,6 +59,33 @@ const createFallbackAppUser = (authUser: FirebaseAuthUser | null): AppUser => {
 	}
 }
 
+const ensureAppUserDocument = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
+	const fallbackAppUser = createFallbackAppUser(authUser)
+
+	try {
+		await dbUsersModule.doc(authUser.uid).insert(fallbackAppUser)
+		return fallbackAppUser
+	} catch (error) {
+		const existingAppUser = await dbUsersModule.doc(authUser.uid).fetch({ force: true })
+		if (existingAppUser?.id) {
+			return {
+				...defaultAppUser(),
+				...existingAppUser,
+				id: existingAppUser.id || authUser.uid,
+				uid: existingAppUser.uid || authUser.uid,
+				email: existingAppUser.email || authUser.email || '',
+				displayName:
+					existingAppUser.displayName ||
+					authUser.displayName ||
+					authUser.email ||
+					'',
+			}
+		}
+
+		throw error
+	}
+}
+
 const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
 	const appUser = await dbUsersModule.doc(authUser.uid).fetch({ force: true })
 
@@ -74,7 +101,7 @@ const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
 		}
 	}
 
-	return createFallbackAppUser(authUser)
+	return ensureAppUserDocument(authUser)
 }
 
 const shouldRedirectForAuthState = (

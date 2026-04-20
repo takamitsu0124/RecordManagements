@@ -521,13 +521,17 @@ const goBack = () => {
   router.go(-1)
 }
 
-const goToPostSkill = (userId: string) => {
+const goToPostSkill = (member: { uid: string; displayName: string; role: AppRole }) => {
   if (!isEditMode.value) return
 
   if (guildId.value) {
     router.push({
       name: 'RMSkillPost',
-      params: { guildId: guildId.value as string, userId },
+      params: { guildId: guildId.value as string, userId: member.uid },
+      query: {
+        displayName: member.displayName,
+        role: member.role,
+      },
     })
   }
 }
@@ -882,7 +886,7 @@ const attrSeverity = (attr: string) => {
                       outlined
                       severity="contrast"
                       size="small"
-                      @click="goToPostSkill(member.uid)"
+                      @click="goToPostSkill(member)"
                     />
                   </div>
                   <div class="guild-skill-overview-item__stats">
@@ -1201,7 +1205,7 @@ const attrSeverity = (attr: string) => {
                       outlined
                       severity="contrast"
                       class="guild-member-item__link"
-                      @click="goToPostSkill(member.uid)"
+                      @click="goToPostSkill(member)"
                     />
                   </div>
 
