@@ -15,13 +15,6 @@ export type UserSkill = {
 	ownedSkills: OwnedSkill[]
 } & DefaultType
 
-export function defaultOwnedSkill(): OwnedSkill {
-	return {
-		skillId: '',
-		level: 0,
-	}
-}
-
 export function defaultUserSkill(): UserSkill {
 	return {
 		id: '',

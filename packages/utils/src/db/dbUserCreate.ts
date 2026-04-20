@@ -22,8 +22,8 @@ export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
       isCheckCircle: false
     })
     console.error(
-      'Failed to create synced user documents:',
-      getSyncUserDocumentsErrorDetails(e) || e
+      'Failed to create user document:',
+      e
     )
     throw e
   }

@@ -1,5 +1,5 @@
 import { DefaultType } from './default'
-import { User } from './User'
+import { AppUser } from './AppUser'
 export type Guild = {
   /** ギルドネーム */
   guildName: string
@@ -20,7 +20,7 @@ export type Guild = {
   /** 共有 Google Calendar ID */
   googleCalendarId: string
   /** ギルドメンバー */
-  guildMember: { [uid: string]: { name: User['charaName'] } }
+  guildMember: { [uid: string]: { name: AppUser['displayName'] } }
 } & DefaultType
 
 export function defaultGuild(): Guild {

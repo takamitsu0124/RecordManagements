@@ -1,5 +1,5 @@
 import { DefaultType } from './default'
-import { AppRole, defaultAppRole } from './AppRole'
+import { AppRole } from './AppRole'
 
 export type AppUser = {
 	/** Auth UID */
@@ -49,6 +49,6 @@ export function defaultAppUser(): AppUser {
 		birthDateAt: null,
 		phone: '',
 		imageUrls: [],
-		role: defaultAppRole(),
+		role: 'member',
 	}
 }

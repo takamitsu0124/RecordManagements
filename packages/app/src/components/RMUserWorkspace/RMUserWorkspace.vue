@@ -30,7 +30,6 @@ import {
   defaultSkillMaster,
   defaultUserSkill,
 } from '@rm/types'
-import { getSyncUserDocumentsErrorDetails } from '@rm/utils'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
@@ -65,33 +64,29 @@ type OwnedSkillRow = OwnedSkill & {
 }
 
 type WorkspaceProfile = {
-  charaName: string
-  charaNameKana: string
+  displayName: string
+  displayNameKana: string
   guildId: string
   affiliationDate: Date | null
   affiliationNum: number
   situation: AppUser['situation']
   gameStartDateAt: Date | null
-  contact: {
-    email: string
-    phone: string
-  }
+  email: string
+  phone: string
   birthDateAt: Date | null
   imageUrls: string[]
 }
 
 const defaultWorkspaceProfile = (): WorkspaceProfile => ({
-  charaName: '',
-  charaNameKana: '',
+  displayName: '',
+  displayNameKana: '',
   guildId: '',
   affiliationDate: null,
   affiliationNum: 0,
   situation: '現役',
   gameStartDateAt: null,
-  contact: {
-    email: '',
-    phone: '',
-  },
+  email: '',
+  phone: '',
   birthDateAt: null,
   imageUrls: [],
 })
@@ -166,7 +161,7 @@ const currentCarouselImage = computed(
   () => activeCarouselImages.value[carouselSlide.value] ?? ''
 )
 
-const pageSubtitle = computed(() => user.value.charaName || '登録内容未設定')
+const pageSubtitle = computed(() => user.value.displayName || '登録内容未設定')
 const showProfile = computed(() => props.includeProfile)
 const isCompactMode = computed(() => props.compactMode)
 const activeCompactSection = ref<'skills' | 'images'>('skills')
@@ -219,10 +214,8 @@ const cloneUser = (
 
   return {
     ...nextUser,
-    contact: {
-      ...base.contact,
-      ...(payload?.contact || {}),
-    },
+    email: payload?.email ?? base.email,
+    phone: payload?.phone ?? base.phone,
     imageUrls: Array.isArray(payload?.imageUrls)
       ? payload!.imageUrls.filter(
           (url): url is string => typeof url === 'string'
@@ -241,17 +234,15 @@ const createUserProfileFromAppUser = (
   payload?: Partial<AppUser> | null
 ): WorkspaceProfile => {
   return cloneUser({
-    charaName: payload?.displayName || '',
-    charaNameKana: payload?.displayNameKana || '',
+    displayName: payload?.displayName || '',
+    displayNameKana: payload?.displayNameKana || '',
     guildId: payload?.guildId || '',
     affiliationDate: payload?.affiliationDate || null,
     affiliationNum: payload?.affiliationNum || 0,
     situation: payload?.situation || '現役',
     gameStartDateAt: payload?.gameStartDateAt || null,
-    contact: {
-      email: payload?.email || '',
-      phone: payload?.phone || '',
-    },
+    email: payload?.email || '',
+    phone: payload?.phone || '',
     birthDateAt: payload?.birthDateAt || null,
     imageUrls: payload?.imageUrls || [],
   })
@@ -655,25 +646,23 @@ const onSubmit = async () => {
       const nextUser = cloneUser({
         ...user.value,
         imageUrls: resolvedImageUrls,
-        charaName: user.value.charaName.trim(),
-        charaNameKana: user.value.charaNameKana.trim(),
+        displayName: user.value.displayName.trim(),
+        displayNameKana: user.value.displayNameKana.trim(),
         guildId: user.value.guildId.trim(),
         affiliationDate: modelToDate(affiliationDateStr.value),
         affiliationNum: Number(user.value.affiliationNum) || 0,
         gameStartDateAt: modelToDate(gameStartDateAtStr.value),
-        contact: {
-          email: user.value.contact.email.trim(),
-          phone: user.value.contact.phone.trim(),
-        },
+        email: user.value.email.trim(),
+        phone: user.value.phone.trim(),
         birthDateAt: modelToDate(birthDateAtStr.value),
       })
       const nextAppUser = cloneAppUser({
         ...appUser.value,
         id: props.userId,
         uid: props.userId,
-        displayName: nextUser.charaName || appUser.value.displayName,
-        displayNameKana: nextUser.charaNameKana,
-        email: appUser.value.email,
+        displayName: nextUser.displayName || appUser.value.displayName,
+        displayNameKana: nextUser.displayNameKana,
+        email: nextUser.email || appUser.value.email,
         guildId: canEditGuildId.value
           ? nextUser.guildId
           : appUser.value.guildId,
@@ -682,7 +671,7 @@ const onSubmit = async () => {
         situation: nextUser.situation,
         gameStartDateAt: nextUser.gameStartDateAt,
         birthDateAt: nextUser.birthDateAt,
-        phone: nextUser.contact.phone,
+        phone: nextUser.phone,
         imageUrls: resolvedImageUrls,
       })
       const nextUsersPayload = props.includeProfile
@@ -785,13 +774,8 @@ const onSubmit = async () => {
         )
       }
 
-      const syncErrorDetails = getSyncUserDocumentsErrorDetails(error)
-      notifyError(
-        syncErrorDetails
-          ? 'users / user の保存同期に失敗しました。'
-          : '保存に失敗しました。'
-      )
-      console.error('Failed to save user workspace:', syncErrorDetails || error)
+      notifyError('保存に失敗しました。')
+      console.error('Failed to save user workspace:', error)
     }
   })
 }
@@ -916,13 +900,13 @@ const emitBack = () => {
               <div class="rm-section-title">基本情報</div>
               <div class="rm-form-grid rm-form-grid--two">
                 <RMInput
-                  v-model="user.charaName"
+                  v-model="user.displayName"
                   label="キャラクターネーム"
                   shadow
                   :disabled="!isEditMode"
                 />
                 <RMInput
-                  v-model="user.charaNameKana"
+                  v-model="user.displayNameKana"
                   label="キャラクターネーム(カナ)"
                   shadow
                   :disabled="!isEditMode"
@@ -991,14 +975,14 @@ const emitBack = () => {
               <div class="rm-section-title">連絡先</div>
               <div class="rm-form-grid rm-form-grid--two">
                 <RMInput
-                  v-model="user.contact.email"
+                  v-model="user.email"
                   label="登録メールアドレス"
                   type="email"
                   shadow
                   :disabled="true"
                 />
                 <RMInput
-                  v-model="user.contact.phone"
+                  v-model="user.phone"
                   label="登録電話番号"
                   type="tel"
                   shadow

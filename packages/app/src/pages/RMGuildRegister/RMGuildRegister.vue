@@ -5,7 +5,6 @@ import Card from 'primevue/card'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
 import { dbUsersModule, writeDocWithRandomId } from '@rm/db'
 import { defaultGuild, Guild } from '@rm/types'
-import { getSyncUserDocumentsErrorDetails } from '@rm/utils'
 import { globalLoginUserData } from 'src/boot/main'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -68,13 +67,8 @@ const onSubmit = async () => {
       notifySuccess('ギルドが正常に登録されました。')
       router.push({ name: 'RMHome' })
     } catch (error) {
-      const syncErrorDetails = getSyncUserDocumentsErrorDetails(error)
-      notifyError(
-        syncErrorDetails
-          ? 'ギルド作成後の users / user 同期に失敗しました。'
-          : 'ギルドの登録に失敗しました。'
-      )
-      console.error('Guild registration failed:', syncErrorDetails || error)
+      notifyError('ギルドの登録に失敗しました。')
+      console.error('Guild registration failed:', error)
     }
   })
 }

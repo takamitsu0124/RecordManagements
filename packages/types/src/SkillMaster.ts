@@ -1,15 +1,12 @@
 import { DefaultType } from './default'
 
-export type SkillAttribute = string
-export type SkillWeaponType = string
-
 export type SkillMaster = {
 	/** Skill display name */
 	name: string
 	/** Attribute such as fire/water/earth */
-	attr: SkillAttribute
+	attr: string
 	/** Detailed category such as sword/link or ability/chain */
-	type: SkillWeaponType
+	type: string
 	/** Cooldown text */
 	cool: string
 	/** Switch gauge text */

@@ -1,4 +1,3 @@
-export * from './User'
 export * from './Guild'
 export * from './Users'
 export * from './SkillMaster'

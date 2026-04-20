@@ -13,7 +13,7 @@ import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import { collection, getDocs, query, where } from 'firebase/firestore'
-import { db } from '@rm/db'
+import { db, dbUsersModule } from '@rm/db'
 import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
 import { AppRole, AppUser, Guild } from '@rm/types'
 import {
@@ -603,17 +603,8 @@ const saveRole = async (member: GuildUserRow) => {
 
   await useSpinner(async () => {
     try {
-      await syncUserDocuments({
-        uid: member.uid,
-        operation: 'guild-role-update',
-        appUser: {
-          mode: 'merge',
-          payload: { role: nextRole },
-        },
-        legacyUser: {
-          mode: 'merge',
-          payload: { role: toLegacyRole(nextRole) },
-        },
+      await dbUsersModule.doc(member.uid).merge({
+        role: nextRole,
       })
 
       guildUsers.value = guildUsers.value.map((user) =>
