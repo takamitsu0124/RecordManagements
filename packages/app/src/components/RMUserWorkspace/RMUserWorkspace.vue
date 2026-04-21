@@ -3,14 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
-import Divider from 'primevue/divider'
-import Dropdown from 'primevue/dropdown'
-import FileUpload from 'primevue/fileupload'
-import InputNumber from 'primevue/inputnumber'
-import OrderList from 'primevue/orderlist'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
-import Draggable from 'vuedraggable'
 import {
   dbUsersModule,
   dbUserSkillsModule,
@@ -26,9 +20,19 @@ import {
   defaultSkillMaster,
   defaultUserSkill,
 } from '@rm/types'
+import RMUserWorkspaceImagesSection from './RMUserWorkspaceImagesSection.vue'
+import RMUserWorkspaceProfileSection from './RMUserWorkspaceProfileSection.vue'
+import RMUserWorkspaceSkillsSection from './RMUserWorkspaceSkillsSection.vue'
+import type {
+  ImageItem,
+  OwnedSkillRow,
+  SkillCatalogRow,
+  SkillCatalogStatus,
+  WorkspaceProfile,
+} from './types'
+import { defaultWorkspaceProfile } from './types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
-import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { globalLoginUserData, hasAdmin } from 'src/boot/main'
@@ -39,60 +43,6 @@ import {
   notifySuccess,
 } from 'src/composables/useAppNotifications'
 import { useSkillStore } from 'src/store'
-
-type ImageItem = {
-  id: string
-  previewUrl: string
-  persistedUrl: string | null
-  file: File | null
-  objectUrl: string | null
-  isNew: boolean
-  label: string
-}
-
-type OwnedSkillRow = OwnedSkill & {
-  index: number
-  name: string
-  attr: string
-  type: string
-  image: string
-  masterMissing: boolean
-}
-
-type SkillCatalogStatus = 'all' | 'owned' | 'unowned'
-
-type SkillCatalogRow = SkillMaster & {
-  isOwned: boolean
-  ownedLevel: number
-}
-
-type WorkspaceProfile = {
-  displayName: string
-  displayNameKana: string
-  guildId: string
-  affiliationDate: Date | null
-  affiliationNum: number
-  situation: AppUser['situation']
-  gameStartDateAt: Date | null
-  email: string
-  phone: string
-  birthDateAt: Date | null
-  imageUrls: string[]
-}
-
-const defaultWorkspaceProfile = (): WorkspaceProfile => ({
-  displayName: '',
-  displayNameKana: '',
-  guildId: '',
-  affiliationDate: null,
-  affiliationNum: 0,
-  situation: '現役',
-  gameStartDateAt: null,
-  email: '',
-  phone: '',
-  birthDateAt: null,
-  imageUrls: [],
-})
 
 const props = withDefaults(
   defineProps<{
@@ -238,9 +188,15 @@ const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
     .filter((skill) => {
       if (skillCatalogStatus.value === 'owned' && !skill.isOwned) return false
       if (skillCatalogStatus.value === 'unowned' && skill.isOwned) return false
-      if (skillCatalogAttr.value !== 'all' && skill.attr !== skillCatalogAttr.value)
+      if (
+        skillCatalogAttr.value !== 'all' &&
+        skill.attr !== skillCatalogAttr.value
+      )
         return false
-      if (skillCatalogType.value !== 'all' && skill.type !== skillCatalogType.value)
+      if (
+        skillCatalogType.value !== 'all' &&
+        skill.type !== skillCatalogType.value
+      )
         return false
       if (!query) return true
 
@@ -255,7 +211,10 @@ const visibleSkillCatalogRows = computed(() =>
 )
 
 const hiddenSkillCatalogCount = computed(() =>
-  Math.max(0, filteredSkillCatalogRows.value.length - visibleSkillCatalogRows.value.length)
+  Math.max(
+    0,
+    filteredSkillCatalogRows.value.length - visibleSkillCatalogRows.value.length
+  )
 )
 
 const createImageId = () =>
@@ -308,7 +267,10 @@ const createUserProfileFromAppUser = (
 }
 
 const resolveFallbackWorkspaceAppUser = (): AppUser | null => {
-  if (props.userId === globalLoginUserData.value.id && globalLoginUserData.value.id) {
+  if (
+    props.userId === globalLoginUserData.value.id &&
+    globalLoginUserData.value.id
+  ) {
     return cloneAppUser({
       ...globalLoginUserData.value,
       id: props.userId,
@@ -950,558 +912,48 @@ const emitBack = () => {
         </template>
       </Card>
 
-      <Card v-if="showProfile" class="user-workspace-card">
-        <template #content>
-          <div class="user-workspace-section">
-            <div class="user-workspace-section__header">
-              <div>
-                <div class="rm-section-title">プロフィール</div>
-                <div class="user-workspace-section__description">
-                  個人情報を増やさず、現在使っているプロフィール項目だけを同じ画面で確認・更新できます。
-                </div>
-              </div>
-            </div>
+      <RMUserWorkspaceProfileSection
+        v-if="showProfile"
+        v-model:user="user"
+        :isEditMode="isEditMode"
+        :canEditGuildId="canEditGuildId"
+        :situationOptions="situationOptions"
+        v-model:affiliationDateStr="affiliationDateStr"
+        v-model:gameStartDateAtStr="gameStartDateAtStr"
+        v-model:birthDateAtStr="birthDateAtStr"
+      />
 
-            <Divider />
-
-            <section>
-              <div class="rm-section-title">基本情報</div>
-              <div class="rm-form-grid rm-form-grid--two">
-                <RMInput
-                  v-model="user.displayName"
-                  label="キャラクターネーム"
-                  shadow
-                  :disabled="!isEditMode"
-                />
-                <RMInput
-                  v-model="user.displayNameKana"
-                  label="キャラクターネーム(カナ)"
-                  shadow
-                  :disabled="!isEditMode"
-                />
-                <RMInput
-                  v-model="user.guildId"
-                  label="所属ギルドID"
-                  shadow
-                  :disabled="!isEditMode || !canEditGuildId"
-                />
-                <RMInput
-                  v-model="user.affiliationNum"
-                  label="所属No"
-                  type="number"
-                  shadow
-                  :disabled="!isEditMode"
-                />
-              </div>
-              <div class="user-workspace-field">
-                <div class="user-workspace-field__label">プレイヤー状況</div>
-                <Dropdown
-                  v-model="user.situation"
-                  :options="situationOptions"
-                  placeholder="状況を選択"
-                  class="user-workspace-dropdown"
-                  :disabled="!isEditMode"
-                />
-              </div>
-            </section>
-
-            <Divider />
-
-            <section>
-              <div class="rm-section-title">日付情報</div>
-              <div class="rm-form-grid rm-form-grid--three">
-                <RMInput
-                  v-model="affiliationDateStr"
-                  label="ギルド所属日"
-                  type="date"
-                  :date="true"
-                  shadow
-                  :disabled="!isEditMode"
-                />
-                <RMInput
-                  v-model="gameStartDateAtStr"
-                  label="ゲーム開始日時"
-                  type="date"
-                  :date="true"
-                  shadow
-                  :disabled="!isEditMode"
-                />
-                <RMInput
-                  v-model="birthDateAtStr"
-                  label="誕生日"
-                  type="date"
-                  :date="true"
-                  shadow
-                  :disabled="!isEditMode"
-                />
-              </div>
-            </section>
-
-            <Divider />
-
-            <section>
-              <div class="rm-section-title">連絡先</div>
-              <div class="rm-form-grid rm-form-grid--two">
-                <RMInput
-                  v-model="user.email"
-                  label="登録メールアドレス"
-                  type="email"
-                  shadow
-                  :disabled="true"
-                />
-                <RMInput
-                  v-model="user.phone"
-                  label="登録電話番号"
-                  type="tel"
-                  shadow
-                  :disabled="!isEditMode"
-                />
-              </div>
-            </section>
-          </div>
-        </template>
-      </Card>
-
-      <Card
+      <RMUserWorkspaceSkillsSection
         v-if="!isCompactMode || activeCompactSection === 'skills'"
-        class="user-workspace-card"
-      >
-        <template #content>
-          <div class="user-workspace-section">
-            <div class="user-workspace-section__header">
-              <div>
-                <div class="rm-section-title">所持スキル</div>
-                <div class="user-workspace-section__description">
-                  編集モードでは一覧を見ながら所持スキルをチェックでき、同じ画面で熟練度も更新できます。
-                </div>
-              </div>
-              <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
-            </div>
+        :isEditMode="isEditMode"
+        v-model:ownedSkills="ownedSkills"
+        :ownedSkillRows="ownedSkillRows"
+        :filteredSkillCatalogRows="filteredSkillCatalogRows"
+        :visibleSkillCatalogRows="visibleSkillCatalogRows"
+        :hiddenSkillCatalogCount="hiddenSkillCatalogCount"
+        v-model:skillCatalogQuery="skillCatalogQuery"
+        v-model:skillCatalogAttr="skillCatalogAttr"
+        v-model:skillCatalogType="skillCatalogType"
+        v-model:skillCatalogStatus="skillCatalogStatus"
+        :skillCatalogAttrOptions="skillCatalogAttrOptions"
+        :skillCatalogTypeOptions="skillCatalogTypeOptions"
+        @toggle-skill="toggleOwnedSkill"
+        @remove-skill="removeOwnedSkill"
+        @reset-filters="resetSkillFilters"
+      />
 
-            <Divider />
-
-            <div v-if="isEditMode" class="skill-checker">
-              <div class="skill-checker__intro">
-                <div class="skill-checker__title">一覧からチェック</div>
-                <p class="skill-checker__description">
-                  持っているスキルをタップすると追加、もう一度タップすると解除できます。細かい熟練度は下の一覧でまとめて調整してください。
-                </p>
-              </div>
-
-              <RMInput
-                v-model="skillCatalogQuery"
-                search
-                shadow
-                class="skill-checker__search"
-                placeholder="スキル名・ID・属性・種別で検索"
-              />
-
-              <div class="skill-checker__filter-group">
-                <div class="skill-checker__filter-label">表示</div>
-                <div class="skill-checker__filter-actions">
-                  <Button
-                    type="button"
-                    label="未チェック"
-                    size="small"
-                    :severity="
-                      skillCatalogStatus === 'unowned' ? 'contrast' : 'secondary'
-                    "
-                    :outlined="skillCatalogStatus !== 'unowned'"
-                    @click="skillCatalogStatus = 'unowned'"
-                  />
-                  <Button
-                    type="button"
-                    label="チェック済み"
-                    size="small"
-                    :severity="
-                      skillCatalogStatus === 'owned' ? 'contrast' : 'secondary'
-                    "
-                    :outlined="skillCatalogStatus !== 'owned'"
-                    @click="skillCatalogStatus = 'owned'"
-                  />
-                  <Button
-                    type="button"
-                    label="すべて"
-                    size="small"
-                    :severity="
-                      skillCatalogStatus === 'all' ? 'contrast' : 'secondary'
-                    "
-                    :outlined="skillCatalogStatus !== 'all'"
-                    @click="skillCatalogStatus = 'all'"
-                  />
-                </div>
-              </div>
-
-              <div class="skill-checker__filter-group">
-                <div class="skill-checker__filter-label">属性</div>
-                <div class="skill-checker__filter-actions">
-                  <Button
-                    type="button"
-                    label="すべて"
-                    size="small"
-                    :severity="
-                      skillCatalogAttr === 'all' ? 'contrast' : 'secondary'
-                    "
-                    :outlined="skillCatalogAttr !== 'all'"
-                    @click="skillCatalogAttr = 'all'"
-                  />
-                  <Button
-                    v-for="attr in skillCatalogAttrOptions"
-                    :key="attr"
-                    type="button"
-                    :label="attr"
-                    size="small"
-                    :severity="
-                      skillCatalogAttr === attr ? 'contrast' : 'secondary'
-                    "
-                    :outlined="skillCatalogAttr !== attr"
-                    @click="skillCatalogAttr = attr"
-                  />
-                </div>
-              </div>
-
-              <div class="skill-checker__filter-group">
-                <div class="skill-checker__filter-label">種別</div>
-                <div class="skill-checker__filter-actions">
-                  <Button
-                    type="button"
-                    label="すべて"
-                    size="small"
-                    :severity="
-                      skillCatalogType === 'all' ? 'contrast' : 'secondary'
-                    "
-                    :outlined="skillCatalogType !== 'all'"
-                    @click="skillCatalogType = 'all'"
-                  />
-                  <Button
-                    v-for="type in skillCatalogTypeOptions"
-                    :key="type"
-                    type="button"
-                    :label="type"
-                    size="small"
-                    :severity="
-                      skillCatalogType === type ? 'contrast' : 'secondary'
-                    "
-                    :outlined="skillCatalogType !== type"
-                    @click="skillCatalogType = type"
-                  />
-                </div>
-              </div>
-
-              <div class="skill-checker__summary">
-                <div class="skill-checker__summary-tags">
-                  <Tag
-                    :value="`候補 ${filteredSkillCatalogRows.length}件`"
-                    severity="secondary"
-                  />
-                  <Tag
-                    :value="`チェック済み ${ownedSkillRows.length}件`"
-                    severity="success"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  label="絞り込みをクリア"
-                  text
-                  size="small"
-                  @click="resetSkillFilters"
-                />
-              </div>
-
-              <div
-                v-if="visibleSkillCatalogRows.length === 0"
-                class="user-workspace-empty"
-              >
-                条件に合うスキルがありません。検索条件をゆるめてください。
-              </div>
-
-              <div v-else class="skill-catalog-grid">
-                <button
-                  v-for="skill in visibleSkillCatalogRows"
-                  :key="skill.id"
-                  type="button"
-                  class="skill-catalog-card"
-                  :class="{ 'skill-catalog-card--owned': skill.isOwned }"
-                  :aria-pressed="skill.isOwned"
-                  @click="toggleOwnedSkill(skill)"
-                >
-                  <div class="skill-catalog-card__media">
-                    <img
-                      v-if="skill.image"
-                      :src="skill.image"
-                      alt=""
-                      class="skill-catalog-card__image"
-                    />
-                    <div v-else class="skill-catalog-card__placeholder">
-                      No image
-                    </div>
-                  </div>
-                  <div class="skill-catalog-card__body">
-                    <div class="skill-catalog-card__head">
-                      <div class="skill-catalog-card__name">
-                        {{ skill.name }}
-                      </div>
-                      <Tag
-                        :value="skill.isOwned ? 'チェック済み' : '未チェック'"
-                        :severity="skill.isOwned ? 'success' : 'secondary'"
-                      />
-                    </div>
-                    <div class="skill-catalog-card__meta">{{ skill.id }}</div>
-                    <div class="skill-catalog-card__tags">
-                      <Tag :value="skill.attr" severity="secondary" />
-                      <Tag :value="skill.type" severity="secondary" />
-                    </div>
-                    <div class="skill-catalog-card__hint">
-                      {{
-                        skill.isOwned
-                          ? `熟練度 ${skill.ownedLevel} / タップで解除`
-                          : 'タップで所持に追加'
-                      }}
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              <p v-if="hiddenSkillCatalogCount > 0" class="skill-checker__help">
-                候補が多いため先頭 {{ visibleSkillCatalogRows.length }} 件だけ表示しています。検索や絞り込みを追加すると探しやすくなります。
-              </p>
-            </div>
-
-            <div
-              v-if="ownedSkillRows.length === 0"
-              class="user-workspace-empty"
-            >
-              {{
-                isEditMode
-                  ? 'まだ所持スキルは選ばれていません。上の一覧から持っているスキルをチェックしてください。'
-                  : 'まだ所持スキルは登録されていません。'
-              }}
-            </div>
-
-            <div v-else class="owned-skill-list">
-              <div v-if="isEditMode" class="owned-skill-list__header">
-                <div class="owned-skill-list__title">チェック済み一覧</div>
-                <div class="owned-skill-list__subtitle">
-                  ここでは熟練度の調整と不要なスキルの削除ができます。
-                </div>
-              </div>
-              <article
-                v-for="skill in ownedSkillRows"
-                :key="skill.skillId"
-                class="owned-skill-item"
-              >
-                <div class="owned-skill-item__media">
-                  <img
-                    v-if="skill.image"
-                    :src="skill.image"
-                    alt=""
-                    class="owned-skill-item__image"
-                  />
-                  <div v-else class="owned-skill-item__placeholder">
-                    No image
-                  </div>
-                </div>
-                <div class="owned-skill-item__body">
-                  <div class="owned-skill-item__head">
-                    <div>
-                      <div class="owned-skill-item__name">{{ skill.name }}</div>
-                      <div class="owned-skill-item__meta">
-                        {{ skill.skillId }}
-                      </div>
-                    </div>
-                    <Button
-                      v-if="isEditMode"
-                      type="button"
-                      icon="pi pi-trash"
-                      severity="danger"
-                      text
-                      rounded
-                      @click="removeOwnedSkill(skill.skillId)"
-                    />
-                  </div>
-                  <div class="owned-skill-item__tags">
-                    <Tag :value="skill.attr" severity="secondary" />
-                    <Tag :value="skill.type" severity="secondary" />
-                    <Tag
-                      v-if="skill.masterMissing"
-                      value="master未登録"
-                      severity="danger"
-                    />
-                  </div>
-                  <div class="owned-skill-item__level">
-                    <div class="user-workspace-field__label">熟練度</div>
-                    <InputNumber
-                      v-model="ownedSkills[skill.index].level"
-                      :min="0"
-                      showButtons
-                      :disabled="!isEditMode"
-                      class="owned-skill-item__input"
-                    />
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-        </template>
-      </Card>
-
-      <Card
+      <RMUserWorkspaceImagesSection
         v-if="!isCompactMode || activeCompactSection === 'images'"
-        class="user-workspace-card"
-      >
-        <template #content>
-          <div class="user-workspace-section">
-            <div class="user-workspace-section__header">
-              <div>
-                <div class="rm-section-title">画像管理</div>
-                <div class="user-workspace-section__description">
-                  画像 URL
-                  は表示せず、プレビューと順序だけを管理します。保存時は現在の順序のまま
-                  Firestore に反映されます。
-                </div>
-              </div>
-              <Tag
-                :value="imageCountLabel"
-                :severity="imageItems.length > 0 ? 'success' : 'secondary'"
-              />
-            </div>
-
-            <Divider />
-
-            <div v-if="isEditMode" class="image-toolbox">
-              <FileUpload
-                :key="imageUploadKey"
-                mode="basic"
-                multiple
-                accept="image/*"
-                chooseLabel="画像を追加"
-                class="image-toolbox__upload"
-                @select="onImageFilesSelect"
-              />
-              <div class="image-toolbox__help">
-                ドラッグ＆ドロップで大まかに並び替え、細かい調整は `OrderList`
-                の上下ボタンで行えます。
-              </div>
-            </div>
-
-            <div v-if="imageItems.length === 0" class="user-workspace-empty">
-              まだ画像は登録されていません。
-            </div>
-
-            <div v-else-if="isEditMode" class="image-order-layout">
-              <OrderList
-                v-model="imageItems"
-                v-model:selection="selectedImageItems"
-                dataKey="id"
-                :metaKeySelection="false"
-                :listStyle="{ height: 'auto' }"
-                scrollHeight="22rem"
-                class="image-order-list"
-              >
-                <template #header>
-                  <div class="image-order-list__header">
-                    <div class="image-order-list__title">並び替え一覧</div>
-                    <div class="image-order-list__subtitle">
-                      画像を選択して上下ボタンで順序を調整します。
-                    </div>
-                  </div>
-                </template>
-                <template #option="{ option, index }">
-                  <div class="image-order-item">
-                    <button
-                      type="button"
-                      class="image-order-item__preview"
-                      @click.stop="openImageCarouselById(option.id)"
-                    >
-                      <img
-                        :src="option.previewUrl"
-                        alt=""
-                        class="image-order-item__image"
-                      />
-                    </button>
-                    <div class="image-order-item__meta">
-                      <div class="image-order-item__title">
-                        画像 {{ index + 1 }}
-                      </div>
-                      <div class="image-order-item__subtitle">
-                        {{ option.label }}
-                      </div>
-                      <Tag v-if="option.isNew" value="未保存" severity="warn" />
-                    </div>
-                    <Button
-                      type="button"
-                      icon="pi pi-trash"
-                      severity="danger"
-                      text
-                      rounded
-                      @click.stop="removeImage(option.id)"
-                    />
-                  </div>
-                </template>
-              </OrderList>
-
-              <div class="image-sort-grid">
-                <div class="image-sort-grid__title">ドラッグで並び替え</div>
-                <div class="image-sort-grid__description">
-                  ハンドルをつかんで順序を変更すると、その並びのまま保存されます。
-                </div>
-                <Draggable
-                  v-model="imageItems"
-                  item-key="id"
-                  handle=".image-sort-grid__handle"
-                  :animation="180"
-                  class="image-preview-grid image-preview-grid--sortable"
-                >
-                  <template #item="{ element, index }">
-                    <div
-                      class="image-preview-grid__item image-preview-grid__item--sortable"
-                    >
-                      <button
-                        type="button"
-                        class="image-sort-grid__handle"
-                        aria-label="画像の順序を変更"
-                      >
-                        <span class="pi pi-bars" aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        class="image-preview-grid__preview"
-                        @click="openImageCarousel(index)"
-                      >
-                        <img
-                          :src="element.previewUrl"
-                          alt=""
-                          class="image-preview-grid__image"
-                        />
-                        <span class="image-preview-grid__badge">{{
-                          index + 1
-                        }}</span>
-                      </button>
-                    </div>
-                  </template>
-                </Draggable>
-              </div>
-            </div>
-
-            <div v-else class="image-preview-grid">
-              <button
-                v-for="(item, index) in imageItems"
-                :key="item.id"
-                type="button"
-                class="image-preview-grid__item"
-                @click="openImageCarousel(index)"
-              >
-                <img
-                  :src="item.previewUrl"
-                  alt=""
-                  class="image-preview-grid__image"
-                />
-                <span class="image-preview-grid__badge">{{ index + 1 }}</span>
-              </button>
-            </div>
-          </div>
-        </template>
-      </Card>
+        :isEditMode="isEditMode"
+        :imageUploadKey="imageUploadKey"
+        :imageCountLabel="imageCountLabel"
+        v-model:imageItems="imageItems"
+        v-model:selectedImageItems="selectedImageItems"
+        @select-files="onImageFilesSelect"
+        @remove-image="removeImage"
+        @open-carousel="openImageCarousel"
+        @open-carousel-by-id="openImageCarouselById"
+      />
 
       <div class="rm-actions user-workspace-actions">
         <RMButton
@@ -1753,9 +1205,7 @@ const emitBack = () => {
   background: #fff;
   text-align: left;
   cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
+  transition: transform 0.18s ease, border-color 0.18s ease,
     box-shadow 0.18s ease;
 }
 
