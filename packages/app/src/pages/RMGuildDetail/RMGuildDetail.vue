@@ -12,9 +12,7 @@ import InputText from 'primevue/inputtext'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
-import { collection, getDocs, query, where } from 'firebase/firestore'
-import { db, dbUsersModule } from '@rm/db'
-import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
+import { dbGuildModule, dbUsersModule } from '@rm/db'
 import { AppRole, AppUser, Guild } from '@rm/types'
 import {
   canManageGuildMembers,
@@ -32,6 +30,7 @@ import {
   notifyInfo,
   notifySuccess,
 } from 'src/composables/useAppNotifications'
+import { fetchGuild, fetchGuildUsers } from 'src/services/guildData'
 import { useSkillStore } from 'src/store'
 
 const route = useRoute()
@@ -403,19 +402,7 @@ const loadGuildUsers = async () => {
   isMemberLoading.value = true
 
   try {
-    const guildUsersQuery = query(
-      collection(db, 'users'),
-      where('guildId', '==', currentGuildId.value)
-    )
-    const guildUsersSnapshot = await getDocs(guildUsersQuery)
-    guildUsers.value = guildUsersSnapshot.docs.map((doc) => {
-      const data = doc.data() as AppUser
-      return {
-        ...data,
-        id: data.id || doc.id,
-        uid: data.uid || doc.id,
-      }
-    })
+    guildUsers.value = await fetchGuildUsers(currentGuildId.value)
     syncRoleDrafts()
   } catch (error) {
     notifyError('ギルドメンバー管理情報の取得に失敗しました。')
@@ -453,8 +440,7 @@ onMounted(async () => {
 
   try {
     isLoading.value = true
-    await dbGuildModule.doc(guildId.value as string).fetch()
-    const fetchedGuild = dbGuildModule.doc(guildId.value as string).data
+    const fetchedGuild = await fetchGuild(guildId.value as string)
 
     if (fetchedGuild) {
       guildDetail.value = fetchedGuild as Guild
@@ -521,7 +507,11 @@ const goBack = () => {
   router.go(-1)
 }
 
-const goToPostSkill = (member: { uid: string; displayName: string; role: AppRole }) => {
+const goToPostSkill = (member: {
+  uid: string
+  displayName: string
+  role: AppRole
+}) => {
   if (!isEditMode.value) return
 
   if (guildId.value) {

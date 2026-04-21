@@ -1,25 +1,5 @@
-import { GuildScheduleResponse } from '@rm/types'
-import { auth, magnetar } from '../config'
-import { formatDataTimestampToDate } from '../utils'
+import { GuildScheduleResponse } from "@rm/types";
+import { createFirestoreCollection } from "./createCollection";
 
-export const dbGuildScheduleResponsesModule = magnetar.collection<GuildScheduleResponse>(
-	'guild_schedule_responses',
-	{
-		modifyPayloadOn: {
-			insert: (payload: GuildScheduleResponse) => {
-				;(payload.updatedBy = auth.currentUser?.uid || ''),
-					(payload.createdBy = auth.currentUser?.uid || '')
-				return { ...payload }
-			},
-			merge: (payload: GuildScheduleResponse) => {
-				;(payload.updatedAt = new Date()),
-					(payload.updatedBy = auth.currentUser?.uid || '')
-				return { ...payload }
-			},
-		},
-		modifyReadResponseOn: {
-			added: formatDataTimestampToDate,
-			modified: formatDataTimestampToDate,
-		},
-	}
-)
+export const dbGuildScheduleResponsesModule =
+  createFirestoreCollection<GuildScheduleResponse>("guild_schedule_responses");

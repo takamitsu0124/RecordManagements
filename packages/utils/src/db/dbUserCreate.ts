@@ -1,7 +1,12 @@
-import { defaultAppUser } from '@rm/types'
-import { dbUsersModule } from '@rm/db'
-import { RegisterInfo } from 'src/pages/RMUserRegister/register'
-import { useToast } from 'src/components/RMToast/RMToast'
+import { AppRole, defaultAppUser } from "@rm/types";
+import { dbUsersModule } from "@rm/db";
+
+type RegisterInfo = {
+  email: string;
+  name: string;
+  guildId: string;
+  role: AppRole;
+};
 
 export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
   try {
@@ -12,19 +17,10 @@ export const dbUserCreate = async (uid: string, info: RegisterInfo) => {
       email: info.email,
       displayName: info.name,
       guildId: info.guildId,
-      role: info.role
-    })
+      role: info.role,
+    });
   } catch (e) {
-    useToast({
-      toastTitle: 'ユーザー登録に失敗しました',
-      toastColor: 'red',
-      toastMovingTime: 3,
-      isCheckCircle: false
-    })
-    console.error(
-      'Failed to create user document:',
-      e
-    )
-    throw e
+    console.error("Failed to create user document:", e);
+    throw e;
   }
-}
+};

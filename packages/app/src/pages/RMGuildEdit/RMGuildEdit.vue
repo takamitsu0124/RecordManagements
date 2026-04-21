@@ -4,13 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import Dropdown from 'primevue/dropdown'
 import FileUpload from 'primevue/fileupload'
-import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
+import { dbGuildModule, deleteFileByUrl, uploadFile } from '@rm/db'
 import { Guild } from '@rm/types'
-import { uploadFile, deleteFileByUrl } from '@rm/db/src/fireStorage/fireStorage'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
+import { fetchGuild } from 'src/services/guildData'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,15 +43,16 @@ onMounted(async () => {
 
   await useSpinner(async () => {
     try {
-      await dbGuildModule.doc(guildId.value as string).fetch()
-      const fetchedGuild = dbGuildModule.doc(guildId.value as string).data
+      const fetchedGuild = await fetchGuild(guildId.value as string)
 
       if (fetchedGuild) {
         guildName.value = fetchedGuild.guildName || ''
         guildDescription.value = fetchedGuild.guildMemo || ''
         guildSituation.value = fetchedGuild.situation || ''
         guildFoundingDate.value = fetchedGuild.guildFoundingDateAt
-          ? new Intl.DateTimeFormat('sv-SE').format(fetchedGuild.guildFoundingDateAt)
+          ? new Intl.DateTimeFormat('sv-SE').format(
+              fetchedGuild.guildFoundingDateAt
+            )
           : ''
         guildLogoUrl.value = fetchedGuild.guildLogo || ''
         guildGoogleCalendarId.value = fetchedGuild.googleCalendarId || ''
@@ -109,13 +110,13 @@ const onSubmit = async () => {
         )
       }
 
-        const updatedData: Partial<Guild> = {
-          guildName: guildName.value,
-          guildMemo: guildDescription.value,
-          googleCalendarId: guildGoogleCalendarId.value.trim(),
-          situation: guildSituation.value,
-          guildFoundingDateAt: guildFoundingDate.value
-            ? new Date(guildFoundingDate.value)
+      const updatedData: Partial<Guild> = {
+        guildName: guildName.value,
+        guildMemo: guildDescription.value,
+        googleCalendarId: guildGoogleCalendarId.value.trim(),
+        situation: guildSituation.value,
+        guildFoundingDateAt: guildFoundingDate.value
+          ? new Date(guildFoundingDate.value)
           : null,
         guildLogo: updatedLogoUrl,
       }
@@ -150,7 +151,10 @@ const onCancel = () => {
   <div class="rm-page rm-page--center">
     <Card class="guild-edit-card">
       <template #content>
-        <form class="rm-form-stack guild-edit-card__content" @submit.prevent="onSubmit">
+        <form
+          class="rm-form-stack guild-edit-card__content"
+          @submit.prevent="onSubmit"
+        >
           <div class="guild-edit-card__title">ギルド情報編集</div>
 
           <RMInput

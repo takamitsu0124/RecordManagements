@@ -6,8 +6,12 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import jaLocale from '@fullcalendar/core/locales/ja'
-import { CalendarOptions, DatesSetArg, EventClickArg, EventInput } from '@fullcalendar/core'
-import { dbGuildModule } from '@rm/db/src/fireStore/Guild'
+import {
+  CalendarOptions,
+  DatesSetArg,
+  EventClickArg,
+  EventInput,
+} from '@fullcalendar/core'
 import { Guild } from '@rm/types'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
@@ -23,7 +27,11 @@ import {
   googleCalendarScopes,
   validateGoogleCalendarPublicConfig,
 } from 'src/config/googleCalendar'
-import { notifyError, notifyInfo, notifySuccess } from 'src/composables/useAppNotifications'
+import {
+  notifyError,
+  notifyInfo,
+  notifySuccess,
+} from 'src/composables/useAppNotifications'
 import {
   GoogleCalendarApiEvent,
   GoogleCalendarTokenResponse,
@@ -33,6 +41,7 @@ import {
   requestGoogleCalendarAccessToken,
   revokeGoogleCalendarAccessToken,
 } from 'src/services/googleCalendar'
+import { fetchGuild } from 'src/services/guildData'
 
 type CalendarSourceKey = 'guild' | 'personal'
 
@@ -208,7 +217,9 @@ const toEventForm = (entry: CalendarEventEntry): CalendarEventForm => {
     : toDateTimeLocalValue(entry.apiEvent.start.dateTime)
   const endValue = allDay
     ? toInclusiveAllDayEnd(entry.apiEvent.end.date, entry.apiEvent.start.date)
-    : toDateTimeLocalValue(entry.apiEvent.end.dateTime || entry.apiEvent.start.dateTime)
+    : toDateTimeLocalValue(
+        entry.apiEvent.end.dateTime || entry.apiEvent.start.dateTime
+      )
 
   return {
     id: entry.id,
@@ -254,7 +265,9 @@ const rolePolicy = computed(() =>
   getGoogleCalendarRolePolicy(globalLoginUserData.value.role)
 )
 
-const guildCalendarId = computed(() => guildDetail.value?.googleCalendarId?.trim() || '')
+const guildCalendarId = computed(
+  () => guildDetail.value?.googleCalendarId?.trim() || ''
+)
 const guildName = computed(() => guildDetail.value?.guildName || '所属ギルド')
 
 const sourceOptions = computed<CalendarSourceOption[]>(() => {
@@ -314,14 +327,20 @@ const calendarEvents = computed<EventInput[]>(() =>
   }))
 )
 
-const calendarLayoutKey = computed(() => (isMobile.value ? 'mobile' : 'desktop'))
+const calendarLayoutKey = computed(() =>
+  isMobile.value ? 'mobile' : 'desktop'
+)
 
 const isConnected = computed(() => accessToken.value !== '')
 const hasEditScope = computed(() =>
   grantedScopes.value.includes(googleCalendarScopes.manageEvents)
 )
-const canEditActiveSource = computed(() => activeSourceOption.value?.editable ?? false)
-const isDialogReadOnly = computed(() => !canEditActiveSource.value || isSaving.value)
+const canEditActiveSource = computed(
+  () => activeSourceOption.value?.editable ?? false
+)
+const isDialogReadOnly = computed(
+  () => !canEditActiveSource.value || isSaving.value
+)
 const canShowCalendarSetupAction = computed(
   () =>
     activeSource.value === 'guild' &&
@@ -330,8 +349,14 @@ const canShowCalendarSetupAction = computed(
 )
 
 const statusPills = computed(() => [
-  { label: isConnected.value ? 'Google 接続中' : '未接続', tone: isConnected.value ? 'success' : 'muted' },
-  { label: canEditActiveSource.value ? '編集可' : '閲覧専用', tone: canEditActiveSource.value ? 'info' : 'muted' },
+  {
+    label: isConnected.value ? 'Google 接続中' : '未接続',
+    tone: isConnected.value ? 'success' : 'muted',
+  },
+  {
+    label: canEditActiveSource.value ? '編集可' : '閲覧専用',
+    tone: canEditActiveSource.value ? 'info' : 'muted',
+  },
   {
     label: hasEditScope.value ? 'edit scope 取得済み' : 'readonly scope',
     tone: hasEditScope.value ? 'warning' : 'muted',
@@ -415,7 +440,10 @@ const updateEventEntry = (
 }
 
 const loadGuildCalendarConfig = async () => {
-  if (!globalLoginUserData.value.guildId || !googleCalendarPublicConfig.enableGuildCalendar) {
+  if (
+    !globalLoginUserData.value.guildId ||
+    !googleCalendarPublicConfig.enableGuildCalendar
+  ) {
     guildDetail.value = null
     return
   }
@@ -424,8 +452,7 @@ const loadGuildCalendarConfig = async () => {
 
   try {
     const guildId = globalLoginUserData.value.guildId
-    await dbGuildModule.doc(guildId).fetch()
-    guildDetail.value = dbGuildModule.doc(guildId).data || null
+    guildDetail.value = await fetchGuild(guildId)
   } catch (error) {
     guildDetail.value = null
     notifyError('ギルドのカレンダー設定取得に失敗しました。')
@@ -501,7 +528,11 @@ const handleCalendarError = (error: unknown, fallbackMessage: string) => {
 }
 
 const reloadEvents = async () => {
-  if (!activeSourceOption.value || !accessToken.value || calendarBlocker.value) {
+  if (
+    !activeSourceOption.value ||
+    !accessToken.value ||
+    calendarBlocker.value
+  ) {
     eventEntries.value = []
     return
   }
@@ -533,7 +564,9 @@ const reloadEvents = async () => {
 
     if (selectedEvent.value) {
       const refreshedSelectedEvent =
-        eventEntries.value.find((entry) => entry.id === selectedEvent.value?.id) || null
+        eventEntries.value.find(
+          (entry) => entry.id === selectedEvent.value?.id
+        ) || null
       selectedEvent.value = refreshedSelectedEvent
       if (refreshedSelectedEvent) {
         eventForm.value = toEventForm(refreshedSelectedEvent)
@@ -582,7 +615,9 @@ const onDatesSet = async (arg: DatesSetArg) => {
 }
 
 const onEventClick = (arg: EventClickArg) => {
-  const entry = eventEntries.value.find((eventEntry) => eventEntry.id === arg.event.id)
+  const entry = eventEntries.value.find(
+    (eventEntry) => eventEntry.id === arg.event.id
+  )
 
   if (!entry) {
     notifyError('選択した予定の詳細を取得できませんでした。')
@@ -704,15 +739,19 @@ const goToGuildEdit = () => {
   })
 }
 
-watch(sourceOptions, (options) => {
-  if (!options.length) {
-    return
-  }
+watch(
+  sourceOptions,
+  (options) => {
+    if (!options.length) {
+      return
+    }
 
-  if (!options.some((option) => option.key === activeSource.value)) {
-    activeSource.value = options[0].key
-  }
-}, { immediate: true })
+    if (!options.some((option) => option.key === activeSource.value)) {
+      activeSource.value = options[0].key
+    }
+  },
+  { immediate: true }
+)
 
 watch(activeSource, async () => {
   clearSelectedEvent()
@@ -734,7 +773,9 @@ onMounted(async () => {
     validateGoogleCalendarPublicConfig()
   } catch (error) {
     configurationErrorMessage.value =
-      error instanceof Error ? error.message : 'Google Calendar の設定確認に失敗しました。'
+      error instanceof Error
+        ? error.message
+        : 'Google Calendar の設定確認に失敗しました。'
   }
 
   updateViewportState()
@@ -792,7 +833,9 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             :label="isLoadingEvents ? '更新中...' : '再読み込み'"
             width="170px"
             outline
-            :isDisable="isLoadingEvents || isConnecting || Boolean(calendarBlocker)"
+            :isDisable="
+              isLoadingEvents || isConnecting || Boolean(calendarBlocker)
+            "
             @click="reloadEvents"
           />
           <RMButton
@@ -826,10 +869,15 @@ const calendarOptions = computed<CalendarOptions>(() => ({
                   :key="option.key"
                   type="button"
                   class="calendar-source-button"
-                  :class="{ 'calendar-source-button--active': activeSource === option.key }"
+                  :class="{
+                    'calendar-source-button--active':
+                      activeSource === option.key,
+                  }"
                   @click="activeSource = option.key"
                 >
-                  <div class="calendar-source-button__label">{{ option.label }}</div>
+                  <div class="calendar-source-button__label">
+                    {{ option.label }}
+                  </div>
                   <div class="calendar-source-button__description">
                     {{ option.description }}
                   </div>
@@ -865,7 +913,9 @@ const calendarOptions = computed<CalendarOptions>(() => ({
                 </div>
                 <div class="calendar-status-list__row">
                   <dt>取得済み scope</dt>
-                  <dd class="calendar-status-list__scopes">{{ currentScopeText }}</dd>
+                  <dd class="calendar-status-list__scopes">
+                    {{ currentScopeText }}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -940,8 +990,14 @@ const calendarOptions = computed<CalendarOptions>(() => ({
                 </div>
 
                 <template v-else>
-                  <FullCalendar :key="calendarLayoutKey" :options="calendarOptions" />
-                  <div v-if="calendarEvents.length === 0" class="calendar-empty-inline">
+                  <FullCalendar
+                    :key="calendarLayoutKey"
+                    :options="calendarOptions"
+                  />
+                  <div
+                    v-if="calendarEvents.length === 0"
+                    class="calendar-empty-inline"
+                  >
                     この表示範囲に予定はありません。
                   </div>
                 </template>
@@ -964,10 +1020,20 @@ const calendarOptions = computed<CalendarOptions>(() => ({
           <span class="calendar-status-pill calendar-status-pill--info">
             {{ activeSourceOption?.label || '予定' }}
           </span>
-          <span class="calendar-status-pill" :class="eventForm.allDay ? 'calendar-status-pill--warning' : 'calendar-status-pill--success'">
+          <span
+            class="calendar-status-pill"
+            :class="
+              eventForm.allDay
+                ? 'calendar-status-pill--warning'
+                : 'calendar-status-pill--success'
+            "
+          >
             {{ eventForm.allDay ? '終日予定' : '時刻指定' }}
           </span>
-          <span v-if="!canEditActiveSource" class="calendar-status-pill calendar-status-pill--muted">
+          <span
+            v-if="!canEditActiveSource"
+            class="calendar-status-pill calendar-status-pill--muted"
+          >
             閲覧専用
           </span>
         </div>
@@ -1180,8 +1246,8 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 }
 
 .calendar-status-list__scopes {
-  font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas,
-    'Liberation Mono', 'Courier New', monospace;
+  font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco,
+    Consolas, 'Liberation Mono', 'Courier New', monospace;
   font-size: 0.82rem;
 }
 
