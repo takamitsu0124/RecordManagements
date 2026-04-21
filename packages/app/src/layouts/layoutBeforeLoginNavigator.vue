@@ -11,6 +11,6 @@
 
 <style lang="sass" scoped>
 ._login_layout
-  min-height: 100vh
+  min-height: var(--rm-viewport-height)
   width: 100%
 </style>

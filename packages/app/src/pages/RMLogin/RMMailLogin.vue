@@ -106,11 +106,12 @@ const signIn = async () => {
 
 <style lang="scss" scoped>
 .login-page {
-  width: 100vw;
-  min-height: 100vh;
+  width: 100%;
+  min-height: var(--rm-viewport-height);
   display: grid;
   place-items: center;
-  padding: 18px 14px;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   background: v-bind(bgImgPath);
   background-size: cover;
 }
@@ -155,6 +156,56 @@ const signIn = async () => {
 @media (min-width: 768px) {
   .login-card__content {
     padding: 24px 22px;
+  }
+}
+
+@media (max-width: 767px) {
+  .login-card__content {
+    gap: 16px;
+    padding: 18px 16px;
+  }
+
+  .login-card__logo {
+    width: 120px;
+  }
+
+  .login-card__support {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 767px) and (max-height: 820px) {
+  .login-page {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .login-card__content {
+    gap: 14px;
+    padding: 16px 14px;
+  }
+
+  .login-card__logo {
+    width: 108px;
+  }
+
+  .login-card__support,
+  .login-card__error {
+    padding: 10px 12px;
+    line-height: 1.55;
+  }
+
+  .login-card__content :deep(.rm-page-header .p-toolbar) {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .login-card__content :deep(.rm-page-header__body) {
+    gap: 6px;
+  }
+
+  .login-card__content :deep(.rm-page-header__description) {
+    line-height: 1.5;
   }
 }
 </style>

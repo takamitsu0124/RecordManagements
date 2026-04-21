@@ -51,7 +51,7 @@ const menuClick = (currentMenu: { name: string; url: string; isShow: boolean }) 
 <style scoped>
 .after-login-layout {
   position: relative;
-  min-height: 100vh;
+  min-height: var(--rm-viewport-height);
   isolation: isolate;
   overflow-x: clip;
   background-color: #edf4fb;
@@ -79,7 +79,7 @@ const menuClick = (currentMenu: { name: string; url: string; isShow: boolean }) 
 }
 
 .after-login-layout__content-shell {
-  min-height: calc(100vh - var(--rm-header-height));
+  min-height: calc(var(--rm-viewport-height) - var(--rm-header-height));
 }
 
 @media (max-width: 1023px) {

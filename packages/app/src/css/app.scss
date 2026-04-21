@@ -18,6 +18,19 @@
   --rm-page-width: 1240px;
   --rm-page-width-narrow: 980px;
   --rm-focus-ring: rgba(75, 105, 130, 0.18);
+  --rm-viewport-height: 100vh;
+}
+
+@supports (height: 100svh) {
+  :root {
+    --rm-viewport-height: 100svh;
+  }
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --rm-viewport-height: 100dvh;
+  }
 }
 
 * {
@@ -35,6 +48,7 @@ html {
 }
 
 body {
+  min-height: var(--rm-viewport-height);
   margin: 0;
   font-family: 'Roboto', sans-serif;
   line-height: 1.5;
@@ -181,7 +195,7 @@ img {
 
 .rm-page {
   position: relative;
-  min-height: calc(100vh - var(--rm-header-height));
+  min-height: calc(var(--rm-viewport-height) - var(--rm-header-height));
   padding: 16px max(12px, env(safe-area-inset-right)) 30px
     max(12px, env(safe-area-inset-left));
 }

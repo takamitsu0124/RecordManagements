@@ -10,6 +10,6 @@
 
 <style scoped>
 .main-layout-shell {
-  min-height: 100vh;
+  min-height: var(--rm-viewport-height);
 }
 </style>
