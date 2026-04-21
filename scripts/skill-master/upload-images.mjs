@@ -8,11 +8,12 @@ import admin from 'firebase-admin'
  * 画像ファイルの事前準備
  * ----------------------
  * 1. アップロード前の元画像は、ローカルの任意フォルダにまとめて置いてください。
+ *    運用上は武器種ごとに分けるのを推奨します。
  *    例:
  *      scripts/skill-master/source-images/
- *        fire/
+ *        sword/
  *          skill-fire-sword-link-001.png
- *        water/
+ *        bow/
  *          skill-water-bow-002.webp
  *
  *    あるいは 1 フォルダに平置きでも構いません。
@@ -23,7 +24,7 @@ import admin from 'firebase-admin'
  * 2. 入力 CSV / JSON の image 列には、Firebase の URL ではなく
  *    「ローカル画像へのパス」または「ファイル名」を書いてください。
  *    例:
- *      image = fire/skill-fire-sword-link-001.png
+ *      image = sword/skill-fire-sword-link-001.png
  *      image = skill-water-bow-002.webp
  *
  * 3. 上のような相対パスで管理する場合は、--image-base-dir を付けると

@@ -11,6 +11,76 @@ FIREBASE_AUTH_EMAIL=admin@example.com FIREBASE_AUTH_PASSWORD=secret npm run skil
 FIREBASE_AUTH_EMAIL=admin@example.com FIREBASE_AUTH_PASSWORD=secret npm run skill-master:import -- --file ./path/to/skill-master.json
 ```
 
+### Bulk image upload flow
+
+`skill_master` の画像を**一括で Storage に上げたい場合**は、先に `skill-master:upload-images` を使います。  
+画像の元ファイルは repo 内の固定ディレクトリ必須ではありませんが、運用上は**武器種ごと**に次のように置くのを推奨します。
+
+```text
+scripts/skill-master/
+  skill-master.csv
+  source-images/
+    sword/
+      skill-fire-sword-link-001.png
+    bow/
+      skill-water-bow-002.webp
+    ability/
+      skill-light-ability-003.png
+```
+
+フラットに平置きでも動きます。
+
+```text
+scripts/skill-master/
+  skill-master.csv
+  source-images/
+    skill-fire-sword-link-001.png
+    skill-water-bow-002.webp
+```
+
+推奨フォルダ名は次の通りです。
+
+| 種別 | 推奨フォルダ名 |
+| --- | --- |
+| 片手直剣 | `sword` |
+| 細剣 | `rapier` |
+| 棍棒 | `club` |
+| 短剣 | `dagger` |
+| 斧 | `axe` |
+| 槍 | `spear` |
+| 弓 | `bow` |
+| 盾 | `shield` |
+| アビリティ | `ability` |
+| バースト/フルバースト | `burst-fullburst` |
+| フリー | `free` |
+
+`skill-master.csv` / `skill-master.json` の `image` 列には、Firebase Storage URL ではなく**ローカル画像への相対パス**または**ファイル名**を書きます。
+
+```csv
+id,name,attr,type,cool,swGauge,brGauge,image
+skill-fire-sword-link-001,火剣リンク,火,片手直剣(リンク),10,20,30,sword/skill-fire-sword-link-001.png
+skill-water-bow-002,水弓,水,弓,10,20,30,bow/skill-water-bow-002.webp
+```
+
+実行例:
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  npm run skill-master:upload-images -- \
+  --file ./scripts/skill-master/skill-master.csv \
+  --image-base-dir ./scripts/skill-master/source-images \
+  --output ./scripts/skill-master/skill-master.storage.csv
+```
+
+ポイント:
+
+- `--image-base-dir` を付けた場合、`image` 列の相対パスはそのディレクトリ基準で解決されます
+- `--image-base-dir` を省略した場合、相対パスは入力 CSV / JSON ファイルが置かれているディレクトリ基準で解決されます
+- 必要なら `sword/link/...` のように**武器フォルダ配下でさらに細かく分けても**動作します
+- 実行後は `image` 列が Storage URL に置き換わった `.storage.csv` / `.storage.json` が出力されるので、その**出力ファイル**を `npm run skill-master:import` に渡してください
+- Storage 上の保存先は `skill_master_images/{prefix}/{skillId}/source.{ext}` です
+- 対応拡張子の判定は `.png` / `.jpg` / `.jpeg` / `.webp` / `.gif` / `.svg` / `.avif` / `.bmp` です
+
 ### Input format
 
 - Required keys: `id`, `name`, `attr`, `type`, `cool`, `swGauge`, `brGauge`, `image`
