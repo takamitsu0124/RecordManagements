@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
+import Drawer from 'primevue/drawer'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import {
@@ -109,6 +110,8 @@ const skillCatalogStatus = ref<SkillCatalogStatus>('unowned')
 const imageUploadKey = ref(0)
 
 const isCarouselVisible = ref(false)
+const isProfileDrawerVisible = ref(false)
+const isImagesDrawerVisible = ref(false)
 const carouselSlide = ref(0)
 const touchStartX = ref<number | null>(null)
 const activeCarouselImages = computed(() =>
@@ -121,8 +124,18 @@ const currentCarouselImage = computed(
 const pageSubtitle = computed(() => user.value.displayName || '登録内容未設定')
 const showProfile = computed(() => props.includeProfile)
 const isCompactMode = computed(() => props.compactMode)
+const useDrawerLayout = computed(() => !isCompactMode.value)
 const activeCompactSection = ref<'skills' | 'images'>('skills')
 const canEditGuildId = computed(() => hasAdmin.value)
+const showProfileInline = computed(
+  () => showProfile.value && !useDrawerLayout.value
+)
+const showSkillsInline = computed(
+  () => useDrawerLayout.value || activeCompactSection.value === 'skills'
+)
+const showImagesInline = computed(
+  () => !useDrawerLayout.value && activeCompactSection.value === 'images'
+)
 
 const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
   ownedSkills.value.map((ownedSkill, index) => {
@@ -851,6 +864,13 @@ const emitBack = () => {
               :icon="props.pageIcon"
             >
               <template #actions>
+                <RMButton
+                  v-if="isEditMode"
+                  label="変更を保存"
+                  type="submit"
+                  color="primary"
+                  width="150px"
+                />
                 <RMModeToggle v-model="isEditMode" />
               </template>
             </RMPageHeader>
@@ -874,6 +894,33 @@ const emitBack = () => {
                   :severity="isEditMode ? 'contrast' : 'secondary'"
                 />
               </div>
+            </div>
+            <div v-if="useDrawerLayout" class="user-workspace-overlay-actions">
+              <button
+                v-if="showProfile"
+                type="button"
+                class="user-workspace-overlay-action"
+                @click="isProfileDrawerVisible = true"
+              >
+                <div class="user-workspace-overlay-action__title">
+                  プロフィールを開く
+                </div>
+                <div class="user-workspace-overlay-action__text">
+                  基本情報・日付・連絡先は Drawer にまとめて表示します。
+                </div>
+              </button>
+              <button
+                type="button"
+                class="user-workspace-overlay-action"
+                @click="isImagesDrawerVisible = true"
+              >
+                <div class="user-workspace-overlay-action__title">
+                  画像管理を開く
+                </div>
+                <div class="user-workspace-overlay-action__text">
+                  画像追加、並び替え、プレビュー確認は Drawer で集中して行えます。
+                </div>
+              </button>
             </div>
             <div v-else class="user-workspace-focus-switch">
               <div class="user-workspace-focus-switch__copy">
@@ -905,55 +952,70 @@ const emitBack = () => {
               {{
                 isCompactMode
                   ? '閲覧モードでは必要な項目だけ切り替えて確認できます。変更が必要な場合だけ編集モードへ切り替えてください。'
-                  : '閲覧モードでは現在のプロフィール、所持スキル、画像順を確認できます。変更が必要な場合だけ編集モードへ切り替えてください。'
+                  : 'プロフィールと画像は必要なときだけ Drawer で開き、メイン画面では所持スキルに集中できます。変更が必要な場合だけ編集モードへ切り替えてください。'
               }}
             </div>
           </div>
         </template>
       </Card>
 
-      <RMUserWorkspaceProfileSection
-        v-if="showProfile"
-        v-model:user="user"
-        :isEditMode="isEditMode"
-        :canEditGuildId="canEditGuildId"
-        :situationOptions="situationOptions"
-        v-model:affiliationDateStr="affiliationDateStr"
-        v-model:gameStartDateAtStr="gameStartDateAtStr"
-        v-model:birthDateAtStr="birthDateAtStr"
-      />
+      <div
+        v-if="showProfileInline"
+        id="workspace-profile"
+        class="user-workspace-anchor"
+      >
+        <RMUserWorkspaceProfileSection
+          v-model:user="user"
+          :isEditMode="isEditMode"
+          :canEditGuildId="canEditGuildId"
+          :situationOptions="situationOptions"
+          v-model:affiliationDateStr="affiliationDateStr"
+          v-model:gameStartDateAtStr="gameStartDateAtStr"
+          v-model:birthDateAtStr="birthDateAtStr"
+        />
+      </div>
 
-      <RMUserWorkspaceSkillsSection
-        v-if="!isCompactMode || activeCompactSection === 'skills'"
-        :isEditMode="isEditMode"
-        v-model:ownedSkills="ownedSkills"
-        :ownedSkillRows="ownedSkillRows"
-        :filteredSkillCatalogRows="filteredSkillCatalogRows"
-        :visibleSkillCatalogRows="visibleSkillCatalogRows"
-        :hiddenSkillCatalogCount="hiddenSkillCatalogCount"
-        v-model:skillCatalogQuery="skillCatalogQuery"
-        v-model:skillCatalogAttr="skillCatalogAttr"
-        v-model:skillCatalogType="skillCatalogType"
-        v-model:skillCatalogStatus="skillCatalogStatus"
-        :skillCatalogAttrOptions="skillCatalogAttrOptions"
-        :skillCatalogTypeOptions="skillCatalogTypeOptions"
-        @toggle-skill="toggleOwnedSkill"
-        @remove-skill="removeOwnedSkill"
-        @reset-filters="resetSkillFilters"
-      />
+      <div
+        v-if="showSkillsInline"
+        id="workspace-skills"
+        class="user-workspace-anchor"
+      >
+        <RMUserWorkspaceSkillsSection
+          :isEditMode="isEditMode"
+          v-model:ownedSkills="ownedSkills"
+          :ownedSkillRows="ownedSkillRows"
+          :filteredSkillCatalogRows="filteredSkillCatalogRows"
+          :visibleSkillCatalogRows="visibleSkillCatalogRows"
+          :hiddenSkillCatalogCount="hiddenSkillCatalogCount"
+          v-model:skillCatalogQuery="skillCatalogQuery"
+          v-model:skillCatalogAttr="skillCatalogAttr"
+          v-model:skillCatalogType="skillCatalogType"
+          v-model:skillCatalogStatus="skillCatalogStatus"
+          :skillCatalogAttrOptions="skillCatalogAttrOptions"
+          :skillCatalogTypeOptions="skillCatalogTypeOptions"
+          @toggle-skill="toggleOwnedSkill"
+          @remove-skill="removeOwnedSkill"
+          @reset-filters="resetSkillFilters"
+        />
+      </div>
 
-      <RMUserWorkspaceImagesSection
-        v-if="!isCompactMode || activeCompactSection === 'images'"
-        :isEditMode="isEditMode"
-        :imageUploadKey="imageUploadKey"
-        :imageCountLabel="imageCountLabel"
-        v-model:imageItems="imageItems"
-        v-model:selectedImageItems="selectedImageItems"
-        @select-files="onImageFilesSelect"
-        @remove-image="removeImage"
-        @open-carousel="openImageCarousel"
-        @open-carousel-by-id="openImageCarouselById"
-      />
+      <div
+        v-if="showImagesInline"
+        id="workspace-images"
+        class="user-workspace-anchor"
+      >
+        <RMUserWorkspaceImagesSection
+          :isEditMode="isEditMode"
+          :imageUploadKey="imageUploadKey"
+          :imageCountLabel="imageCountLabel"
+          v-model:imageItems="imageItems"
+          v-model:selectedImageItems="selectedImageItems"
+          @select-files="onImageFilesSelect"
+          @remove-image="removeImage"
+          @open-carousel="openImageCarousel"
+          @open-carousel-by-id="openImageCarouselById"
+        />
+      </div>
 
       <div class="rm-actions user-workspace-actions">
         <RMButton
@@ -974,13 +1036,57 @@ const emitBack = () => {
         />
         <RMButton
           v-if="isEditMode"
-          label="保存"
+          label="変更を保存"
           type="submit"
           color="primary"
           width="160px"
         />
       </div>
     </form>
+
+    <Drawer
+      v-if="showProfile && useDrawerLayout"
+      v-model:visible="isProfileDrawerVisible"
+      position="right"
+      header="プロフィール"
+      :style="{ width: 'min(96vw, 40rem)' }"
+      class="user-workspace-drawer"
+    >
+      <div id="workspace-profile" class="user-workspace-drawer__content">
+        <RMUserWorkspaceProfileSection
+          v-model:user="user"
+          :isEditMode="isEditMode"
+          :canEditGuildId="canEditGuildId"
+          :situationOptions="situationOptions"
+          v-model:affiliationDateStr="affiliationDateStr"
+          v-model:gameStartDateAtStr="gameStartDateAtStr"
+          v-model:birthDateAtStr="birthDateAtStr"
+        />
+      </div>
+    </Drawer>
+
+    <Drawer
+      v-if="useDrawerLayout"
+      v-model:visible="isImagesDrawerVisible"
+      position="right"
+      header="画像管理"
+      :style="{ width: 'min(96vw, 44rem)' }"
+      class="user-workspace-drawer"
+    >
+      <div id="workspace-images" class="user-workspace-drawer__content">
+        <RMUserWorkspaceImagesSection
+          :isEditMode="isEditMode"
+          :imageUploadKey="imageUploadKey"
+          :imageCountLabel="imageCountLabel"
+          v-model:imageItems="imageItems"
+          v-model:selectedImageItems="selectedImageItems"
+          @select-files="onImageFilesSelect"
+          @remove-image="removeImage"
+          @open-carousel="openImageCarousel"
+          @open-carousel-by-id="openImageCarouselById"
+        />
+      </div>
+    </Drawer>
 
     <Dialog
       v-model:visible="isCarouselVisible"
@@ -1049,10 +1155,50 @@ const emitBack = () => {
   gap: 16px;
 }
 
+.user-workspace-anchor {
+  scroll-margin-top: calc(var(--rm-header-height) + 28px);
+}
+
 .user-workspace-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+
+.user-workspace-overlay-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.user-workspace-overlay-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid rgba(75, 105, 130, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  text-align: left;
+  transition: transform 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.user-workspace-overlay-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(75, 105, 130, 0.34);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+.user-workspace-overlay-action__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--rm-text);
+}
+
+.user-workspace-overlay-action__text {
+  color: var(--rm-text-soft);
+  line-height: 1.7;
 }
 
 .user-workspace-focus-switch {
@@ -1104,6 +1250,12 @@ const emitBack = () => {
   margin-top: 6px;
   color: #64748b;
   line-height: 1.7;
+}
+
+.user-workspace-drawer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .user-workspace-section section {

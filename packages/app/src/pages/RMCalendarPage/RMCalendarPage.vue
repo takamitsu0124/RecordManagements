@@ -12,15 +12,17 @@ import {
   EventClickArg,
   EventInput,
 } from '@fullcalendar/core'
+import { useDialog } from 'primevue/usedialog'
 import { Guild } from '@rm/types'
 import Card from 'primevue/card'
-import Dialog from 'primevue/dialog'
+import Drawer from 'primevue/drawer'
 import ProgressSpinner from 'primevue/progressspinner'
 import { globalLoginUserData } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
-import RMInput from 'src/components/RMInput/RMInput.vue'
+import RMFlowGuide from 'src/components/RMFlowGuide/RMFlowGuide.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
+import RMCalendarEventDialogContent from 'src/pages/RMCalendarPage/components/RMCalendarEventDialogContent.vue'
 import {
   getGoogleCalendarRolePolicy,
   googleCalendarPublicConfig,
@@ -76,34 +78,42 @@ type CalendarEventForm = {
 }
 
 const router = useRouter()
+const dialog = useDialog()
 
 const activeSource = ref<CalendarSourceKey>('guild')
 const guildDetail = ref<Guild | null>(null)
 const accessToken = ref('')
 const grantedScopes = ref<string[]>([])
 const eventEntries = ref<CalendarEventEntry[]>([])
-const selectedEvent = ref<CalendarEventEntry | null>(null)
-const eventDialogVisible = ref(false)
 const isLoadingGuild = ref(false)
 const isConnecting = ref(false)
 const isLoadingEvents = ref(false)
 const isSaving = ref(false)
 const isMobile = ref(false)
+const isSettingsDrawerVisible = ref(false)
 const currentRange = ref<{ start: Date; end: Date } | null>(null)
 const configurationErrorMessage = ref('')
-const eventForm = ref<CalendarEventForm>({
-  id: '',
-  googleEventId: '',
-  source: 'guild',
-  calendarId: '',
-  title: '',
-  description: '',
-  location: '',
-  start: '',
-  end: '',
-  allDay: false,
-  htmlLink: '',
-})
+
+const calendarGuideItems = [
+  {
+    title: '表示するカレンダーを選ぶ',
+    description:
+      'まず共有ギルド予定か個人予定かを切り替えて、見たい予定の種類を決めます。',
+    targetId: 'calendar-source',
+  },
+  {
+    title: '接続状態を確認する',
+    description:
+      'Google との接続や権限範囲は接続状態カードを見ればすぐ分かります。',
+    targetId: 'calendar-status',
+  },
+  {
+    title: '予定を開いて確認・編集する',
+    description:
+      'カレンダー本体の予定を押すと詳細が開き、権限があればそのまま更新できます。',
+    targetId: 'calendar-board',
+  },
+]
 
 const localTimeZone =
   Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo'
@@ -236,29 +246,10 @@ const toEventForm = (entry: CalendarEventEntry): CalendarEventForm => {
   }
 }
 
-const clearSelectedEvent = () => {
-  selectedEvent.value = null
-  eventDialogVisible.value = false
-  eventForm.value = {
-    id: '',
-    googleEventId: '',
-    source: activeSource.value,
-    calendarId: '',
-    title: '',
-    description: '',
-    location: '',
-    start: '',
-    end: '',
-    allDay: false,
-    htmlLink: '',
-  }
-}
-
 const clearCalendarSession = () => {
   accessToken.value = ''
   grantedScopes.value = []
   eventEntries.value = []
-  clearSelectedEvent()
 }
 
 const rolePolicy = computed(() =>
@@ -337,9 +328,6 @@ const hasEditScope = computed(() =>
 )
 const canEditActiveSource = computed(
   () => activeSourceOption.value?.editable ?? false
-)
-const isDialogReadOnly = computed(
-  () => !canEditActiveSource.value || isSaving.value
 )
 const canShowCalendarSetupAction = computed(
   () =>
@@ -432,11 +420,6 @@ const updateEventEntry = (
   )
   nextEntries.push(nextEntry)
   eventEntries.value = sortEventEntries(nextEntries)
-
-  if (selectedEvent.value?.id === nextEntry.id) {
-    selectedEvent.value = nextEntry
-    eventForm.value = toEventForm(nextEntry)
-  }
 }
 
 const loadGuildCalendarConfig = async () => {
@@ -561,17 +544,6 @@ const reloadEvents = async () => {
         apiEvent: item,
       }))
     )
-
-    if (selectedEvent.value) {
-      const refreshedSelectedEvent =
-        eventEntries.value.find(
-          (entry) => entry.id === selectedEvent.value?.id
-        ) || null
-      selectedEvent.value = refreshedSelectedEvent
-      if (refreshedSelectedEvent) {
-        eventForm.value = toEventForm(refreshedSelectedEvent)
-      }
-    }
   } catch (error) {
     eventEntries.value = []
     handleCalendarError(error, 'Google Calendar の予定取得に失敗しました。')
@@ -624,24 +596,36 @@ const onEventClick = (arg: EventClickArg) => {
     return
   }
 
-  selectedEvent.value = entry
-  eventForm.value = toEventForm(entry)
-  eventDialogVisible.value = true
+  dialog.open(RMCalendarEventDialogContent, {
+    props: {
+      header: '予定の詳細',
+      modal: true,
+      style: {
+        width: 'min(96vw, 720px)',
+      },
+    },
+    data: {
+      eventForm: toEventForm(entry),
+      canEdit: canEditActiveSource.value,
+      sourceLabel: activeSourceOption.value?.label || '予定',
+      onSave: (form: CalendarEventForm) => saveEventChanges(entry, form),
+    },
+  })
 }
 
-const validateEventForm = () => {
-  if (!eventForm.value.title.trim()) {
+const validateEventForm = (form: CalendarEventForm) => {
+  if (!form.title.trim()) {
     notifyError('タイトルを入力してください。')
     return false
   }
 
-  if (!eventForm.value.start || !eventForm.value.end) {
+  if (!form.start || !form.end) {
     notifyError('開始日時と終了日時を入力してください。')
     return false
   }
 
-  if (eventForm.value.allDay) {
-    if (eventForm.value.end < eventForm.value.start) {
+  if (form.allDay) {
+    if (form.end < form.start) {
       notifyError('終了日は開始日以降を指定してください。')
       return false
     }
@@ -649,8 +633,8 @@ const validateEventForm = () => {
     return true
   }
 
-  const start = new Date(eventForm.value.start)
-  const end = new Date(eventForm.value.end)
+  const start = new Date(form.start)
+  const end = new Date(form.end)
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     notifyError('日時の形式が正しくありません。')
@@ -665,63 +649,58 @@ const validateEventForm = () => {
   return true
 }
 
-const saveEventChanges = async () => {
-  if (!selectedEvent.value) {
-    return
-  }
-
+const saveEventChanges = async (
+  entry: CalendarEventEntry,
+  form: CalendarEventForm
+) => {
   if (!canEditActiveSource.value) {
     notifyError('このカレンダーを編集する権限がありません。')
-    return
+    return false
   }
 
-  if (!validateEventForm()) {
-    return
+  if (!validateEventForm(form)) {
+    return false
   }
 
   isSaving.value = true
 
   try {
     const token = await ensureCalendarAccess('edit', true)
-    const payload = eventForm.value.allDay
+    const payload = form.allDay
       ? {
-          summary: eventForm.value.title.trim(),
-          description: eventForm.value.description.trim(),
-          location: eventForm.value.location.trim(),
-          start: { date: eventForm.value.start },
-          end: { date: addLocalDays(eventForm.value.end, 1) },
+          summary: form.title.trim(),
+          description: form.description.trim(),
+          location: form.location.trim(),
+          start: { date: form.start },
+          end: { date: addLocalDays(form.end, 1) },
         }
       : {
-          summary: eventForm.value.title.trim(),
-          description: eventForm.value.description.trim(),
-          location: eventForm.value.location.trim(),
+          summary: form.title.trim(),
+          description: form.description.trim(),
+          location: form.location.trim(),
           start: {
-            dateTime: new Date(eventForm.value.start).toISOString(),
+            dateTime: new Date(form.start).toISOString(),
             timeZone: localTimeZone,
           },
           end: {
-            dateTime: new Date(eventForm.value.end).toISOString(),
+            dateTime: new Date(form.end).toISOString(),
             timeZone: localTimeZone,
           },
         }
 
     const updatedEvent = await patchGoogleCalendarEvent({
       accessToken: token,
-      calendarId: selectedEvent.value.calendarId,
-      eventId: selectedEvent.value.googleEventId,
+      calendarId: entry.calendarId,
+      eventId: entry.googleEventId,
       payload,
     })
 
-    updateEventEntry(
-      updatedEvent,
-      selectedEvent.value.source,
-      selectedEvent.value.calendarId
-    )
-
-    eventDialogVisible.value = false
+    updateEventEntry(updatedEvent, entry.source, entry.calendarId)
     notifySuccess('予定を更新しました。')
+    return true
   } catch (error) {
     handleCalendarError(error, '予定の更新に失敗しました。')
+    return false
   } finally {
     isSaving.value = false
   }
@@ -754,7 +733,6 @@ watch(
 )
 
 watch(activeSource, async () => {
-  clearSelectedEvent()
   eventEntries.value = []
 
   if (isConnected.value) {
@@ -829,6 +807,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
       >
         <template #actions>
           <RMButton
+            label="表示設定"
+            width="150px"
+            outline
+            @click="isSettingsDrawerVisible = true"
+          />
+          <RMButton
             v-if="isConnected"
             :label="isLoadingEvents ? '更新中...' : '再読み込み'"
             width="170px"
@@ -858,72 +842,38 @@ const calendarOptions = computed<CalendarOptions>(() => ({
         </template>
       </RMPageHeader>
 
-      <div class="calendar-overview-grid">
-        <Card class="calendar-panel-card">
-          <template #content>
-            <div class="calendar-panel-card__content">
-              <div class="calendar-panel-card__title">表示対象</div>
-              <div class="calendar-source-list">
-                <button
-                  v-for="option in sourceOptions"
-                  :key="option.key"
-                  type="button"
-                  class="calendar-source-button"
-                  :class="{
-                    'calendar-source-button--active':
-                      activeSource === option.key,
-                  }"
-                  @click="activeSource = option.key"
-                >
-                  <div class="calendar-source-button__label">
-                    {{ option.label }}
-                  </div>
-                  <div class="calendar-source-button__description">
-                    {{ option.description }}
-                  </div>
-                </button>
-              </div>
-            </div>
-          </template>
-        </Card>
+      <div class="calendar-quick-bar">
+        <button
+          v-for="option in sourceOptions"
+          :key="option.key"
+          type="button"
+          class="calendar-source-button"
+          :class="{
+            'calendar-source-button--active': activeSource === option.key,
+          }"
+          @click="activeSource = option.key"
+        >
+          <div class="calendar-source-button__label">
+            {{ option.label }}
+          </div>
+          <div class="calendar-source-button__description">
+            {{ option.description }}
+          </div>
+        </button>
 
-        <Card class="calendar-panel-card">
-          <template #content>
-            <div class="calendar-panel-card__content">
-              <div class="calendar-panel-card__title">接続状態</div>
-              <div class="calendar-status-pill_list">
-                <span
-                  v-for="pill in statusPills"
-                  :key="pill.label"
-                  class="calendar-status-pill"
-                  :class="`calendar-status-pill--${pill.tone}`"
-                >
-                  {{ pill.label }}
-                </span>
-              </div>
-
-              <dl class="calendar-status-list">
-                <div class="calendar-status-list__row">
-                  <dt>現在の表示先</dt>
-                  <dd>{{ activeSourceOption?.label || '未選択' }}</dd>
-                </div>
-                <div class="calendar-status-list__row">
-                  <dt>カレンダー ID</dt>
-                  <dd>{{ activeSourceOption?.calendarId || '未設定' }}</dd>
-                </div>
-                <div class="calendar-status-list__row">
-                  <dt>取得済み scope</dt>
-                  <dd class="calendar-status-list__scopes">
-                    {{ currentScopeText }}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </template>
-        </Card>
+        <div class="calendar-quick-status">
+          <span
+            v-for="pill in statusPills"
+            :key="pill.label"
+            class="calendar-status-pill"
+            :class="`calendar-status-pill--${pill.tone}`"
+          >
+            {{ pill.label }}
+          </span>
+        </div>
       </div>
 
-      <Card class="calendar-main-card">
+      <Card id="calendar-board" class="calendar-main-card calendar-anchor">
         <template #content>
           <div class="calendar-main-card__content">
             <div v-if="isLoadingGuild" class="rm-state-card">
@@ -1008,124 +958,95 @@ const calendarOptions = computed<CalendarOptions>(() => ({
       </Card>
     </div>
 
-    <Dialog
-      v-model:visible="eventDialogVisible"
-      modal
-      header="予定の詳細"
-      :style="{ width: 'min(96vw, 720px)' }"
-      @hide="clearSelectedEvent"
+    <Drawer
+      v-model:visible="isSettingsDrawerVisible"
+      position="right"
+      header="表示設定と接続状態"
+      :style="{ width: 'min(96vw, 34rem)' }"
+      class="calendar-settings-drawer"
     >
-      <div v-if="selectedEvent" class="calendar-dialog">
-        <div class="calendar-status-pill_list">
-          <span class="calendar-status-pill calendar-status-pill--info">
-            {{ activeSourceOption?.label || '予定' }}
-          </span>
-          <span
-            class="calendar-status-pill"
-            :class="
-              eventForm.allDay
-                ? 'calendar-status-pill--warning'
-                : 'calendar-status-pill--success'
-            "
-          >
-            {{ eventForm.allDay ? '終日予定' : '時刻指定' }}
-          </span>
-          <span
-            v-if="!canEditActiveSource"
-            class="calendar-status-pill calendar-status-pill--muted"
-          >
-            閲覧専用
-          </span>
-        </div>
+      <div class="calendar-settings-drawer__content">
+        <RMFlowGuide
+          title="この画面で触る場所"
+          description="表示対象を決めて接続状態を確認したら、カレンダー本体の予定を押して詳細を開きます。"
+          :items="calendarGuideItems"
+        />
 
-        <div class="calendar-dialog__grid">
-          <RMInput
-            v-model="eventForm.title"
-            label="タイトル *"
-            :outline="true"
-            :disabled="isDialogReadOnly"
-          />
+        <Card id="calendar-source" class="calendar-panel-card calendar-anchor">
+          <template #content>
+            <div class="calendar-panel-card__content">
+              <div class="calendar-panel-card__title">表示対象</div>
+              <div class="calendar-source-list">
+                <button
+                  v-for="option in sourceOptions"
+                  :key="option.key"
+                  type="button"
+                  class="calendar-source-button"
+                  :class="{
+                    'calendar-source-button--active':
+                      activeSource === option.key,
+                  }"
+                  @click="activeSource = option.key"
+                >
+                  <div class="calendar-source-button__label">
+                    {{ option.label }}
+                  </div>
+                  <div class="calendar-source-button__description">
+                    {{ option.description }}
+                  </div>
+                </button>
+              </div>
+            </div>
+          </template>
+        </Card>
 
-          <div class="calendar-dialog__date-grid">
-            <RMInput
-              v-model="eventForm.start"
-              :label="eventForm.allDay ? '開始日 *' : '開始日時 *'"
-              :type="eventForm.allDay ? 'date' : 'datetime-local'"
-              :outline="true"
-              :disabled="isDialogReadOnly"
-            />
-            <RMInput
-              v-model="eventForm.end"
-              :label="eventForm.allDay ? '終了日 *' : '終了日時 *'"
-              :type="eventForm.allDay ? 'date' : 'datetime-local'"
-              :outline="true"
-              :disabled="isDialogReadOnly"
-            />
-          </div>
+        <Card id="calendar-status" class="calendar-panel-card calendar-anchor">
+          <template #content>
+            <div class="calendar-panel-card__content">
+              <div class="calendar-panel-card__title">接続状態</div>
+              <div class="calendar-status-pill_list">
+                <span
+                  v-for="pill in statusPills"
+                  :key="pill.label"
+                  class="calendar-status-pill"
+                  :class="`calendar-status-pill--${pill.tone}`"
+                >
+                  {{ pill.label }}
+                </span>
+              </div>
 
-          <RMInput
-            v-model="eventForm.location"
-            label="場所"
-            hint="Google Calendar の location を更新します"
-            :outline="true"
-            :disabled="isDialogReadOnly"
-          />
-
-          <RMInput
-            v-model="eventForm.description"
-            label="メモ"
-            type="textarea"
-            hint="Google Calendar の description を更新します"
-            :outline="true"
-            :disabled="isDialogReadOnly"
-          />
-
-          <a
-            v-if="eventForm.htmlLink"
-            :href="eventForm.htmlLink"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="calendar-dialog__link"
-          >
-            Google Calendar で開く
-          </a>
-        </div>
+              <dl class="calendar-status-list">
+                <div class="calendar-status-list__row">
+                  <dt>現在の表示先</dt>
+                  <dd>{{ activeSourceOption?.label || '未選択' }}</dd>
+                </div>
+                <div class="calendar-status-list__row">
+                  <dt>カレンダー ID</dt>
+                  <dd>{{ activeSourceOption?.calendarId || '未設定' }}</dd>
+                </div>
+                <div class="calendar-status-list__row">
+                  <dt>取得済み scope</dt>
+                  <dd class="calendar-status-list__scopes">
+                    {{ currentScopeText }}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </template>
+        </Card>
       </div>
-
-      <template #footer>
-        <div class="calendar-dialog__footer">
-          <RMButton
-            label="閉じる"
-            width="150px"
-            flat
-            color="grey"
-            :isDisable="isSaving"
-            @click="eventDialogVisible = false"
-          />
-          <RMButton
-            v-if="canEditActiveSource"
-            :label="isSaving ? '保存中...' : '保存'"
-            width="150px"
-            color="primary"
-            :isDisable="isSaving"
-            @click="saveEventChanges"
-          />
-        </div>
-      </template>
-    </Dialog>
+    </Drawer>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.calendar-overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
-}
-
 .calendar-panel-card,
 .calendar-main-card {
   border-radius: 24px;
+}
+
+.calendar-anchor {
+  scroll-margin-top: calc(var(--rm-header-height) + 28px);
 }
 
 .calendar-panel-card__content,
@@ -1134,6 +1055,20 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   flex-direction: column;
   gap: 18px;
   padding: clamp(16px, 2vw, 22px);
+}
+
+.calendar-quick-bar,
+.calendar-settings-drawer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.calendar-quick-bar {
+  padding: 16px 18px;
+  border: 1px solid rgba(75, 105, 130, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .calendar-panel-card__title {
@@ -1169,6 +1104,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 .calendar-source-button--active {
   border-color: rgba(75, 105, 130, 0.42);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.calendar-quick-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .calendar-source-button__label {
@@ -1265,36 +1206,6 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   text-align: center;
 }
 
-.calendar-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.calendar-dialog__grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.calendar-dialog__date-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.calendar-dialog__link {
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.calendar-dialog__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  width: 100%;
-}
-
 .calendar-main-card :deep(.fc) {
   --fc-border-color: rgba(148, 163, 184, 0.22);
   --fc-button-bg-color: #4b6982;
@@ -1323,12 +1234,8 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 }
 
 @media (max-width: 767px) {
-  .calendar-dialog__date-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .calendar-dialog__footer {
-    flex-direction: column-reverse;
+  .calendar-quick-bar {
+    padding: 14px;
   }
 
   .calendar-main-card :deep(.fc-toolbar.fc-header-toolbar) {

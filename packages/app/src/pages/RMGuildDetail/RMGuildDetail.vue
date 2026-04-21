@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import Divider from 'primevue/divider'
+import Drawer from 'primevue/drawer'
 import ProgressSpinner from 'primevue/progressspinner'
 import { dbGuildModule, dbUsersModule } from '@rm/db'
 import { AppRole, AppUser, Guild } from '@rm/types'
@@ -22,6 +22,7 @@ import {
 } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
+import RMFlowGuide from 'src/components/RMFlowGuide/RMFlowGuide.vue'
 import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
@@ -46,6 +47,8 @@ const isSkillLoading = ref(false)
 const errorMessage = ref<string | null>(null)
 const skillErrorMessage = ref<string | null>(null)
 const isEditMode = ref(false)
+const isOverviewDrawerVisible = ref(false)
+const isMembersDrawerVisible = ref(false)
 const roleDrafts = ref<Record<string, AppRole>>({})
 const skillTableFilters = ref({
   skillName: { value: '', matchMode: 'contains' },
@@ -59,6 +62,24 @@ const currentGuildId = computed(() =>
 )
 
 const canEditGuild = computed(() => canManageGuildMembers.value)
+const guildGuideItems = [
+  {
+    title: 'ギルド概要を把握する',
+    description: 'まず基本情報とメンバー数を見て、今の運用状態を確認します。',
+    targetId: 'guild-overview',
+  },
+  {
+    title: 'スキルを横断検索する',
+    description:
+      'メンバー別の所持状況を見ながら、欲しいスキルを条件で絞り込みます。',
+    targetId: 'guild-skill-search',
+  },
+  {
+    title: 'メンバー運用を進める',
+    description: '承認待ち確認、権限更新、必要なら個別のスキル編集へ進みます。',
+    targetId: 'guild-member-management',
+  },
+]
 
 const guildScopedUsers = computed(() =>
   guildUsers.value.filter((user) => user.guildId === currentGuildId.value)
@@ -662,61 +683,56 @@ const attrSeverity = (attr: string) => {
             </template>
           </RMPageHeader>
 
-          <RMGuildDetailOverviewSection
-            :guildDetail="guildDetail"
-            :canManageGuildMembers="canManageGuildMembers"
-            :managerGuide="managerGuide"
-            :guildFoundingDateLabel="guildFoundingDateLabel"
-            :summaryItems="summaryItems"
-          />
+          <div class="guild-detail-shortcuts">
+            <button
+              type="button"
+              class="guild-detail-shortcut"
+              @click="isOverviewDrawerVisible = true"
+            >
+              <div class="guild-detail-shortcut__title">ギルド概要を見る</div>
+              <div class="guild-detail-shortcut__text">
+                基本情報・運用メモ・全体サマリーは Drawer でまとめて確認できます。
+              </div>
+            </button>
+            <button
+              type="button"
+              class="guild-detail-shortcut"
+              @click="isMembersDrawerVisible = true"
+            >
+              <div class="guild-detail-shortcut__title">メンバー運用を開く</div>
+              <div class="guild-detail-shortcut__text">
+                承認待ち確認、権限変更、個別のスキル編集導線を Drawer に集約しています。
+              </div>
+            </button>
+          </div>
 
-          <Divider />
-
-          <RMGuildDetailSkillsSection
-            :approvedMembers="approvedMembers"
-            :memberSkillSummaries="memberSkillSummaries"
-            :isSkillLoading="isSkillLoading"
-            :isEditMode="isEditMode"
-            :canManageGuildMembers="canManageGuildMembers"
-            :currentUserId="globalLoginUserData.id"
-            :roleLabels="roleLabels"
-            :guildSkillRows="guildSkillRows"
-            :filteredGuildSkillRows="filteredGuildSkillRows"
-            :skillErrorMessage="skillErrorMessage"
-            v-model:skillTableFilters="skillTableFilters"
-            :attrOptions="attrOptions"
-            :typeOptions="typeOptions"
-            :searchGuide="searchGuide"
-            :roleSeverity="roleSeverity"
-            :attrSeverity="attrSeverity"
-            @clear-filters="clearSkillFilters"
-            @edit-member="goToPostSkill"
-          />
-
-          <Divider />
-
-          <RMGuildDetailMembersSection
-            :approvedMembers="approvedMembers"
-            :pendingMembers="pendingMembers"
-            :isEditMode="isEditMode"
-            :canManageGuildMembers="canManageGuildMembers"
-            :isMemberLoading="isMemberLoading"
-            :currentUserId="globalLoginUserData.id"
-            v-model:roleDrafts="roleDrafts"
-            :roleOptions="roleOptions"
-            :roleLabels="roleLabels"
-            :canChangeRole="canChangeRole"
-            :roleSeverity="roleSeverity"
-            @edit-member="goToPostSkill"
-            @save-role="saveRole"
-            @revoke-approval="revokeApproval"
-            @approve-member="approveMember"
-          />
+          <div id="guild-skill-search" class="guild-detail-anchor">
+            <RMGuildDetailSkillsSection
+              :approvedMembers="approvedMembers"
+              :memberSkillSummaries="memberSkillSummaries"
+              :isSkillLoading="isSkillLoading"
+              :isEditMode="isEditMode"
+              :canManageGuildMembers="canManageGuildMembers"
+              :currentUserId="globalLoginUserData.id"
+              :roleLabels="roleLabels"
+              :guildSkillRows="guildSkillRows"
+              :filteredGuildSkillRows="filteredGuildSkillRows"
+              :skillErrorMessage="skillErrorMessage"
+              v-model:skillTableFilters="skillTableFilters"
+              :attrOptions="attrOptions"
+              :typeOptions="typeOptions"
+              :searchGuide="searchGuide"
+              :roleSeverity="roleSeverity"
+              :attrSeverity="attrSeverity"
+              @clear-filters="clearSkillFilters"
+              @edit-member="goToPostSkill"
+            />
+          </div>
 
           <div class="rm-actions guild-detail-actions">
             <RMButton label="戻る" flat color="grey" @click="goBack" />
             <RMButton
-              label="ギルドを編集"
+              label="ギルド設定を編集"
               color="primary"
               :isDisable="!canEditGuild"
               @click="goToEditGuild"
@@ -725,6 +741,60 @@ const attrSeverity = (attr: string) => {
         </div>
       </template>
     </Card>
+
+    <Drawer
+      v-if="guildDetail"
+      v-model:visible="isOverviewDrawerVisible"
+      position="right"
+      header="ギルド概要"
+      :style="{ width: 'min(96vw, 40rem)' }"
+      class="guild-detail-drawer"
+    >
+      <div id="guild-overview" class="guild-detail-drawer__content">
+        <RMFlowGuide
+          title="このギルドで最初に見る場所"
+          description="概要を把握してからスキル検索やメンバー運用へ進めるよう、補助情報を Drawer にまとめています。"
+          :items="guildGuideItems"
+        />
+
+        <RMGuildDetailOverviewSection
+          :guildDetail="guildDetail"
+          :canManageGuildMembers="canManageGuildMembers"
+          :managerGuide="managerGuide"
+          :guildFoundingDateLabel="guildFoundingDateLabel"
+          :summaryItems="summaryItems"
+        />
+      </div>
+    </Drawer>
+
+    <Drawer
+      v-if="guildDetail"
+      v-model:visible="isMembersDrawerVisible"
+      position="right"
+      header="メンバー運用"
+      :style="{ width: 'min(96vw, 42rem)' }"
+      class="guild-detail-drawer"
+    >
+      <div id="guild-member-management" class="guild-detail-drawer__content">
+        <RMGuildDetailMembersSection
+          :approvedMembers="approvedMembers"
+          :pendingMembers="pendingMembers"
+          :isEditMode="isEditMode"
+          :canManageGuildMembers="canManageGuildMembers"
+          :isMemberLoading="isMemberLoading"
+          :currentUserId="globalLoginUserData.id"
+          v-model:roleDrafts="roleDrafts"
+          :roleOptions="roleOptions"
+          :roleLabels="roleLabels"
+          :canChangeRole="canChangeRole"
+          :roleSeverity="roleSeverity"
+          @edit-member="goToPostSkill"
+          @save-role="saveRole"
+          @revoke-approval="revokeApproval"
+          @approve-member="approveMember"
+        />
+      </div>
+    </Drawer>
   </div>
 </template>
 
@@ -735,6 +805,52 @@ const attrSeverity = (attr: string) => {
 
 .guild-detail-card__content {
   padding: clamp(16px, 2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guild-detail-anchor {
+  scroll-margin-top: calc(var(--rm-header-height) + 28px);
+}
+
+.guild-detail-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.guild-detail-shortcut {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(75, 105, 130, 0.14);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.84);
+  text-align: left;
+  transition: transform 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.guild-detail-shortcut:hover {
+  transform: translateY(-1px);
+  border-color: rgba(75, 105, 130, 0.34);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.guild-detail-shortcut__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--rm-text);
+}
+
+.guild-detail-shortcut__text {
+  color: var(--rm-text-soft);
+  line-height: 1.7;
+}
+
+.guild-detail-drawer__content {
   display: flex;
   flex-direction: column;
   gap: 16px;

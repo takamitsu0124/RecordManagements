@@ -1,11 +1,12 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Divider from 'primevue/divider'
+import Drawer from 'primevue/drawer'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
@@ -22,6 +23,7 @@ import {
 import { globalLoginUserData, hasAdmin, hasGuildAdmin } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
+import RMFlowGuide from 'src/components/RMFlowGuide/RMFlowGuide.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import {
   notifyError,
@@ -91,7 +93,7 @@ const isSaving = ref(false)
 const errorMessage = ref('')
 const draftStatus = ref<GuildScheduleStatus | null>(null)
 const draftNote = ref('')
-const selectedDayPanelRef = ref<HTMLElement | null>(null)
+const isSelectedDayDrawerVisible = ref(false)
 
 const roleLabels: Record<AppRole, string> = {
   admin: 'Admin',
@@ -113,6 +115,25 @@ const statusSeverity: Record<
   maybe: 'warn',
   unavailable: 'danger',
 }
+
+const scheduleGuideItems = [
+  {
+    title: '月間カレンダーで日を選ぶ',
+    description: 'まず集計カレンダーから気になる日付を押して詳細を開きます。',
+    targetId: 'schedule-calendar',
+  },
+  {
+    title: '選択日の回答を更新する',
+    description:
+      '自分の参加可否とメモを入力し、その日の回答だけをすぐ保存できます。',
+    targetId: 'schedule-answer',
+  },
+  {
+    title: '一覧表で全体を見比べる',
+    description: '月末の回答状況や未回答数は日別一覧からまとめて確認できます。',
+    targetId: 'schedule-list',
+  },
+]
 
 const currentGuildId = computed(() =>
   typeof route.params.guildId === 'string' ? route.params.guildId : ''
@@ -467,25 +488,9 @@ const moveMonth = (amount: number) => {
   currentMonth.value = addMonths(currentMonth.value, amount)
 }
 
-const shouldAutoScrollToSelectedDayPanel = () => {
-  return typeof window !== 'undefined' && window.innerWidth <= 1180
-}
-
-const scrollToSelectedDayPanel = async () => {
-  if (!shouldAutoScrollToSelectedDayPanel()) {
-    return
-  }
-
-  await nextTick()
-  selectedDayPanelRef.value?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  })
-}
-
-const openDate = async (dateKey: string) => {
+const openDate = (dateKey: string) => {
   selectedDateKey.value = dateKey
-  await scrollToSelectedDayPanel()
+  isSelectedDayDrawerVisible.value = true
 }
 
 const goToGuildDetail = () => {
@@ -744,7 +749,7 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
               </div>
 
               <div v-else class="schedule-content-grid">
-                <Panel class="schedule-calendar-panel">
+                <Panel id="schedule-calendar" class="schedule-calendar-panel">
                   <template #header>
                     <div class="schedule-panel-header">
                       <div>
@@ -752,14 +757,23 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
                           月間集計カレンダー
                         </div>
                         <div class="schedule-panel-header__subtitle">
-                          日を選ぶと右側で自分の回答編集とメンバー内訳を確認できます。
+                          日を選ぶと Drawer で自分の回答編集とメンバー内訳を確認できます。
                         </div>
                       </div>
-                      <Tag
-                        :value="`${approvedMembers.length}人で集計`"
-                        severity="info"
-                        class="schedule-panel-header__tag"
-                      />
+                      <div class="schedule-panel-header__actions">
+                        <Tag
+                          :value="`${approvedMembers.length}人で集計`"
+                          severity="info"
+                          class="schedule-panel-header__tag"
+                        />
+                        <Button
+                          type="button"
+                          label="選択日の詳細"
+                          outlined
+                          severity="secondary"
+                          @click="isSelectedDayDrawerVisible = true"
+                        />
+                      </div>
                     </div>
                   </template>
 
@@ -842,143 +856,12 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
                     </button>
                   </div>
                 </Panel>
-
-                <div
-                  ref="selectedDayPanelRef"
-                  class="schedule-editor-panel-anchor"
-                >
-                  <Panel class="schedule-editor-panel">
-                    <template #header>
-                      <div class="schedule-panel-header">
-                        <div>
-                          <div class="schedule-panel-header__title">
-                            選択日の回答と内訳
-                          </div>
-                          <div class="schedule-panel-header__subtitle">
-                            {{ formatFullDateLabel(selectedDateKey) }}
-                          </div>
-                        </div>
-                        <Tag
-                          :value="selectedResponseRateText"
-                          severity="contrast"
-                          class="schedule-panel-header__tag"
-                        />
-                      </div>
-                    </template>
-
-                    <div class="schedule-editor-card">
-                      <div class="schedule-editor-card__title">自分の回答</div>
-                      <div class="schedule-editor-statuses">
-                        <Button
-                          v-for="status in [
-                            'available',
-                            'maybe',
-                            'unavailable',
-                          ]"
-                          :key="status"
-                          :label="statusLabels[status]"
-                          :outlined="draftStatus !== status"
-                          :severity="statusSeverity[status]"
-                          :disabled="!canEditOwnResponse || isSaving"
-                          class="schedule-editor-statuses__button"
-                          @click="draftStatus = status"
-                        />
-                      </div>
-                      <Textarea
-                        v-model="draftNote"
-                        rows="4"
-                        autoResize
-                        placeholder="補足が必要な場合だけメモを残せます。"
-                        :disabled="!canEditOwnResponse || isSaving"
-                        class="schedule-editor-card__textarea"
-                      />
-                      <div class="schedule-editor-card__actions">
-                        <RMButton
-                          :label="isSaving ? '保存中...' : 'この日の回答を保存'"
-                          width="190px"
-                          color="primary"
-                          :isDisable="!canEditOwnResponse || isSaving"
-                          @click="saveOwnResponse"
-                        />
-                        <RMButton
-                          label="回答をクリア"
-                          width="160px"
-                          outline
-                          :isDisable="!canEditOwnResponse || isSaving"
-                          @click="clearOwnResponse"
-                        />
-                      </div>
-                      <p
-                        v-if="!canEditOwnResponse"
-                        class="schedule-editor-card__note"
-                      >
-                        承認済みメンバー本人のみ、自分の回答を登録・更新できます。
-                      </p>
-                    </div>
-
-                    <Divider />
-
-                    <div class="schedule-breakdown-list">
-                      <div
-                        v-for="group in selectedStatusGroups"
-                        :key="group.key"
-                        class="schedule-breakdown-section"
-                      >
-                        <div class="schedule-breakdown-section__head">
-                          <Tag
-                            :value="group.label"
-                            :severity="group.severity"
-                          />
-                          <span class="schedule-breakdown-section__count">
-                            {{ group.members.length }}人
-                          </span>
-                        </div>
-                        <div
-                          v-if="group.members.length === 0"
-                          class="schedule-breakdown-empty"
-                        >
-                          該当メンバーはいません。
-                        </div>
-                        <div v-else class="schedule-breakdown-members">
-                          <div
-                            v-for="member in group.members"
-                            :key="`${group.key}-${member.uid}`"
-                            class="schedule-breakdown-member"
-                          >
-                            <div class="schedule-breakdown-member__head">
-                              <div class="schedule-breakdown-member__name">
-                                {{ member.displayName }}
-                              </div>
-                              <div class="schedule-breakdown-member__meta">
-                                <Tag
-                                  :value="roleLabels[member.role]"
-                                  severity="secondary"
-                                />
-                                <Tag
-                                  v-if="member.isCurrentUser"
-                                  value="自分"
-                                  severity="info"
-                                />
-                              </div>
-                            </div>
-                            <p
-                              v-if="member.note"
-                              class="schedule-breakdown-member__note"
-                            >
-                              {{ member.note }}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Panel>
-                </div>
               </div>
             </div>
           </template>
         </Card>
 
-        <Panel class="schedule-table-panel">
+        <Panel id="schedule-list" class="schedule-table-panel">
           <template #header>
             <div class="schedule-panel-header">
               <div>
@@ -1051,6 +934,132 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
             </DataTable>
           </div>
         </Panel>
+
+        <Drawer
+          v-model:visible="isSelectedDayDrawerVisible"
+          position="right"
+          :header="`${formatFullDateLabel(selectedDateKey)} の詳細`"
+          :style="{ width: 'min(96vw, 36rem)' }"
+          class="schedule-detail-drawer"
+        >
+          <div id="schedule-answer" class="schedule-editor-panel-anchor">
+            <RMFlowGuide
+              title="この日の操作"
+              description="回答を保存してからメンバー内訳を見る流れにすると、その日の状況を迷わず把握できます。"
+              :items="scheduleGuideItems.slice(1)"
+            />
+
+            <div class="schedule-panel-header schedule-panel-header--drawer">
+              <div>
+                <div class="schedule-panel-header__title">選択日の回答と内訳</div>
+                <div class="schedule-panel-header__subtitle">
+                  {{ formatFullDateLabel(selectedDateKey) }}
+                </div>
+              </div>
+              <Tag
+                :value="selectedResponseRateText"
+                severity="contrast"
+                class="schedule-panel-header__tag"
+              />
+            </div>
+
+            <div class="schedule-editor-card">
+              <div class="schedule-editor-card__title">自分の回答</div>
+              <div class="schedule-editor-statuses">
+                <Button
+                  v-for="status in ['available', 'maybe', 'unavailable']"
+                  :key="status"
+                  :label="statusLabels[status]"
+                  :outlined="draftStatus !== status"
+                  :severity="statusSeverity[status]"
+                  :disabled="!canEditOwnResponse || isSaving"
+                  class="schedule-editor-statuses__button"
+                  @click="draftStatus = status"
+                />
+              </div>
+              <Textarea
+                v-model="draftNote"
+                rows="4"
+                autoResize
+                placeholder="補足が必要な場合だけメモを残せます。"
+                :disabled="!canEditOwnResponse || isSaving"
+                class="schedule-editor-card__textarea"
+              />
+              <div class="schedule-editor-card__actions">
+                <RMButton
+                  :label="isSaving ? '保存中...' : 'この日の回答を保存'"
+                  width="190px"
+                  color="primary"
+                  :isDisable="!canEditOwnResponse || isSaving"
+                  @click="saveOwnResponse"
+                />
+                <RMButton
+                  label="回答をクリア"
+                  width="160px"
+                  outline
+                  :isDisable="!canEditOwnResponse || isSaving"
+                  @click="clearOwnResponse"
+                />
+              </div>
+              <p v-if="!canEditOwnResponse" class="schedule-editor-card__note">
+                承認済みメンバー本人のみ、自分の回答を登録・更新できます。
+              </p>
+            </div>
+
+            <Divider />
+
+            <div class="schedule-breakdown-list">
+              <div
+                v-for="group in selectedStatusGroups"
+                :key="group.key"
+                class="schedule-breakdown-section"
+              >
+                <div class="schedule-breakdown-section__head">
+                  <Tag :value="group.label" :severity="group.severity" />
+                  <span class="schedule-breakdown-section__count">
+                    {{ group.members.length }}人
+                  </span>
+                </div>
+                <div
+                  v-if="group.members.length === 0"
+                  class="schedule-breakdown-empty"
+                >
+                  該当メンバーはいません。
+                </div>
+                <div v-else class="schedule-breakdown-members">
+                  <div
+                    v-for="member in group.members"
+                    :key="`${group.key}-${member.uid}`"
+                    class="schedule-breakdown-member"
+                  >
+                    <div class="schedule-breakdown-member__head">
+                      <div class="schedule-breakdown-member__name">
+                        {{ member.displayName }}
+                      </div>
+                      <div class="schedule-breakdown-member__meta">
+                        <Tag
+                          :value="roleLabels[member.role]"
+                          severity="secondary"
+                        />
+                        <Tag
+                          v-if="member.isCurrentUser"
+                          value="自分"
+                          severity="info"
+                        />
+                      </div>
+                    </div>
+                    <p
+                      v-if="member.note"
+                      class="schedule-breakdown-member__note"
+                    >
+                      {{ member.note }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Drawer>
       </template>
     </div>
   </div>
@@ -1136,6 +1145,11 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   );
 }
 
+.schedule-calendar-panel,
+.schedule-table-panel {
+  scroll-margin-top: calc(var(--rm-header-height) + 28px);
+}
+
 .schedule-summary-card--members {
   background: linear-gradient(
     180deg,
@@ -1169,10 +1183,7 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
 }
 
 .schedule-content-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
-  gap: 16px;
-  align-items: start;
+  display: block;
 }
 
 .schedule-panel-header {
@@ -1181,6 +1192,17 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
+}
+
+.schedule-panel-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.schedule-panel-header--drawer {
+  margin-bottom: 16px;
 }
 
 .schedule-panel-header__title {
@@ -1202,6 +1224,12 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
 
 .schedule-editor-panel-anchor {
   scroll-margin-top: calc(var(--rm-header-height) + 20px);
+}
+
+.schedule-detail-drawer :deep(.p-drawer-content) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .schedule-weekday-grid,
@@ -1429,12 +1457,6 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   cursor: pointer;
 }
 
-@media (max-width: 1180px) {
-  .schedule-content-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 767px) {
   .schedule-weekday-grid,
   .schedule-day-grid {
@@ -1455,6 +1477,12 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
 
   .schedule-month-toolbar :deep(.p-button) {
     width: 100%;
+  }
+
+  .schedule-panel-header,
+  .schedule-panel-header__actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>
