@@ -17,6 +17,7 @@
   --rm-header-height: 76px;
   --rm-page-width: 1240px;
   --rm-page-width-narrow: 980px;
+  --rm-focus-ring: rgba(75, 105, 130, 0.18);
 }
 
 * {
@@ -29,12 +30,18 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: 'Roboto', sans-serif;
   line-height: 1.5;
   background: linear-gradient(180deg, #eef4fb 0%, #f7f9fc 100%);
   color: var(--rm-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -42,6 +49,7 @@ input,
 textarea,
 select {
   font: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
@@ -63,7 +71,7 @@ img {
 .p-dialog {
   border-radius: var(--rm-radius);
   background: var(--rm-surface);
-  border: 1px solid rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.76);
   box-shadow: var(--rm-shadow);
   backdrop-filter: blur(14px);
 }
@@ -100,6 +108,7 @@ img {
 .p-button,
 .p-inputtext,
 .p-inputnumber-input,
+.p-dropdown,
 .p-select,
 .p-datepicker-input,
 .p-textarea,
@@ -111,6 +120,7 @@ img {
 
 .p-inputtext,
 .p-inputnumber-input,
+.p-dropdown,
 .p-select,
 .p-datepicker-input,
 .p-textarea {
@@ -119,6 +129,12 @@ img {
   border-color: var(--rm-border);
   background: rgba(255, 255, 255, 0.97);
   color: var(--rm-text);
+}
+
+.p-dropdown .p-dropdown-label,
+.p-select .p-select-label {
+  display: flex;
+  align-items: center;
 }
 
 .p-togglebutton {
@@ -192,6 +208,7 @@ img {
   border: 1px solid rgba(255, 255, 255, 0.65);
   box-shadow: var(--rm-shadow);
   backdrop-filter: blur(12px);
+  overflow: hidden;
 }
 
 .rm-state-card {
@@ -206,14 +223,14 @@ img {
 .rm-form-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .rm-page-stack {
   width: min(100%, var(--rm-page-width));
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .rm-form-grid {
@@ -232,8 +249,14 @@ img {
 .rm-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-end;
   gap: 10px;
+}
+
+.rm-actions > * {
+  flex: 0 1 220px;
+  max-width: 100%;
 }
 
 .rm-section-title {
@@ -276,6 +299,11 @@ img {
   overflow-x: auto;
 }
 
+:where(a, button, [role='button']):focus-visible {
+  outline: 3px solid var(--rm-focus-ring);
+  outline-offset: 3px;
+}
+
 @media (min-width: 768px) {
   .rm-page {
     padding: 22px max(18px, env(safe-area-inset-right)) 38px
@@ -283,11 +311,17 @@ img {
   }
 
   .rm-page-stack {
-    gap: 16px;
+    gap: 18px;
   }
 
   .rm-state-card {
     padding: 32px 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .rm-actions > * {
+    flex: 1 1 100%;
   }
 }
 

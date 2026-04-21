@@ -17,14 +17,18 @@ const emit = defineEmits(['menuClick', 'logout'])
 
 const currentPageTitle = computed(() => {
   const metaTitle = route.meta.pageTitle
-  return typeof metaTitle === 'string' && metaTitle ? metaTitle : 'Record Managements'
+  return typeof metaTitle === 'string' && metaTitle
+    ? metaTitle
+    : 'Record Managements'
 })
 
 const currentPageDescription = computed(() => {
   if (route.name === 'RMSkillPost') return 'メンバーの所持スキルと画像順を更新'
   if (route.name === 'RMGuildDetail') return '承認状況とメンバー運用を確認'
-  if (route.name === 'RMSkillMasterAdmin') return '検索・登録・更新をまとめて管理'
-  if (route.name === 'RMUserEdit') return 'プロフィール・所持スキル・画像をまとめて確認'
+  if (route.name === 'RMSkillMasterAdmin')
+    return '検索・登録・更新をまとめて管理'
+  if (route.name === 'RMUserEdit')
+    return 'プロフィール・所持スキル・画像をまとめて確認'
   return 'ギルド運営に必要な操作へすばやく移動'
 })
 
@@ -43,6 +47,9 @@ const logout = () => {
       <div class="rm-header-shell__brand">
         <div class="rm-header-shell__app">Record Managements</div>
         <div class="rm-header-shell__current_name">{{ currentPageTitle }}</div>
+        <p class="rm-header-shell__mobile_description">
+          {{ currentPageDescription }}
+        </p>
       </div>
     </template>
     <template #end>
@@ -100,7 +107,7 @@ const logout = () => {
 .rm-header-shell__brand
   display: flex
   flex-direction: column
-  gap: 2px
+  gap: 4px
   min-width: 0
 
 .rm-header-shell__app
@@ -118,6 +125,14 @@ const logout = () => {
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
+
+.rm-header-shell__mobile_description
+  display: none
+  margin: 0
+  max-width: 48ch
+  font-size: 12px
+  line-height: 1.45
+  color: rgba(255, 255, 255, 0.72)
 
 .rm-header-shell__actions
   display: flex
@@ -141,10 +156,16 @@ const logout = () => {
     padding-top: max(10px, env(safe-area-inset-top))
   .rm-header-shell__description
     display: none
+  .rm-header-shell__mobile_description
+    display: block
 
 @media (max-width: 767px)
   .rm-header-shell
     border-radius: 0 0 20px 20px
   .rm-header-shell__current_name
     font-size: 16px
+    white-space: normal
+    display: -webkit-box
+    -webkit-line-clamp: 2
+    -webkit-box-orient: vertical
 </style>

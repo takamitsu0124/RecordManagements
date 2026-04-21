@@ -86,6 +86,10 @@ const registerSave = async () => {
             icon="pi pi-check-square"
           />
 
+          <div class="rm-inline-note">
+            登録を実行すると新しいユーザーが作成され、完了後はホームへ戻ります。
+          </div>
+
           <div class="user-register-confirm-list">
             <div class="user-register-confirm-item">
               <div class="user-register-confirm-item__label">
@@ -127,12 +131,16 @@ const registerSave = async () => {
 
           <div class="rm-actions user-register-confirm-actions">
             <RMButton
-              label="戻る"
+              label="入力に戻る"
               flat
               color="grey"
               @click="router.push({ name: 'RMUserRegister' })"
             />
-            <RMButton label="登録" color="primary" @click="registerSave" />
+            <RMButton
+              label="この内容で登録"
+              color="primary"
+              @click="registerSave"
+            />
           </div>
         </div>
       </template>

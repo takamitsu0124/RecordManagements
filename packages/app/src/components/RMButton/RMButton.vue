@@ -75,22 +75,26 @@ const buttonStyle = computed(() => ({
   '--rm-button-badge-size': props.medalGarbageSize,
   '--rm-button-bg': resolvedBackground.value,
   '--rm-button-color': resolvedTextColor.value,
-  '--rm-button-border': props.outline || props.isBorder ? '1px solid #4b6982' : '1px solid transparent',
+  '--rm-button-border':
+    props.outline || props.isBorder
+      ? '1px solid #4b6982'
+      : '1px solid transparent',
 }))
 
 const buttonClass = computed(() => ({
-  '_button_shape_round': props.buttonShape === 'round',
-  '_button_shape_ellipse': props.buttonShape === 'ellipse',
-  '_button_shadow': props.isShadow,
-  '_button_border': props.isBorder,
-  '_just_icon':
+  _button_shape_round: props.buttonShape === 'round',
+  _button_shape_ellipse: props.buttonShape === 'ellipse',
+  _button_shadow: props.isShadow,
+  _button_border: props.isBorder,
+  _just_icon:
     props.buttonType === 'justIcon' ||
     props.buttonType === 'delete' ||
     props.buttonType === 'medal',
-  '_withImg': props.buttonType === 'withImg',
-  '_button_content_center': props.contentPosition === 'center',
-  '_button_flat': props.flat,
-  '_button_outline': props.outline,
+  _withImg: props.buttonType === 'withImg',
+  _button_content_center: props.contentPosition === 'center',
+  _button_content_between: props.contentPosition === 'between',
+  _button_flat: props.flat,
+  _button_outline: props.outline,
 }))
 
 const medalGarbageColor = computed(() => {
@@ -119,7 +123,11 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
     <img
       v-else-if="buttonType === 'medal'"
       src="~/assets/medal.svg"
-      :class="['_garbage_and_medal_icon', '_medal_icon_size', medalGarbageColor]"
+      :class="[
+        '_garbage_and_medal_icon',
+        '_medal_icon_size',
+        medalGarbageColor,
+      ]"
       alt="medal"
     />
     <div
@@ -142,17 +150,27 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
           alt="medal"
         />
         <div v-else-if="specialIcon" class="_btn_icon _special_icon">
-          <span class="material-symbols-outlined">{{ imageUrlOrIconName }}</span>
+          <span class="material-symbols-outlined">{{
+            imageUrlOrIconName
+          }}</span>
         </div>
         <RMIcon v-else :name="iconName" class="_btn_icon" />
       </div>
       <div v-else-if="buttonType === 'withImg'" class="_icon_status">
         <div class="_img_box">
-          <img :src="imageUrlOrIconName" class="_icon_size _img_size" alt="button" />
+          <img
+            :src="imageUrlOrIconName"
+            class="_icon_size _img_size"
+            alt="button"
+          />
         </div>
       </div>
       <span
-        v-if="buttonType === 'withImg' || buttonType === 'standard' || buttonType === 'withIcon'"
+        v-if="
+          buttonType === 'withImg' ||
+          buttonType === 'standard' ||
+          buttonType === 'withIcon'
+        "
         class="_just_letter"
         v-html="buttonLabel"
       ></span>
@@ -172,6 +190,7 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
   transition: 0.3s ease
   user-select: none
   box-shadow: none
+  overflow: hidden
   :deep(.p-button-label)
     display: none
   :deep(.p-button-icon)
@@ -179,6 +198,16 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
   &:hover
     opacity: 0.92
     transform: translateY(-1px)
+  &:focus-visible
+    outline: none
+    box-shadow: 0 0 0 4px rgba(75, 105, 130, 0.16)
+  &:active:not(:disabled)
+    transform: translateY(0)
+  &:disabled, &.p-disabled
+    opacity: 0.58
+    cursor: not-allowed
+    transform: none
+    filter: saturate(0.72)
 
 ._button_flat
   background: transparent
@@ -213,10 +242,14 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
   justify-content: center
   gap: 12px
   width: 100%
+  min-height: calc(var(--rm-button-height) - 2px)
   padding: 10px 24px
 
 ._button_content_center
   justify-content: center
+
+._button_content_between
+  justify-content: space-between
 
 ._icon_status
   display: flex
@@ -242,8 +275,11 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
 ._just_letter
   display: grid
   place-items: center
+  width: 100%
   font-size: var(--rm-button-font-size)
   line-height: 1.3
+  font-weight: 700
+  text-align: center
 
 ._withImg
   min-height: 101px

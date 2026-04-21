@@ -32,6 +32,7 @@ const props = defineProps({
   search: { type: Boolean, default: false },
   calendarPopupMode: { type: Boolean, default: false },
   accept: { type: String, default: '' },
+  autocomplete: { type: String, default: '' },
   rules: {
     type: Array as PropType<Array<(value: string) => true | string>>,
     default: () => [],
@@ -188,7 +189,13 @@ defineExpose({ validate })
       </div>
     </div>
 
-    <div class="_input_container" :class="{ _with_left_icon: iconLeft || search, _with_right_icon: iconRight || isDateField || type === 'password' }">
+    <div
+      class="_input_container"
+      :class="{
+        _with_left_icon: iconLeft || search,
+        _with_right_icon: iconRight || isDateField || type === 'password',
+      }"
+    >
       <div v-if="iconLeft && !search" class="_icon_left_position">
         <RMIcon :name="iconLeft" class="_cc_mdicon" />
       </div>
@@ -197,7 +204,10 @@ defineExpose({ validate })
         <RMIcon name="search" class="_cc_search_icon" />
       </div>
 
-      <div v-if="iconRight && !isDateField && type !== 'password'" class="_icon_right_position">
+      <div
+        v-if="iconRight && !isDateField && type !== 'password'"
+        class="_icon_right_position"
+      >
         <RMIcon :name="iconRight" class="_cc_mdicon" />
       </div>
 
@@ -219,6 +229,7 @@ defineExpose({ validate })
         <InputText
           :modelValue="displayValue"
           :disabled="disabled"
+          :autocomplete="autocomplete"
           readonly
           class="rm-input-control rm-input-field"
           :placeholder="placeholder"
@@ -247,6 +258,7 @@ defineExpose({ validate })
         autoResize
         rows="4"
         :disabled="disabled"
+        :autocomplete="autocomplete"
         :placeholder="placeholder"
         :maxlength="maxlength"
         class="rm-input-control rm-input-field rm-input-textarea"
@@ -258,6 +270,7 @@ defineExpose({ validate })
         v-else
         v-model="inputModel"
         :disabled="disabled"
+        :autocomplete="autocomplete"
         :placeholder="search ? 'キーワードで検索' : placeholder"
         :maxlength="maxlength"
         :inputmode="inputmode"
@@ -295,17 +308,20 @@ defineExpose({ validate })
   font-family: 'Roboto', sans-serif
   position: relative
   box-sizing: border-box
+  display: flex
+  flex-direction: column
+  gap: 6px
 
 ._label_container
   display: flex
   align-items: center
   padding: 0 5px
-  margin-bottom: 6px
   line-height: 24px
 
 ._label
   font-size: 16px
-  color: #475569
+  font-weight: 700
+  color: #334155
   width: fit-content
 
 ._required_text
@@ -347,13 +363,24 @@ defineExpose({ validate })
   border-radius: 14px
   border: 1px solid rgba(148, 163, 184, 0.45)
   background: rgba(255,255,255,0.92)
+  min-height: 50px
   padding: 12px 14px
   color: #1f2937
   transition: border-color .2s ease, box-shadow .2s ease, background .2s ease
 
+:deep(.p-textarea)
+  min-height: 120px
+
+:deep(.p-inputtext::placeholder), :deep(.p-textarea::placeholder), :deep(.p-datepicker-input::placeholder)
+  color: #94a3b8
+
 :deep(.p-inputtext:enabled:focus), :deep(.p-textarea:enabled:focus), :deep(.p-datepicker-input:enabled:focus)
   border-color: #4B6982
   box-shadow: 0 0 0 4px rgba(75, 105, 130, 0.14)
+
+:deep(.p-inputtext:disabled), :deep(.p-textarea:disabled), :deep(.p-datepicker-input:disabled)
+  background: rgba(241, 245, 249, 0.88)
+  color: #64748b
 
 ._cc_input._error
   :deep(.p-inputtext), :deep(.p-textarea), :deep(.p-datepicker-input)
@@ -391,6 +418,7 @@ defineExpose({ validate })
   transform: translateY(-50%)
   cursor: pointer
   z-index: 1
+  border-radius: 999px
 
 ._cc_mdicon
   font-size: 22px
@@ -403,12 +431,12 @@ defineExpose({ validate })
 ._error_message
   color: #D20000
   font-size: 14px
-  margin-top: 6px
+  line-height: 1.5
 
 ._hint_message
   color: #64748b
   font-size: 13px
-  margin-top: 6px
+  line-height: 1.5
 
 .label_text_size
   font-size: v-bind('labelSize === "" ? "16px" : labelSize')
@@ -423,4 +451,11 @@ defineExpose({ validate })
 
 .rm-file-trigger
   flex-shrink: 0
+
+@media (max-width: 767px)
+  .rm-file-field
+    flex-direction: column
+    align-items: stretch
+  .rm-file-trigger
+    width: 100%
 </style>

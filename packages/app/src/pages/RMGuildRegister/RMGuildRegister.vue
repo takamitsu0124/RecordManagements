@@ -7,6 +7,7 @@ import { defaultGuild, Guild } from '@rm/types'
 import { globalLoginUserData } from 'src/boot/main'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
+import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 
@@ -76,57 +77,70 @@ const onCancel = () => {
 </script>
 
 <template>
-  <div class="rm-page rm-page--center">
-    <Card class="guild-register-card">
-      <template #content>
-        <form
-          class="rm-form-stack guild-register-card__content"
-          @submit.prevent="onSubmit"
-        >
-          <div class="guild-register-card__title">ギルド登録</div>
+  <div class="rm-page rm-page--top">
+    <div class="rm-page-stack guild-register-shell">
+      <Card class="guild-register-card">
+        <template #content>
+          <form
+            class="rm-form-stack guild-register-card__content"
+            @submit.prevent="onSubmit"
+          >
+            <RMPageHeader
+              title="ギルド登録"
+              subtitle="最初に必要な情報だけ入力"
+              description="まずはギルド名があれば作成できます。説明はあとから編集できるので、迷う項目は空欄のままでも問題ありません。"
+              icon="pi pi-building"
+            />
 
-          <RMInput
-            v-model="guildName"
-            label="ギルド名 *"
-            hint="ギルドの名称を入力してください"
-            shadow
-          />
+            <div class="rm-inline-note">
+              登録直後は、作成者がギルド管理者として設定されます。
+            </div>
 
-          <RMInput
-            v-model="guildDescription"
-            label="ギルド説明"
-            type="textarea"
-            hint="ギルドの説明を入力してください (任意)"
-            shadow
-          />
+            <RMInput
+              v-model="guildName"
+              label="ギルド名 *"
+              hint="ギルドの名称を入力してください"
+              autocomplete="organization"
+              shadow
+            />
 
-          <div class="rm-actions">
-            <RMButton label="キャンセル" flat color="grey" @click="onCancel" />
-            <RMButton label="登録" type="submit" color="primary" />
-          </div>
-        </form>
-      </template>
-    </Card>
+            <RMInput
+              v-model="guildDescription"
+              label="ギルド説明"
+              type="textarea"
+              hint="ギルドの説明を入力してください (任意)"
+              shadow
+            />
+
+            <div class="rm-actions">
+              <RMButton
+                label="キャンセル"
+                flat
+                color="grey"
+                @click="onCancel"
+              />
+              <RMButton label="ギルドを作成" type="submit" color="primary" />
+            </div>
+          </form>
+        </template>
+      </Card>
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.guild-register-shell {
+  width: min(100%, 640px);
+}
+
 .guild-register-card {
-  width: min(100%, 560px);
+  width: 100%;
   border-radius: 24px;
   overflow: hidden;
 }
 
 .guild-register-card__content {
   padding: 22px 18px;
-}
-
-.guild-register-card__title {
-  margin-bottom: 4px;
-  text-align: center;
-  font-size: clamp(1.8rem, 4vw, 2.2rem);
-  font-weight: 800;
-  color: #1f2937;
 }
 
 @media (max-width: 600px) {

@@ -44,7 +44,7 @@ const signIn = async () => {
   <div class="login-page">
     <Card class="login-card">
       <template #content>
-        <div class="login-card__content">
+        <form class="login-card__content" @submit.prevent="signIn">
           <div class="login-card__logo">
             <img src="~/assets/logo.png" alt="RecordManagement logo" />
           </div>
@@ -56,12 +56,17 @@ const signIn = async () => {
             centered
           />
 
+          <p class="login-card__support">
+            登録済みメールアドレスでログインします。うまく入れない場合は、管理者にアカウント状態を確認してください。
+          </p>
+
           <div class="rm-form-stack">
             <RMInput
               v-model="email"
-              type="text"
+              type="email"
               label="ログインID"
               placeholder="sample@gmail.com"
+              autocomplete="username"
               :error2="!!errorMessage"
               shadow
             />
@@ -70,6 +75,7 @@ const signIn = async () => {
               type="password"
               label="パスワード"
               placeholder="aa12345678"
+              autocomplete="current-password"
               :error2="!!errorMessage"
               shadow
             />
@@ -79,14 +85,20 @@ const signIn = async () => {
             {{ errorMessage }}
           </p>
 
-          <RMButton
-            class="login-card__button"
-            width="100%"
-            label="ログイン"
-            bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
-            @click="signIn"
-          />
-        </div>
+          <div class="rm-actions">
+            <RMButton
+              label="戻る"
+              flat
+              color="grey"
+              @click="router.push({ name: 'RMPreLogin' })"
+            />
+            <RMButton
+              type="submit"
+              label="ログイン"
+              bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
+            />
+          </div>
+        </form>
       </template>
     </Card>
   </div>
@@ -119,6 +131,16 @@ const signIn = async () => {
   margin: 0 auto;
 }
 
+.login-card__support {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(215, 222, 232, 0.9);
+  color: var(--rm-text-soft);
+  line-height: 1.7;
+}
+
 .login-card__error {
   margin: 0;
   padding: 12px 16px;
@@ -128,10 +150,6 @@ const signIn = async () => {
   text-align: center;
   font-weight: 700;
   color: var(--rm-danger);
-}
-
-.login-card__button {
-  margin-top: 4px;
 }
 
 @media (min-width: 768px) {

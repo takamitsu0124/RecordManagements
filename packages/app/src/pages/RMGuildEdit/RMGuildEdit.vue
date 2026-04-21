@@ -148,109 +148,127 @@ const onCancel = () => {
 </script>
 
 <template>
-  <div class="rm-page rm-page--center">
-    <Card class="guild-edit-card">
-      <template #content>
-        <form
-          class="rm-form-stack guild-edit-card__content"
-          @submit.prevent="onSubmit"
-        >
-          <div class="guild-edit-card__title">ギルド情報編集</div>
-
-          <RMInput
-            v-model="guildName"
-            label="ギルド名 *"
-            hint="ギルドの名称を入力してください"
-            :outline="true"
-          />
-
-          <RMInput
-            v-model="guildDescription"
-            label="ギルド説明"
-            type="textarea"
-            hint="ギルドの説明を入力してください (任意)"
-            :outline="true"
-          />
-
-          <RMInput
-            v-model="guildGoogleCalendarId"
-            label="共有 Google Calendar ID"
-            hint="共有カレンダーを使う場合だけ入力します。未設定なら空欄のままで構いません"
-            :outline="true"
-          />
-
-          <div>
-            <div class="field-label">状況 *</div>
-            <Dropdown
-              v-model="guildSituation"
-              :options="situationOptions"
-              placeholder="状況を選択"
-              class="guild-edit-card__dropdown"
+  <div class="rm-page rm-page--top">
+    <div class="rm-page-stack guild-edit-shell">
+      <Card class="guild-edit-card">
+        <template #content>
+          <form
+            class="rm-form-stack guild-edit-card__content"
+            @submit.prevent="onSubmit"
+          >
+            <RMPageHeader
+              title="ギルド情報編集"
+              subtitle="公開情報と運用設定を更新"
+              description="見た目に関わる項目と共有設定をまとめて編集できます。迷う項目は今の値を確認しながら一つずつ更新してください。"
+              icon="pi pi-pencil"
             />
-          </div>
 
-          <RMInput
-            v-model="guildFoundingDate"
-            label="創設日"
-            type="date"
-            :date="true"
-            hint="ギルドの創設日を選択してください"
-            :outline="true"
-          />
+            <div class="rm-inline-note">
+              ギルド名・説明・共有カレンダー
+              ID・ロゴはあとから何度でも更新できます。
+            </div>
 
-          <div class="guild-logo-section">
-            <div class="field-label">ギルドロゴ</div>
-            <img
-              v-if="logoPreviewUrl"
-              :src="logoPreviewUrl"
-              alt="ギルドロゴプレビュー"
-              class="guild-logo-preview"
+            <RMInput
+              v-model="guildName"
+              label="ギルド名 *"
+              hint="ギルドの名称を入力してください"
+              autocomplete="organization"
+              :outline="true"
             />
-            <FileUpload
-              mode="basic"
-              accept="image/*"
-              chooseLabel="ギルドロゴ画像を選択"
-              customUpload
-              auto
-              class="guild-logo-upload"
-              @select="onLogoSelect"
-            />
-            <RMButton
-              v-if="guildLogoUrl && !newGuildLogoFile"
-              label="現在のロゴを削除"
-              flat
-              color="negative"
-              icon="delete"
-              @click="removeCurrentLogo"
-            />
-          </div>
 
-          <div class="rm-actions">
-            <RMButton label="キャンセル" flat color="grey" @click="onCancel" />
-            <RMButton label="更新" type="submit" color="primary" />
-          </div>
-        </form>
-      </template>
-    </Card>
+            <RMInput
+              v-model="guildDescription"
+              label="ギルド説明"
+              type="textarea"
+              hint="ギルドの説明を入力してください (任意)"
+              :outline="true"
+            />
+
+            <RMInput
+              v-model="guildGoogleCalendarId"
+              label="共有 Google Calendar ID"
+              hint="共有カレンダーを使う場合だけ入力します。未設定なら空欄のままで構いません"
+              :outline="true"
+            />
+
+            <div>
+              <div class="field-label">状況 *</div>
+              <Dropdown
+                v-model="guildSituation"
+                :options="situationOptions"
+                placeholder="状況を選択"
+                class="guild-edit-card__dropdown"
+              />
+            </div>
+
+            <RMInput
+              v-model="guildFoundingDate"
+              label="創設日"
+              type="date"
+              :date="true"
+              hint="ギルドの創設日を選択してください"
+              :outline="true"
+            />
+
+            <div class="guild-logo-section">
+              <div class="field-label">ギルドロゴ</div>
+              <p class="guild-logo-section__help">
+                ロゴを変更すると、一覧や詳細画面の見分けがつきやすくなります。
+              </p>
+              <img
+                v-if="logoPreviewUrl"
+                :src="logoPreviewUrl"
+                alt="ギルドロゴプレビュー"
+                class="guild-logo-preview"
+              />
+              <FileUpload
+                mode="basic"
+                accept="image/*"
+                chooseLabel="ギルドロゴ画像を選択"
+                customUpload
+                auto
+                class="guild-logo-upload"
+                @select="onLogoSelect"
+              />
+              <RMButton
+                v-if="guildLogoUrl && !newGuildLogoFile"
+                label="現在のロゴを削除"
+                flat
+                color="negative"
+                icon="delete"
+                @click="removeCurrentLogo"
+              />
+            </div>
+
+            <div class="rm-actions">
+              <RMButton
+                label="キャンセル"
+                flat
+                color="grey"
+                @click="onCancel"
+              />
+              <RMButton label="変更を保存" type="submit" color="primary" />
+            </div>
+          </form>
+        </template>
+      </Card>
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.guild-edit-shell {
+  width: min(100%, 700px);
+}
+
 .guild-edit-card {
-  width: min(100%, 580px);
+  width: 100%;
   border-radius: 24px;
   overflow: hidden;
 }
 
 .guild-edit-card__content {
   padding: 22px 18px;
-}
-
-.guild-edit-card__title {
-  text-align: center;
-  font-size: clamp(1.8rem, 4vw, 2.2rem);
-  font-weight: 800;
-  color: #1f2937;
 }
 
 .field-label {
@@ -269,6 +287,12 @@ const onCancel = () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.guild-logo-section__help {
+  margin: 0;
+  color: var(--rm-text-soft);
+  line-height: 1.6;
 }
 
 .guild-logo-preview {

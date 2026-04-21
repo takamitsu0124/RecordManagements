@@ -9,125 +9,148 @@ import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { globalRegisterForm } from './register'
 
-const { registerInfo, defaultRegisterInfo, validateRegisterInfo } = globalRegisterForm()
+const { registerInfo, defaultRegisterInfo, validateRegisterInfo } =
+  globalRegisterForm()
 const router = useRouter()
 const errors = ref<{ field: string; message: string }>({
-	field: '',
-	message: '',
+  field: '',
+  message: '',
 })
 const onFocus = ref<number>(0)
 const roleOptions: { label: string; value: AppRole }[] = [
-	{ label: 'General Member', value: 'member' },
-	{ label: 'Guild Admin', value: 'guild_admin' },
-	{ label: 'Admin', value: 'admin' },
+  { label: 'General Member', value: 'member' },
+  { label: 'Guild Admin', value: 'guild_admin' },
+  { label: 'Admin', value: 'admin' },
 ]
 
 const registerConfirm = () => {
-	errors.value.message = validateRegisterInfo(registerInfo.value)?.message ?? ''
-	errors.value.field = validateRegisterInfo(registerInfo.value)?.field ?? ''
-	if (errors.value.message === '') {
-		router.push({ name: 'RMUserRegisterConfirm' })
-	}
+  errors.value.message = validateRegisterInfo(registerInfo.value)?.message ?? ''
+  errors.value.field = validateRegisterInfo(registerInfo.value)?.field ?? ''
+  if (errors.value.message === '') {
+    router.push({ name: 'RMUserRegisterConfirm' })
+  }
 }
 
 const resetRegisterForm = () => {
-	registerInfo.value = defaultRegisterInfo()
-	errors.value = {
-		field: '',
-		message: '',
-	}
+  registerInfo.value = defaultRegisterInfo()
+  errors.value = {
+    field: '',
+    message: '',
+  }
 }
 </script>
 
 <template>
-	<div class="rm-page rm-page--top">
-		<Card class="user-register-card">
-			<template #content>
-				<div class="user-register-card__content">
-					<RMPageHeader
-						title="ユーザー登録"
-						subtitle="Admin 専用"
-						description="メールアドレス、表示名、所属ギルド、権限を確認しながら登録内容を作成します。"
-						icon="pi pi-user-plus"
-					/>
+  <div class="rm-page rm-page--top">
+    <Card class="user-register-card">
+      <template #content>
+        <div class="user-register-card__content">
+          <RMPageHeader
+            title="ユーザー登録"
+            subtitle="Admin 専用"
+            description="メールアドレス、表示名、所属ギルド、権限を確認しながら登録内容を作成します。"
+            icon="pi pi-user-plus"
+          />
 
-					<div class="rm-form-grid rm-form-grid--two">
-						<RMInput
-							v-model="registerInfo.email"
-							:class="{ _input_active: onFocus === 1 }"
-							label="メールアドレス"
-							type="text"
-							requiredText="※必須"
-							placeholder="sample@gmail.com"
-							shadow
-							@onFocus="onFocus = 1"
-							@onBlur="onFocus = 0"
-							:error2="errors.field === 'email'"
-						/>
-						<RMInput
-							v-model="registerInfo.password"
-							:class="{ _input_active: onFocus === 2 }"
-							label="パスワード"
-							type="password"
-							requiredText="※必須"
-							placeholder="aa1234"
-							shadow
-							@onFocus="onFocus = 2"
-							@onBlur="onFocus = 0"
-							:error2="errors.field === 'password'"
-						/>
-						<RMInput
-							v-model="registerInfo.name"
-							:class="{ _input_active: onFocus === 3 }"
-							label="表示名"
-							type="text"
-							requiredText="※必須"
-							placeholder="displayName"
-							shadow
-							@onFocus="onFocus = 3"
-							@onBlur="onFocus = 0"
-							:error2="errors.field === 'name'"
-						/>
-						<RMInput
-							v-model="registerInfo.guildId"
-							:class="{ _input_active: onFocus === 4 }"
-							label="所属ギルドID"
-							type="text"
-							placeholder="guild-id (任意)"
-							shadow
-							@onFocus="onFocus = 4"
-							@onBlur="onFocus = 0"
-						/>
-					</div>
+          <div class="rm-inline-note">
+            この画面では入力内容を整えます。実際の登録実行は次の確認画面で行います。
+          </div>
 
-					<div class="user-register-role">
-						<div class="user-register-role__label">権限</div>
-						<Dropdown
-							v-model="registerInfo.role"
-							:options="roleOptions"
-							optionLabel="label"
-							optionValue="value"
-							class="user-register-role__dropdown"
-							placeholder="権限を選択"
-						/>
-					</div>
+          <div class="rm-form-grid rm-form-grid--two">
+            <RMInput
+              v-model="registerInfo.email"
+              :class="{ _input_active: onFocus === 1 }"
+              label="メールアドレス"
+              type="email"
+              requiredText="※必須"
+              placeholder="sample@gmail.com"
+              autocomplete="email"
+              shadow
+              @onFocus="onFocus = 1"
+              @onBlur="onFocus = 0"
+              :error2="errors.field === 'email'"
+            />
+            <RMInput
+              v-model="registerInfo.password"
+              :class="{ _input_active: onFocus === 2 }"
+              label="パスワード"
+              type="password"
+              requiredText="※必須"
+              placeholder="aa1234"
+              autocomplete="new-password"
+              shadow
+              @onFocus="onFocus = 2"
+              @onBlur="onFocus = 0"
+              :error2="errors.field === 'password'"
+            />
+            <RMInput
+              v-model="registerInfo.name"
+              :class="{ _input_active: onFocus === 3 }"
+              label="表示名"
+              type="text"
+              requiredText="※必須"
+              placeholder="displayName"
+              autocomplete="name"
+              shadow
+              @onFocus="onFocus = 3"
+              @onBlur="onFocus = 0"
+              :error2="errors.field === 'name'"
+            />
+            <RMInput
+              v-model="registerInfo.guildId"
+              :class="{ _input_active: onFocus === 4 }"
+              label="所属ギルドID"
+              type="text"
+              placeholder="guild-id (任意)"
+              autocomplete="off"
+              shadow
+              @onFocus="onFocus = 4"
+              @onBlur="onFocus = 0"
+            />
+          </div>
 
-					<p v-if="errors.message" class="user-register-error">{{ errors.message }}</p>
+          <div class="user-register-role">
+            <div class="user-register-role__label">権限</div>
+            <div class="user-register-role__help">
+              迷った場合は通常メンバーを選び、必要な権限だけ後から付与してください。
+            </div>
+            <Dropdown
+              v-model="registerInfo.role"
+              :options="roleOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="user-register-role__dropdown"
+              placeholder="権限を選択"
+            />
+          </div>
 
-					<div class="rm-actions user-register-actions">
-						<RMButton
-							label="ホームへ"
-							flat
-							color="grey"
-							@click="router.push({ name: 'RMHome' })"
-						/>
-						<RMButton label="入力をクリア" flat color="grey" @click="resetRegisterForm" />
-						<RMButton label="登録確認" color="primary" @click="registerConfirm" />
-					</div>
-				</div>
-			</template>
-		</Card>
-	</div>
+          <p v-if="errors.message" class="user-register-error">
+            {{ errors.message }}
+          </p>
+
+          <div class="rm-actions user-register-actions">
+            <RMButton
+              label="ホームへ"
+              flat
+              color="grey"
+              @click="router.push({ name: 'RMHome' })"
+            />
+            <RMButton
+              label="入力をクリア"
+              flat
+              color="grey"
+              @click="resetRegisterForm"
+            />
+            <RMButton
+              label="確認へ進む"
+              color="primary"
+              @click="registerConfirm"
+            />
+          </div>
+        </div>
+      </template>
+    </Card>
+  </div>
 </template>
 
 <style lang="sass" scoped>
@@ -154,6 +177,11 @@ const resetRegisterForm = () => {
 	font-size: 14px
 	font-weight: 700
 	color: #475569
+
+.user-register-role__help
+	font-size: 13px
+	line-height: 1.6
+	color: #64748b
 
 .user-register-role__dropdown
 	width: 100%
