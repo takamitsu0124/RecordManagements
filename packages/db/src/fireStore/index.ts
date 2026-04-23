@@ -1,4 +1,5 @@
 export * from './Guild'
+export * from './GuildCalendarEvents'
 export * from './Users'
 export * from './SkillMaster'
 export * from './UserSkills'

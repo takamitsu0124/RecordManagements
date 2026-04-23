@@ -20,7 +20,7 @@ service cloud.firestore {
 		}
 
 		function guildPath(guildId) {
-			return /databases/$(database)/documents/guild/$(guildId);
+			return /databases/$(database)/documents/guilds/$(guildId);
 		}
 
 		function hasUsersDoc(uid) {
@@ -155,8 +155,29 @@ service cloud.firestore {
 				isValidAppRole(data.role);
 		}
 
-		function hasValidOptionalGoogleCalendarId(data) {
-			return !data.keys().hasAny(['googleCalendarId']) || data.googleCalendarId is string;
+		function hasValidGuildCalendarEventData(data, eventId) {
+			return data.id == eventId &&
+				data.guildId is string &&
+				data.guildId != '' &&
+				data.title is string &&
+				data.title.size() > 0 &&
+				data.description is string &&
+				data.location is string &&
+				data.allDay is bool &&
+				data.startAt is timestamp &&
+				data.endAt is timestamp &&
+				data.startAt < data.endAt &&
+				data.createdAt is timestamp &&
+				data.updatedAt is timestamp &&
+				data.createdBy is string &&
+				data.updatedBy is string;
+		}
+
+		function preservesGuildCalendarEventIdentity() {
+			return request.resource.data.id == resource.data.id &&
+				request.resource.data.guildId == resource.data.guildId &&
+				request.resource.data.createdAt == resource.data.createdAt &&
+				request.resource.data.createdBy == resource.data.createdBy;
 		}
 
 		function isGuildClaimForOwnCreatedGuild(uid) {
@@ -276,11 +297,10 @@ service cloud.firestore {
 			allow create, update, delete: if false;
 		}
 
-		match /guild/{guildId} {
+		match /guilds/{guildId} {
 			allow read: if isSignedIn() && canReadGuild(guildId);
 
 			allow create: if isSignedIn() &&
-				hasValidOptionalGoogleCalendarId(request.resource.data) &&
 				request.resource.data.createdBy == authUid() &&
 				request.resource.data.guildMember.keys().hasOnly([authUid()]) &&
 				request.resource.data.officialMembers == 1 &&
@@ -291,7 +311,6 @@ service cloud.firestore {
 				);
 
 			allow update: if isSignedIn() &&
-				hasValidOptionalGoogleCalendarId(request.resource.data) &&
 				canManageGuild(guildId) &&
 				request.resource.data.diff(resource.data).affectedKeys().hasOnly([
 					'guildName',
@@ -302,7 +321,6 @@ service cloud.firestore {
 					'officialMembers',
 					'guildMemo',
 					'guildLogo',
-					'googleCalendarId',
 					'guildMember',
 					'updatedAt',
 					'updatedBy'
@@ -321,6 +339,34 @@ service cloud.firestore {
 			allow delete: if isSignedIn() &&
 				resource.data.userId == authUid() &&
 				canReadGuildSchedule(resource.data.guildId);
+		}
+
+		match /guild_calendar_events/{eventId} {
+			allow read: if isSignedIn() && canReadGuildSchedule(resource.data.guildId);
+
+			allow create: if isSignedIn() &&
+				canManageGuild(request.resource.data.guildId) &&
+				request.resource.data.createdBy == authUid() &&
+				request.resource.data.updatedBy == authUid() &&
+				hasValidGuildCalendarEventData(request.resource.data, eventId);
+
+			allow update: if isSignedIn() &&
+				canManageGuild(resource.data.guildId) &&
+				preservesGuildCalendarEventIdentity() &&
+				request.resource.data.updatedBy == authUid() &&
+				hasValidGuildCalendarEventData(request.resource.data, eventId) &&
+				request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+					'title',
+					'description',
+					'location',
+					'startAt',
+					'endAt',
+					'allDay',
+					'updatedAt',
+					'updatedBy'
+				]);
+
+			allow delete: if isSignedIn() && canManageGuild(resource.data.guildId);
 		}
 	}
 }

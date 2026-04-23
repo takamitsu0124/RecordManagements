@@ -230,59 +230,48 @@ CLI の挙動:
 4. `packages/app/src/boot/main.ts` に legacy `user` backfill が残っていない
 5. `RMUserWorkspace` が legacy `skillRecord` / 画像 fallback を使っていない
 
-## Google Calendar OAuth / secret management
+## アプリ内イベントカレンダー
 
-Issue #52 に対応するため、Google Calendar 連携の前提を **SPA で秘密を持たない構成** に整理しています。  
-実装の受け皿は `packages/app/src/config/googleCalendar.ts` と `packages/app/.env.example` にあります。
+Issue #78 に対応するため、イベントカレンダーは **Google Calendar 依存を持たない Firestore 管理** へ切り替えています。  
+表示レイヤーは `@fullcalendar/vue3` を維持し、予定データだけをアプリ内で完結する構成にしています。
 
 ### 前提アーキテクチャ
 
-- フロントエンドは **Google Identity Services token model** を使う
-- ブラウザが直接 Calendar REST API を叩くときは **access token のみ** を扱う
-- **client secret / refresh token / service account key は frontend に持ち込まない**
-- shared guild calendar と personal calendar は role と token owner で境界を分ける
+- カレンダー画面は `/RMCalendar`
+- 予定データは Firestore の `guild_calendar_events` collection で管理
+- 表示は FullCalendar、入力は既存フォーム部品と PrimeVue DatePicker ベースの `RMInput` を利用
+- Google OAuth / Google Calendar API / shared calendar ID は使わない
 
-### Google Cloud 設定手順
+### データモデル
 
-1. Google Cloud で対象 project を作成または選択する
-2. **Google Calendar API** を有効化する
-3. OAuth consent screen を設定する
-4. OAuth client を **Web application** で作成する
-5. Authorized JavaScript origins に少なくとも以下を追加する
-   - `http://localhost:8080`
-   - 本番 app の origin（例: Firebase Hosting の app origin）
-6. Authorized redirect URIs に少なくとも以下を追加する
-   - `http://localhost:8080/google-calendar/oauth/callback`
-   - `${PRODUCTION_ORIGIN}/google-calendar/oauth/callback`
+`guild_calendar_events` の主な項目:
+
+| 項目 | 型 | 用途 |
+| --- | --- | --- |
+| `id` | string | ドキュメント ID |
+| `guildId` | string | 所属ギルド単位の参照・権限制御 |
+| `title` | string | 予定タイトル |
+| `description` | string | 補足メモ |
+| `location` | string | 場所 |
+| `startAt` | timestamp | 開始日時 |
+| `endAt` | timestamp | 終了日時 |
+| `allDay` | boolean | 終日予定かどうか |
+| `createdAt` / `updatedAt` | timestamp | 監査用 |
+| `createdBy` / `updatedBy` | string | 操作ユーザー |
 
 補足:
 
-- 現行方針は popup token flow なので、通常の予定閲覧・編集では redirect callback は主経路ではありません
-- ただし #48 以降で redirect UX や code model に切り替えても破綻しないよう、callback URI は先に予約しておきます
+- 終日予定は `endAt` を **終了日の翌日 00:00** で保存し、FullCalendar の end-exclusive 仕様に合わせる
+- 表示時は終日予定の終了日を 1 日戻してフォームへ表示する
 
-### scope 方針
+### 権限方針
 
-不要に広い権限は取らず、基本は次の 2 段階です。
-
-| 用途 | Scope | 理由 |
+| 対象 | 閲覧 | 編集 |
 | --- | --- | --- |
-| 閲覧のみ | `https://www.googleapis.com/auth/calendar.events.readonly` | 予定閲覧だけに限定する |
-| 編集時のみ追加 | `https://www.googleapis.com/auth/calendar.events` | 共有カレンダー・個人カレンダーの予定更新に必要な最小単位 |
+| guild shared calendar | `member`, `guild_admin`, `admin` | `guild_admin`, `admin` のみ |
 
-避けるもの:
-
-- `https://www.googleapis.com/auth/calendar`  
-  カレンダー全体の共有・削除まで含み広すぎるため、#52 時点では採用しません
-- ACL / settings / calendars 系 scope  
-  カレンダー権限変更や設定変更が要件にないため採用しません
-
-### 公開情報 / 秘密情報の分類
-
-| 区分 | 例 | 置き場所 |
-| --- | --- | --- |
-| Public | OAuth Client ID, discovery doc URL, redirect path, feature flags | `packages/app/.env` 系から Quasar build env へ注入 |
-| Protected (repo に固定しない) | guild shared calendar ID, role ごとの calendar routing 情報 | Firestore / Firebase Remote Config / backend response など、認証後に返す |
-| Secret | OAuth Client Secret, refresh token, service account key, admin-only integration secrets | Firebase Secret Manager / GitHub Actions secrets / 運用環境の secret store |
+- 読み取りは `canReadGuildSchedule(guildId)` に準拠
+- 作成 / 更新 / 削除は `canManageGuild(guildId)` に準拠
 
 ### env 運用
 
@@ -296,44 +285,11 @@ Git へ commit しないファイル:
 - `packages/app/.env.local`
 - `packages/app/.env.*.local`
 
-利用する public env:
+現時点では、**イベントカレンダーのために必須な public env はありません。**
 
-```bash
-APP_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID=
-APP_PUBLIC_GOOGLE_CALENDAR_DISCOVERY_DOC=https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest
-APP_PUBLIC_GOOGLE_CALENDAR_REDIRECT_PATH=/google-calendar/oauth/callback
-APP_PUBLIC_GOOGLE_CALENDAR_ENABLE_GUILD_CALENDAR=true
-APP_PUBLIC_GOOGLE_CALENDAR_ENABLE_PERSONAL_CALENDAR=false
-```
+### 実装 / 運用メモ
 
-### token の保存・更新・失効
-
-- access token は **メモリのみ** に保持する
-- `localStorage` / `sessionStorage` / Firestore に refresh token を保存しない
-- token 期限切れ時は GIS の `requestAccessToken()` で再取得する
-- revoke は `google.accounts.oauth2.revoke` を使い、同時にアプリ内メモリも消去する
-
-### guild 共有カレンダー / personal calendar の境界
-
-| 対象 | 閲覧 | 編集 | 備考 |
-| --- | --- | --- | --- |
-| guild shared calendar | `member`, `guild_admin`, `admin` | `guild_admin`, `admin` のみ | 共有予定の作成・更新は運営権限者に限定 |
-| personal calendar | token owner のみ | token owner のみ | 他メンバーの個人予定は扱わない |
-
-このポリシーは `packages/app/src/config/googleCalendar.ts` に定数化しています。
-
-### #48 に向けた実装前提
-
-- 画面初回表示では readonly scope だけ要求する
-- 編集操作に入るときだけ追加で edit scope を要求する
-- guild shared calendar ID は frontend にハードコードせず、認証済み経路から取得する
-- backend が必要になった場合だけ code model + Secret Manager へ拡張し、client secret は browser に渡さない
-
-### #48 実装後の運用メモ
-
-- イベントカレンダー画面は `/RMCalendar` です
-- guild shared calendar は `guild.googleCalendarId` を参照します
-- `guild.googleCalendarId` は `RMGuildEdit` 画面の **共有 Google Calendar ID** 入力から設定します
-- `guild.googleCalendarId` は **未設定時は空文字** を許容し、画面保存時は trim 後の文字列を保存します
-- personal calendar は `primary` を使います
-- shared calendar を編集できるのは、Google 側でその calendar に対して編集権限を持つ `guild_admin` / `admin` です
+- ギルド所属ユーザーだけがイベントカレンダーを利用できます
+- `member` は閲覧のみ、`guild_admin` / `admin` は予定の追加・更新・削除ができます
+- `RMGuildEdit` 画面に Google Calendar ID の入力はありません
+- Google 連携の再設定なしでローカル開発・本番利用ができます

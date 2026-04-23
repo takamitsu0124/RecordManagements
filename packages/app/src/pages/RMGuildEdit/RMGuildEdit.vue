@@ -21,7 +21,6 @@ const guildDescription = ref('')
 const guildSituation = ref<'存続' | '解散' | ''>('')
 const guildFoundingDate = ref<string>('')
 const guildLogoUrl = ref('')
-const guildGoogleCalendarId = ref('')
 const newGuildLogoFile = ref<File | null>(null)
 
 const situationOptions = ['存続', '解散']
@@ -55,7 +54,6 @@ onMounted(async () => {
             )
           : ''
         guildLogoUrl.value = fetchedGuild.guildLogo || ''
-        guildGoogleCalendarId.value = fetchedGuild.googleCalendarId || ''
       } else {
         notifyError('指定されたギルドが見つかりませんでした。')
         router.push('/')
@@ -113,7 +111,6 @@ const onSubmit = async () => {
       const updatedData: Partial<Guild> = {
         guildName: guildName.value,
         guildMemo: guildDescription.value,
-        googleCalendarId: guildGoogleCalendarId.value.trim(),
         situation: guildSituation.value,
         guildFoundingDateAt: guildFoundingDate.value
           ? new Date(guildFoundingDate.value)
@@ -164,8 +161,7 @@ const onCancel = () => {
             />
 
             <div class="rm-inline-note">
-              ギルド名・説明・共有カレンダー
-              ID・ロゴはあとから何度でも更新できます。
+              ギルド名・説明・ロゴはあとから何度でも更新できます。
             </div>
 
             <RMInput
@@ -181,13 +177,6 @@ const onCancel = () => {
               label="ギルド説明"
               type="textarea"
               hint="ギルドの説明を入力してください (任意)"
-              :outline="true"
-            />
-
-            <RMInput
-              v-model="guildGoogleCalendarId"
-              label="共有 Google Calendar ID"
-              hint="共有カレンダーを使う場合だけ入力します。未設定なら空欄のままで構いません"
               :outline="true"
             />
 
