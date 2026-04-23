@@ -1908,6 +1908,7 @@ onBeforeUnmount(() => {
 }
 
 .schedule-table-scroll {
+  display: block;
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -1917,16 +1918,20 @@ onBeforeUnmount(() => {
   scrollbar-width: thin;
 }
 
+.schedule-table {
+  width: max-content;
+  min-width: 840px;
+}
+
 .schedule-table :deep(.p-datatable-wrapper),
 .schedule-table :deep(.p-datatable-table-container) {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
+  width: auto;
+  min-width: 100%;
+  overflow: visible;
 }
 
 .schedule-table :deep(.p-datatable-table) {
-  min-width: 840px;
+  min-width: 100%;
   width: max-content;
   table-layout: auto;
 }
