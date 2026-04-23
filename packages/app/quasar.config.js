@@ -10,18 +10,6 @@
 
 import { configure } from 'quasar/wrappers'
 
-const publicEnvKeys = [
-  'APP_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID',
-  'APP_PUBLIC_GOOGLE_CALENDAR_DISCOVERY_DOC',
-  'APP_PUBLIC_GOOGLE_CALENDAR_REDIRECT_PATH',
-  'APP_PUBLIC_GOOGLE_CALENDAR_ENABLE_GUILD_CALENDAR',
-  'APP_PUBLIC_GOOGLE_CALENDAR_ENABLE_PERSONAL_CALENDAR',
-]
-
-const publicEnv = Object.fromEntries(
-  publicEnvKeys.map((key) => [key, process.env[key] || ''])
-)
-
 export default configure(function (ctx) {
   return {
     // https://v2.quasar.dev/quasar-cli-webpack/supporting-ts
@@ -82,7 +70,6 @@ export default configure(function (ctx) {
       env: {
         VUE_OPTIONS_API: true, // オプションAPIを有効にする場合
         VUE_PROD_DEVTOOLS: false, // プロダクションビルドでのDevToolsを無効にする場合
-        ...publicEnv,
       },
       minify: false,
 
@@ -114,7 +101,7 @@ export default configure(function (ctx) {
       server: {
         type: 'http',
       },
-      port: 8080,
+      port: 9200,
       open: true, // opens browser window automatically
     },
 
