@@ -52,6 +52,7 @@ const isLoadingGuild = ref(false)
 const isLoadingEvents = ref(false)
 const isSaving = ref(false)
 const isMobile = ref(false)
+const isTablet = ref(false)
 const isSettingsDrawerVisible = ref(false)
 const currentRange = ref<{ start: Date; end: Date } | null>(null)
 
@@ -77,7 +78,9 @@ const calendarGuideItems = [
 ]
 
 const updateViewportState = () => {
-  isMobile.value = window.innerWidth < 768
+  const width = window.innerWidth
+  isMobile.value = width < 768
+  isTablet.value = width >= 768 && width < 1120
 }
 
 const parseLocalDate = (value: string) => {
@@ -265,9 +268,62 @@ const calendarEvents = computed<EventInput[]>(() =>
   }))
 )
 
-const calendarLayoutKey = computed(() =>
-  isMobile.value ? 'mobile' : 'desktop'
-)
+const calendarViewport = computed<'mobile' | 'tablet' | 'desktop'>(() => {
+  if (isMobile.value) {
+    return 'mobile'
+  }
+
+  if (isTablet.value) {
+    return 'tablet'
+  }
+
+  return 'desktop'
+})
+
+const calendarLayoutKey = computed(() => calendarViewport.value)
+
+const calendarHeaderToolbar = computed(() => {
+  if (calendarViewport.value === 'mobile') {
+    return {
+      left: 'prev,next',
+      center: 'title',
+      right: 'today dayGridMonth,listWeek',
+    }
+  }
+
+  if (calendarViewport.value === 'tablet') {
+    return {
+      left: 'prev,next',
+      center: 'title',
+      right: 'today dayGridMonth,listWeek',
+    }
+  }
+
+  return {
+    left: 'prev,next today',
+    center: 'title',
+    right: 'dayGridMonth,listWeek',
+  }
+})
+
+const calendarTitleFormat = computed(() => {
+  if (calendarViewport.value === 'mobile') {
+    return {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }
+  }
+
+  if (calendarViewport.value === 'tablet') {
+    return {
+      year: 'numeric',
+      month: 'long',
+    }
+  }
+
+  return undefined
+})
 
 const calendarRoleLabel = computed(() => {
   if (globalLoginUserData.value.role === 'admin') {
@@ -279,6 +335,18 @@ const calendarRoleLabel = computed(() => {
   }
 
   return 'Member'
+})
+
+const calendarHintText = computed(() => {
+  if (calendarViewport.value === 'mobile') {
+    return 'スマホでも月表示を主役にしつつ、ツールバーだけを圧縮して PC と近い見え方を保っています。'
+  }
+
+  if (calendarViewport.value === 'tablet') {
+    return 'タブレットでは月表示を保ちつつ、ツールバーが折り返しても操作しやすい幅に調整しています。'
+  }
+
+  return 'PC では月表示と週リストを切り替えながら、広い表示領域で共有予定を確認できます。'
 })
 
 const loadGuildDetail = async () => {
@@ -537,26 +605,26 @@ onBeforeUnmount(() => {
 const calendarOptions = computed<CalendarOptions>(() => ({
   plugins: [dayGridPlugin, listPlugin, interactionPlugin],
   locale: jaLocale,
-  initialView: isMobile.value ? 'listWeek' : 'dayGridMonth',
-  headerToolbar: {
-    left: 'prev,next today',
-    center: 'title',
-    right: 'dayGridMonth,listWeek',
-  },
+  initialView: 'dayGridMonth',
+  headerToolbar: calendarHeaderToolbar.value,
   buttonText: {
     today: '今日',
     dayGridMonth: '月',
     listWeek: '週リスト',
   },
+  titleFormat: calendarTitleFormat.value,
   events: calendarEvents.value,
   eventClick: onEventClick,
   dateClick: onDateClick,
   datesSet: onDatesSet,
   editable: false,
   selectable: false,
-  dayMaxEvents: true,
+  dayMaxEvents: isMobile.value ? 2 : true,
   nowIndicator: true,
   height: 'auto',
+  contentHeight: isMobile.value ? 'auto' : undefined,
+  fixedWeekCount: !isMobile.value,
+  displayEventTime: !isMobile.value,
   noEventsContent: '予定はありません',
   eventTimeFormat: {
     hour: '2-digit',
@@ -644,10 +712,18 @@ const calendarOptions = computed<CalendarOptions>(() => ({
               </div>
 
               <template v-else>
-                <FullCalendar
-                  :key="calendarLayoutKey"
-                  :options="calendarOptions"
-                />
+                <div
+                  class="calendar-frame"
+                  :class="`calendar-frame--${calendarViewport}`"
+                >
+                  <p class="calendar-frame__hint">
+                    {{ calendarHintText }}
+                  </p>
+                  <FullCalendar
+                    :key="calendarLayoutKey"
+                    :options="calendarOptions"
+                  />
+                </div>
                 <div
                   v-if="calendarEvents.length === 0"
                   class="calendar-empty-inline"
@@ -758,6 +834,90 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   color: var(--rm-text);
 }
 
+.calendar-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.calendar-frame__hint {
+  margin: 0;
+  color: var(--rm-text-soft);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.calendar-frame :deep(.fc) {
+  width: 100%;
+  min-width: 0;
+}
+
+.calendar-frame :deep(.fc-header-toolbar) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.calendar-frame :deep(.fc-toolbar-chunk) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.calendar-frame :deep(.fc-toolbar-title) {
+  font-size: clamp(1rem, 2.6vw, 1.5rem);
+  line-height: 1.25;
+  word-break: keep-all;
+}
+
+.calendar-frame :deep(.fc-button-group) {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
+.calendar-frame :deep(.fc-button) {
+  min-height: 40px;
+  padding: 0.55rem 0.82rem;
+  font-size: 0.82rem;
+}
+
+.calendar-frame :deep(.fc-scrollgrid) {
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.calendar-frame :deep(.fc-view-harness) {
+  min-height: 520px;
+}
+
+.calendar-frame :deep(.fc-daygrid-day-frame) {
+  min-height: 96px;
+}
+
+.calendar-frame :deep(.fc-daygrid-event) {
+  border-radius: 10px;
+}
+
+.calendar-frame :deep(.fc-daygrid-event .fc-event-main) {
+  padding: 2px 4px;
+}
+
+.calendar-frame :deep(.fc-col-header-cell-cushion),
+.calendar-frame :deep(.fc-daygrid-day-number) {
+  padding: 6px;
+  font-size: 0.84rem;
+}
+
+.calendar-frame :deep(.fc-event-title),
+.calendar-frame :deep(.fc-list-event-title) {
+  white-space: normal;
+}
+
 .calendar-status-pill-list {
   display: flex;
   flex-wrap: wrap;
@@ -844,6 +1004,137 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   .calendar-status-list__row {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .calendar-main-card__content,
+  .calendar-panel-card__content {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .calendar-frame :deep(.fc-header-toolbar) {
+    justify-content: space-between;
+  }
+
+  .calendar-frame :deep(.fc-toolbar-chunk) {
+    justify-content: flex-start;
+  }
+
+  .calendar-frame :deep(.fc-toolbar-title) {
+    text-align: center;
+  }
+
+  .calendar-frame :deep(.fc-view-harness) {
+    min-height: 460px;
+  }
+}
+
+@media (max-width: 767px) {
+  .calendar-quick-bar {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .calendar-main-card__content,
+  .calendar-panel-card__content {
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .calendar-status-pill {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+  }
+
+  .calendar-notice {
+    padding: 12px 14px;
+    font-size: 0.92rem;
+  }
+
+  .calendar-empty-inline {
+    padding: 14px 4px 2px;
+    font-size: 0.92rem;
+  }
+
+  .calendar-frame {
+    overflow: hidden;
+  }
+
+  .calendar-frame__hint {
+    font-size: 0.86rem;
+  }
+
+  .calendar-frame :deep(.fc) {
+    min-width: 0;
+  }
+
+  .calendar-frame :deep(.fc-header-toolbar) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'title title'
+      'nav actions';
+    align-items: center;
+    gap: 10px;
+  }
+
+  .calendar-frame :deep(.fc-toolbar-chunk) {
+    min-width: 0;
+  }
+
+  .calendar-frame :deep(.fc-toolbar-chunk:nth-child(1)) {
+    grid-area: nav;
+    justify-content: flex-start;
+  }
+
+  .calendar-frame :deep(.fc-toolbar-chunk:nth-child(2)) {
+    grid-area: title;
+    justify-content: center;
+  }
+
+  .calendar-frame :deep(.fc-toolbar-chunk:nth-child(3)) {
+    grid-area: actions;
+    justify-content: flex-end;
+  }
+
+  .calendar-frame :deep(.fc-toolbar-title) {
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  .calendar-frame :deep(.fc-button-group) {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .calendar-frame :deep(.fc-button) {
+    min-height: 36px;
+    padding: 0.42rem 0.6rem;
+    font-size: 0.76rem;
+  }
+
+  .calendar-frame :deep(.fc-view-harness) {
+    min-height: 380px;
+  }
+
+  .calendar-frame :deep(.fc-daygrid-day-frame) {
+    min-height: 72px;
+  }
+
+  .calendar-frame :deep(.fc-col-header-cell-cushion),
+  .calendar-frame :deep(.fc-daygrid-day-number) {
+    padding: 4px;
+    font-size: 0.74rem;
+  }
+
+  .calendar-frame :deep(.fc-event) {
+    font-size: 0.72rem;
+  }
+
+  .calendar-frame :deep(.fc-list-event-time),
+  .calendar-frame :deep(.fc-list-event-title) {
+    font-size: 0.78rem;
   }
 }
 </style>
