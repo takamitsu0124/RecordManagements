@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Divider from 'primevue/divider'
-import Drawer from 'primevue/drawer'
+import Dialog from 'primevue/dialog'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
@@ -90,10 +90,13 @@ const currentMonth = ref(createMonthDate())
 const selectedDateKey = ref(formatDateKey(new Date()))
 const isLoading = ref(true)
 const isSaving = ref(false)
+const isMobile = ref(false)
+const isTablet = ref(false)
+const isCompactMobile = ref(false)
 const errorMessage = ref('')
 const draftStatus = ref<GuildScheduleStatus | null>(null)
 const draftNote = ref('')
-const isSelectedDayDrawerVisible = ref(false)
+const isSelectedDayDialogVisible = ref(false)
 
 const roleLabels: Record<AppRole, string> = {
   admin: 'Admin',
@@ -107,6 +110,12 @@ const statusLabels: Record<GuildScheduleStatus, string> = {
   unavailable: '参加不可',
 }
 
+const compactStatusLabels: Record<GuildScheduleStatus, string> = {
+  available: '可',
+  maybe: '未',
+  unavailable: '不可',
+}
+
 const statusSeverity: Record<
   GuildScheduleStatus,
   'success' | 'warn' | 'danger'
@@ -116,24 +125,27 @@ const statusSeverity: Record<
   unavailable: 'danger',
 }
 
-const scheduleGuideItems = [
+const selectedDayGuideItems = [
   {
-    title: '月間カレンダーで日を選ぶ',
-    description: 'まず集計カレンダーから気になる日付を押して詳細を開きます。',
-    targetId: 'schedule-calendar',
-  },
-  {
-    title: '選択日の回答を更新する',
+    title: '自分の回答を更新する',
     description:
-      '自分の参加可否とメモを入力し、その日の回答だけをすぐ保存できます。',
+      '参加可否とメモを選んで、その日だけを迷わず保存できます。',
     targetId: 'schedule-answer',
   },
   {
-    title: '一覧表で全体を見比べる',
-    description: '月末の回答状況や未回答数は日別一覧からまとめて確認できます。',
-    targetId: 'schedule-list',
+    title: '集計内訳を見る',
+    description:
+      '参加可・未定・参加不可・未回答をメンバー単位でそのまま確認できます。',
+    targetId: 'schedule-breakdown',
   },
 ]
+
+const updateViewportState = () => {
+  const width = window.innerWidth
+  isMobile.value = width < 768
+  isTablet.value = width >= 768 && width < 1120
+  isCompactMobile.value = width < 380
+}
 
 const currentGuildId = computed(() =>
   typeof route.params.guildId === 'string' ? route.params.guildId : ''
@@ -395,6 +407,79 @@ const selectedResponseRateText = computed(() => {
   return `${breakdown.respondedCount}/${breakdown.totalMembers}人`
 })
 
+const selectedDateLabel = computed(() =>
+  selectedDateKey.value ? formatFullDateLabel(selectedDateKey.value) : '日付未選択'
+)
+
+const selectedDaySummaryItems = computed(() => {
+  const breakdown = selectedDayBreakdown.value
+
+  return [
+    {
+      key: 'response',
+      label: '回答状況',
+      value: selectedResponseRateText.value,
+      tone: 'response',
+    },
+    {
+      key: 'available',
+      label: '参加可',
+      value: `${breakdown?.available.length || 0}人`,
+      tone: 'available',
+    },
+    {
+      key: 'maybe',
+      label: '未定',
+      value: `${breakdown?.maybe.length || 0}人`,
+      tone: 'maybe',
+    },
+    {
+      key: 'unavailable',
+      label: '参加不可',
+      value: `${breakdown?.unavailable.length || 0}人`,
+      tone: 'unavailable',
+    },
+    {
+      key: 'unanswered',
+      label: '未回答',
+      value: `${breakdown?.unanswered.length || 0}人`,
+      tone: 'unanswered',
+    },
+  ]
+})
+
+const selectedDayDialogStyle = computed(() => {
+  if (isCompactMobile.value) {
+    return { width: 'calc(100vw - 0.75rem)' }
+  }
+
+  if (isMobile.value) {
+    return { width: 'calc(100vw - 1.5rem)' }
+  }
+
+  if (isTablet.value) {
+    return { width: 'min(96vw, 52rem)' }
+  }
+
+  return { width: 'min(92vw, 68rem)' }
+})
+
+const getScheduleStatusLabel = (
+  status: GuildScheduleStatus | null | undefined,
+  options?: {
+    emptyLabel?: string
+    compactEmptyLabel?: string
+  }
+) => {
+  if (!status) {
+    return isCompactMobile.value
+      ? options?.compactEmptyLabel || '未'
+      : options?.emptyLabel || '未回答'
+  }
+
+  return isCompactMobile.value ? compactStatusLabels[status] : statusLabels[status]
+}
+
 const pageNotice = computed(() => {
   if (canEditOwnResponse.value) {
     return '日を選ぶと自分の回答を更新できます。集計とメンバー内訳は全員分を即時に見比べられます。'
@@ -490,7 +575,7 @@ const moveMonth = (amount: number) => {
 
 const openDate = (dateKey: string) => {
   selectedDateKey.value = dateKey
-  isSelectedDayDrawerVisible.value = true
+  isSelectedDayDialogVisible.value = true
 }
 
 const goToGuildDetail = () => {
@@ -638,6 +723,15 @@ watch(monthDays, syncSelectedDateWithinMonth, { immediate: true })
 watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   immediate: true,
 })
+
+onMounted(() => {
+  updateViewportState()
+  window.addEventListener('resize', updateViewportState)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateViewportState)
+})
 </script>
 
 <template>
@@ -674,13 +768,13 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
           <template #actions>
             <RMButton
               label="今月"
-              width="120px"
+              :width="isMobile ? '100%' : '120px'"
               outline
               @click="goToCurrentMonth"
             />
             <RMButton
-              label="ギルドへ戻る"
-              width="160px"
+              :label="isCompactMobile ? '戻る' : 'ギルドへ戻る'"
+              :width="isMobile ? '100%' : '160px'"
               flat
               color="grey"
               @click="goToGuildDetail"
@@ -757,7 +851,7 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
                           月間集計カレンダー
                         </div>
                         <div class="schedule-panel-header__subtitle">
-                          日を選ぶと Drawer で自分の回答編集とメンバー内訳を確認できます。
+                          日を選ぶとポップアップで自分の回答編集とメンバー内訳を確認できます。
                         </div>
                       </div>
                       <div class="schedule-panel-header__actions">
@@ -768,92 +862,136 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
                         />
                         <Button
                           type="button"
-                          label="選択日の詳細"
+                          :label="
+                            isMobile ? '選択日の詳細' : '選択日の集計を開く'
+                          "
                           outlined
                           severity="secondary"
-                          @click="isSelectedDayDrawerVisible = true"
+                          @click="isSelectedDayDialogVisible = true"
                         />
                       </div>
                     </div>
                   </template>
 
-                  <div class="schedule-weekday-grid">
-                    <span
-                      v-for="weekday in [
-                        '日',
-                        '月',
-                        '火',
-                        '水',
-                        '木',
-                        '金',
-                        '土',
-                      ]"
-                      :key="weekday"
-                      class="schedule-weekday-grid__item"
-                    >
-                      {{ weekday }}
-                    </span>
+                  <div class="schedule-selected-overview">
+                    <div class="schedule-selected-overview__body">
+                      <div class="schedule-selected-overview__label">選択中</div>
+                      <div class="schedule-selected-overview__title">
+                        {{ selectedDateLabel }}
+                      </div>
+                      <div class="schedule-selected-overview__meta">
+                        {{ selectedResponseRateText }} / 自分
+                        {{
+                          getScheduleStatusLabel(
+                            monthRowsByKey.get(selectedDateKey)?.myStatus,
+                            {
+                              compactEmptyLabel: '未',
+                            }
+                          )
+                        }}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      :label="isMobile ? '詳細を見る' : 'ポップアップで詳細を見る'"
+                      severity="contrast"
+                      @click="isSelectedDayDialogVisible = true"
+                    />
                   </div>
 
-                  <div class="schedule-day-grid">
-                    <button
-                      v-for="day in monthDays"
-                      :key="day.key"
-                      type="button"
-                      class="schedule-day-card"
-                      :class="{
-                        'schedule-day-card--selected':
-                          selectedDateKey === day.key,
-                        'schedule-day-card--today': day.isToday,
-                        'schedule-day-card--weekend': day.isWeekend,
-                      }"
-                      @click="openDate(day.key)"
-                    >
-                      <div class="schedule-day-card__head">
-                        <div class="schedule-day-card__date">
-                          {{ day.dayNumber }}
-                        </div>
-                        <div class="schedule-day-card__weekday">
-                          {{ day.weekdayLabel }}
-                        </div>
-                      </div>
-                      <div class="schedule-day-card__counts">
+                  <p v-if="isMobile" class="schedule-calendar-frame__hint">
+                    カレンダーは左右にスワイプできます。
+                  </p>
+
+                  <div class="schedule-calendar-frame">
+                    <div class="schedule-calendar-grid">
+                      <div class="schedule-weekday-grid">
                         <span
-                          class="schedule-count-pill schedule-count-pill--success"
+                          v-for="weekday in [
+                            '日',
+                            '月',
+                            '火',
+                            '水',
+                            '木',
+                            '金',
+                            '土',
+                          ]"
+                          :key="weekday"
+                          class="schedule-weekday-grid__item"
                         >
-                          可
-                          {{
-                            dayBreakdowns.get(day.key)?.available.length || 0
-                          }}
-                        </span>
-                        <span
-                          class="schedule-count-pill schedule-count-pill--warn"
-                        >
-                          未 {{ dayBreakdowns.get(day.key)?.maybe.length || 0 }}
-                        </span>
-                        <span
-                          class="schedule-count-pill schedule-count-pill--danger"
-                        >
-                          不可
-                          {{
-                            dayBreakdowns.get(day.key)?.unavailable.length || 0
-                          }}
+                          {{ weekday }}
                         </span>
                       </div>
-                      <Tag
-                        :value="
-                          monthRowsByKey.get(day.key)?.myStatusLabel || '未回答'
-                        "
-                        :severity="
-                          monthRowsByKey.get(day.key)?.myStatus
-                            ? statusSeverity[
-                                monthRowsByKey.get(day.key)?.myStatus || 'maybe'
-                              ]
-                            : 'secondary'
-                        "
-                        class="schedule-day-card__tag"
-                      />
-                    </button>
+
+                      <div class="schedule-day-grid">
+                        <button
+                          v-for="day in monthDays"
+                          :key="day.key"
+                          type="button"
+                          class="schedule-day-card"
+                          :class="{
+                            'schedule-day-card--selected':
+                              selectedDateKey === day.key,
+                            'schedule-day-card--today': day.isToday,
+                            'schedule-day-card--weekend': day.isWeekend,
+                          }"
+                          @click="openDate(day.key)"
+                        >
+                          <div class="schedule-day-card__head">
+                            <div class="schedule-day-card__date">
+                              {{ day.dayNumber }}
+                            </div>
+                            <div
+                              v-if="!isCompactMobile"
+                              class="schedule-day-card__weekday"
+                            >
+                              {{ day.weekdayLabel }}
+                            </div>
+                          </div>
+                          <div class="schedule-day-card__counts">
+                            <span
+                              class="schedule-count-pill schedule-count-pill--success"
+                            >
+                              可
+                              {{
+                                dayBreakdowns.get(day.key)?.available.length || 0
+                              }}
+                            </span>
+                            <span
+                              class="schedule-count-pill schedule-count-pill--warn"
+                            >
+                              未 {{ dayBreakdowns.get(day.key)?.maybe.length || 0 }}
+                            </span>
+                            <span
+                              class="schedule-count-pill schedule-count-pill--danger"
+                            >
+                              不可
+                              {{
+                                dayBreakdowns.get(day.key)?.unavailable.length || 0
+                              }}
+                            </span>
+                          </div>
+                          <Tag
+                            :value="
+                              getScheduleStatusLabel(
+                                monthRowsByKey.get(day.key)?.myStatus,
+                                {
+                                  compactEmptyLabel: '未',
+                                }
+                              )
+                            "
+                            :severity="
+                              monthRowsByKey.get(day.key)?.myStatus
+                                ? statusSeverity[
+                                    monthRowsByKey.get(day.key)?.myStatus || 'maybe'
+                                  ]
+                                : 'secondary'
+                            "
+                            class="schedule-day-card__tag"
+                          />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </Panel>
               </div>
@@ -867,13 +1005,66 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
               <div>
                 <div class="schedule-panel-header__title">日別一覧</div>
                 <div class="schedule-panel-header__subtitle">
-                  一覧性を優先した表形式でも、日ごとの集計を見比べられます。
+                  表形式でも日ごとの集計を見比べられ、日付を押すと同じ詳細ポップアップを開けます。
                 </div>
               </div>
             </div>
           </template>
 
-          <div class="rm-mobile-scroll">
+          <div v-if="isMobile" class="schedule-mobile-list">
+            <button
+              v-for="row in monthRows"
+              :key="row.key"
+              type="button"
+              class="schedule-mobile-row"
+              :class="{ 'schedule-mobile-row--selected': selectedDateKey === row.key }"
+              @click="openDate(row.key)"
+            >
+              <div class="schedule-mobile-row__head">
+                <div class="schedule-mobile-row__date-group">
+                  <div class="schedule-mobile-row__date">{{ row.dateLabel }}</div>
+                  <div class="schedule-mobile-row__meta">
+                    <span class="schedule-mobile-row__meta-item">
+                      回答 {{ row.responseRateText }}
+                    </span>
+                    <span
+                      class="schedule-mobile-row__meta-item"
+                      :class="
+                        row.myStatus
+                          ? `schedule-mobile-row__meta-item--${statusSeverity[row.myStatus]}`
+                          : 'schedule-mobile-row__meta-item--secondary'
+                      "
+                    >
+                      自分 {{ row.myStatusLabel }}
+                    </span>
+                  </div>
+                </div>
+                <span class="schedule-mobile-row__hint">詳細</span>
+              </div>
+              <div class="schedule-mobile-row__summary">
+                <span
+                  class="schedule-mobile-row__count schedule-mobile-row__count--success"
+                >
+                  可 {{ row.availableCount }}
+                </span>
+                <span
+                  class="schedule-mobile-row__count schedule-mobile-row__count--warn"
+                >
+                  未 {{ row.maybeCount }}
+                </span>
+                <span
+                  class="schedule-mobile-row__count schedule-mobile-row__count--danger"
+                >
+                  不 {{ row.unavailableCount }}
+                </span>
+                <span class="schedule-mobile-row__count">
+                  未回 {{ row.unansweredCount }}
+                </span>
+              </div>
+            </button>
+          </div>
+
+          <div v-else class="schedule-table-scroll rm-mobile-scroll">
             <DataTable
               :value="monthRows"
               responsiveLayout="scroll"
@@ -935,131 +1126,187 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
           </div>
         </Panel>
 
-        <Drawer
-          v-model:visible="isSelectedDayDrawerVisible"
-          position="right"
-          :header="`${formatFullDateLabel(selectedDateKey)} の詳細`"
-          :style="{ width: 'min(96vw, 36rem)' }"
-          class="schedule-detail-drawer"
+        <Dialog
+          v-model:visible="isSelectedDayDialogVisible"
+          modal
+          :draggable="false"
+          dismissableMask
+          :style="selectedDayDialogStyle"
+          :breakpoints="{
+            '1120px': '96vw',
+            '820px': 'calc(100vw - 1.25rem)',
+            '640px': 'calc(100vw - 1rem)',
+          }"
+          class="schedule-detail-dialog"
         >
-          <div id="schedule-answer" class="schedule-editor-panel-anchor">
-            <RMFlowGuide
-              title="この日の操作"
-              description="回答を保存してからメンバー内訳を見る流れにすると、その日の状況を迷わず把握できます。"
-              :items="scheduleGuideItems.slice(1)"
-            />
-
-            <div class="schedule-panel-header schedule-panel-header--drawer">
+          <template #header>
+            <div class="schedule-dialog-header">
               <div>
-                <div class="schedule-panel-header__title">選択日の回答と内訳</div>
-                <div class="schedule-panel-header__subtitle">
-                  {{ formatFullDateLabel(selectedDateKey) }}
-                </div>
-              </div>
-              <Tag
-                :value="selectedResponseRateText"
-                severity="contrast"
-                class="schedule-panel-header__tag"
-              />
-            </div>
-
-            <div class="schedule-editor-card">
-              <div class="schedule-editor-card__title">自分の回答</div>
-              <div class="schedule-editor-statuses">
-                <Button
-                  v-for="status in ['available', 'maybe', 'unavailable']"
-                  :key="status"
-                  :label="statusLabels[status]"
-                  :outlined="draftStatus !== status"
-                  :severity="statusSeverity[status]"
-                  :disabled="!canEditOwnResponse || isSaving"
-                  class="schedule-editor-statuses__button"
-                  @click="draftStatus = status"
-                />
-              </div>
-              <Textarea
-                v-model="draftNote"
-                rows="4"
-                autoResize
-                placeholder="補足が必要な場合だけメモを残せます。"
-                :disabled="!canEditOwnResponse || isSaving"
-                class="schedule-editor-card__textarea"
-              />
-              <div class="schedule-editor-card__actions">
-                <RMButton
-                  :label="isSaving ? '保存中...' : 'この日の回答を保存'"
-                  width="190px"
-                  color="primary"
-                  :isDisable="!canEditOwnResponse || isSaving"
-                  @click="saveOwnResponse"
-                />
-                <RMButton
-                  label="回答をクリア"
-                  width="160px"
-                  outline
-                  :isDisable="!canEditOwnResponse || isSaving"
-                  @click="clearOwnResponse"
-                />
-              </div>
-              <p v-if="!canEditOwnResponse" class="schedule-editor-card__note">
-                承認済みメンバー本人のみ、自分の回答を登録・更新できます。
-              </p>
-            </div>
-
-            <Divider />
-
-            <div class="schedule-breakdown-list">
-              <div
-                v-for="group in selectedStatusGroups"
-                :key="group.key"
-                class="schedule-breakdown-section"
-              >
-                <div class="schedule-breakdown-section__head">
-                  <Tag :value="group.label" :severity="group.severity" />
-                  <span class="schedule-breakdown-section__count">
-                    {{ group.members.length }}人
-                  </span>
+                <div class="schedule-dialog-header__title">
+                  {{ selectedDateLabel }} の詳細
                 </div>
                 <div
-                  v-if="group.members.length === 0"
-                  class="schedule-breakdown-empty"
+                  v-if="!isCompactMobile"
+                  class="schedule-dialog-header__subtitle"
                 >
-                  該当メンバーはいません。
+                  自分の回答更新と当日の集計確認を同じポップアップで行えます。
                 </div>
-                <div v-else class="schedule-breakdown-members">
-                  <div
-                    v-for="member in group.members"
-                    :key="`${group.key}-${member.uid}`"
-                    class="schedule-breakdown-member"
+              </div>
+              <div class="schedule-dialog-header__meta">
+                <Tag :value="selectedResponseRateText" severity="contrast" />
+                <Tag
+                  :value="
+                    getScheduleStatusLabel(
+                      monthRowsByKey.get(selectedDateKey)?.myStatus,
+                      {
+                        compactEmptyLabel: '未',
+                      }
+                    )
+                  "
+                  :severity="
+                    monthRowsByKey.get(selectedDateKey)?.myStatus
+                      ? statusSeverity[
+                          monthRowsByKey.get(selectedDateKey)?.myStatus || 'maybe'
+                        ]
+                      : 'secondary'
+                  "
+                />
+              </div>
+            </div>
+          </template>
+
+          <div id="schedule-answer" class="schedule-editor-panel-anchor">
+            <RMFlowGuide
+              v-if="!isCompactMobile"
+              title="この日の確認フロー"
+              description="まず自分の参加可否を更新し、そのまま集計内訳を見ると判断しやすくなります。"
+              :items="selectedDayGuideItems"
+            />
+
+            <div class="schedule-dialog-grid">
+              <div class="schedule-dialog-sidebar">
+                <div class="schedule-surface-card schedule-editor-card">
+                  <div class="schedule-editor-card__title">自分の回答</div>
+                  <div class="schedule-editor-statuses">
+                    <Button
+                      v-for="status in ['available', 'maybe', 'unavailable']"
+                      :key="status"
+                      :label="statusLabels[status]"
+                      :outlined="draftStatus !== status"
+                      :severity="statusSeverity[status]"
+                      :disabled="!canEditOwnResponse || isSaving"
+                      class="schedule-editor-statuses__button"
+                      @click="draftStatus = status"
+                    />
+                  </div>
+                  <Textarea
+                    v-model="draftNote"
+                    rows="4"
+                    autoResize
+                    placeholder="補足が必要な場合だけメモを残せます。"
+                    :disabled="!canEditOwnResponse || isSaving"
+                    class="schedule-editor-card__textarea"
+                  />
+                  <div class="schedule-editor-card__actions">
+                    <RMButton
+                      :label="isSaving ? '保存中...' : 'この日の回答を保存'"
+                      :width="isMobile ? '100%' : '190px'"
+                      color="primary"
+                      :isDisable="!canEditOwnResponse || isSaving"
+                      @click="saveOwnResponse"
+                    />
+                    <RMButton
+                      label="回答をクリア"
+                      :width="isMobile ? '100%' : '160px'"
+                      outline
+                      :isDisable="!canEditOwnResponse || isSaving"
+                      @click="clearOwnResponse"
+                    />
+                  </div>
+                  <p
+                    v-if="!canEditOwnResponse"
+                    class="schedule-editor-card__note"
                   >
-                    <div class="schedule-breakdown-member__head">
-                      <div class="schedule-breakdown-member__name">
-                        {{ member.displayName }}
+                    承認済みメンバー本人のみ、自分の回答を登録・更新できます。
+                  </p>
+                </div>
+
+                <div class="schedule-surface-card">
+                  <div class="schedule-surface-card__title">当日の集計</div>
+                  <div class="schedule-day-summary-grid">
+                    <div
+                      v-for="item in selectedDaySummaryItems"
+                      :key="item.key"
+                      class="schedule-day-summary-card"
+                      :class="`schedule-day-summary-card--${item.tone}`"
+                    >
+                      <div class="schedule-day-summary-card__label">
+                        {{ item.label }}
                       </div>
-                      <div class="schedule-breakdown-member__meta">
-                        <Tag
-                          :value="roleLabels[member.role]"
-                          severity="secondary"
-                        />
-                        <Tag
-                          v-if="member.isCurrentUser"
-                          value="自分"
-                          severity="info"
-                        />
+                      <div class="schedule-day-summary-card__value">
+                        {{ item.value }}
                       </div>
                     </div>
-                    <p
-                      v-if="member.note"
-                      class="schedule-breakdown-member__note"
+                  </div>
+                </div>
+              </div>
+              <div id="schedule-breakdown" class="schedule-breakdown-panel">
+                <Divider />
+
+                <div class="schedule-breakdown-list">
+                  <div
+                    v-for="group in selectedStatusGroups"
+                    :key="group.key"
+                    class="schedule-breakdown-section"
+                  >
+                    <div class="schedule-breakdown-section__head">
+                      <Tag :value="group.label" :severity="group.severity" />
+                      <span class="schedule-breakdown-section__count">
+                        {{ group.members.length }}人
+                      </span>
+                    </div>
+                    <div
+                      v-if="group.members.length === 0"
+                      class="schedule-breakdown-empty"
                     >
-                      {{ member.note }}
-                    </p>
+                      該当メンバーはいません。
+                    </div>
+                    <div v-else class="schedule-breakdown-members">
+                      <div
+                        v-for="member in group.members"
+                        :key="`${group.key}-${member.uid}`"
+                        class="schedule-breakdown-member"
+                      >
+                        <div class="schedule-breakdown-member__head">
+                          <div class="schedule-breakdown-member__name">
+                            {{ member.displayName }}
+                          </div>
+                          <div class="schedule-breakdown-member__meta">
+                            <Tag
+                              :value="roleLabels[member.role]"
+                              severity="secondary"
+                            />
+                            <Tag
+                              v-if="member.isCurrentUser"
+                              value="自分"
+                              severity="info"
+                            />
+                          </div>
+                        </div>
+                        <p
+                          v-if="member.note"
+                          class="schedule-breakdown-member__note"
+                        >
+                          {{ member.note }}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </Drawer>
+        </Dialog>
       </template>
     </div>
   </div>
@@ -1106,7 +1353,7 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px;
+  padding: clamp(14px, 2vw, 16px);
 }
 
 .schedule-summary-card__label {
@@ -1147,7 +1394,27 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
 
 .schedule-calendar-panel,
 .schedule-table-panel {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
   scroll-margin-top: calc(var(--rm-header-height) + 28px);
+}
+
+.schedule-calendar-panel :deep(.p-panel-content-container),
+.schedule-table-panel :deep(.p-panel-content-container),
+.schedule-calendar-panel :deep(.p-panel-content),
+.schedule-table-panel :deep(.p-panel-content) {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.schedule-calendar-panel :deep(.p-panel-content > *),
+.schedule-table-panel :deep(.p-panel-content > *) {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .schedule-summary-card--members {
@@ -1161,7 +1428,27 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
 .schedule-main-card__content {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: clamp(14px, 2vw, 18px);
+}
+
+.schedule-calendar-frame {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.schedule-calendar-frame__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--rm-text-soft);
+}
+
+.schedule-calendar-grid {
+  min-width: 700px;
 }
 
 .schedule-month-toolbar {
@@ -1172,10 +1459,15 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   flex-wrap: wrap;
 }
 
+.schedule-month-toolbar > * {
+  min-width: 0;
+}
+
 .schedule-month-toolbar__title {
-  font-size: 1.1rem;
+  font-size: clamp(1rem, 2vw, 1.1rem);
   font-weight: 700;
   color: var(--rm-text);
+  overflow-wrap: anywhere;
 }
 
 .schedule-main-card__empty {
@@ -1184,6 +1476,7 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
 
 .schedule-content-grid {
   display: block;
+  min-width: 0;
 }
 
 .schedule-panel-header {
@@ -1199,10 +1492,6 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
-}
-
-.schedule-panel-header--drawer {
-  margin-bottom: 16px;
 }
 
 .schedule-panel-header__title {
@@ -1226,7 +1515,49 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   scroll-margin-top: calc(var(--rm-header-height) + 20px);
 }
 
-.schedule-detail-drawer :deep(.p-drawer-content) {
+.schedule-selected-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  padding: clamp(12px, 2vw, 16px);
+  border-radius: 20px;
+  box-sizing: border-box;
+  background: rgba(241, 245, 249, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.schedule-selected-overview__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.schedule-selected-overview__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--rm-text-soft);
+}
+
+.schedule-selected-overview__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--rm-text);
+  overflow-wrap: anywhere;
+}
+
+.schedule-selected-overview__meta {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--rm-text-soft);
+  overflow-wrap: anywhere;
+}
+
+.schedule-detail-dialog :deep(.p-dialog-content) {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1255,7 +1586,7 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   flex-direction: column;
   gap: 10px;
   min-height: 134px;
-  padding: 14px;
+  padding: clamp(12px, 2vw, 14px);
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.92);
@@ -1339,6 +1670,59 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   align-self: flex-start;
 }
 
+.schedule-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.schedule-dialog-header__title,
+.schedule-surface-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--rm-text);
+}
+
+.schedule-dialog-header__subtitle {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--rm-text-soft);
+}
+
+.schedule-dialog-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.schedule-dialog-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.schedule-dialog-sidebar,
+.schedule-breakdown-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule-surface-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(14px, 2vw, 16px);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
 .schedule-editor-card {
   display: flex;
   flex-direction: column;
@@ -1375,6 +1759,72 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   font-size: 0.88rem;
   line-height: 1.6;
   color: var(--rm-text-soft);
+}
+
+.schedule-day-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.schedule-day-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.schedule-day-summary-card__label {
+  font-size: 0.8rem;
+  color: var(--rm-text-soft);
+}
+
+.schedule-day-summary-card__value {
+  font-weight: 700;
+  color: var(--rm-text);
+}
+
+.schedule-day-summary-card--response {
+  background: linear-gradient(
+    180deg,
+    rgba(75, 105, 130, 0.12),
+    rgba(255, 255, 255, 0.94)
+  );
+}
+
+.schedule-day-summary-card--available {
+  background: linear-gradient(
+    180deg,
+    rgba(22, 163, 74, 0.1),
+    rgba(255, 255, 255, 0.94)
+  );
+}
+
+.schedule-day-summary-card--maybe {
+  background: linear-gradient(
+    180deg,
+    rgba(245, 158, 11, 0.12),
+    rgba(255, 255, 255, 0.94)
+  );
+}
+
+.schedule-day-summary-card--unavailable {
+  background: linear-gradient(
+    180deg,
+    rgba(239, 68, 68, 0.1),
+    rgba(255, 255, 255, 0.94)
+  );
+}
+
+.schedule-day-summary-card--unanswered {
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0.12),
+    rgba(255, 255, 255, 0.94)
+  );
 }
 
 .schedule-breakdown-list {
@@ -1457,32 +1907,464 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
   cursor: pointer;
 }
 
-@media (max-width: 767px) {
-  .schedule-weekday-grid,
-  .schedule-day-grid {
+.schedule-table-scroll {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.schedule-table :deep(.p-datatable-wrapper),
+.schedule-table :deep(.p-datatable-table-container) {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-table :deep(.p-datatable-table) {
+  min-width: 840px;
+  width: max-content;
+  table-layout: auto;
+}
+
+.schedule-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-mobile-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.94);
+  text-align: left;
+}
+
+.schedule-mobile-row--selected {
+  border-color: rgba(75, 105, 130, 0.55);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.schedule-mobile-row__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.schedule-mobile-row__date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.schedule-mobile-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.schedule-mobile-row__date {
+  font-weight: 700;
+  color: var(--rm-text);
+}
+
+.schedule-mobile-row__meta-item,
+.schedule-mobile-row__hint,
+.schedule-mobile-row__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--rm-text-soft);
+}
+
+.schedule-mobile-row__hint {
+  flex-shrink: 0;
+}
+
+.schedule-mobile-row__meta-item,
+.schedule-mobile-row__count {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.schedule-mobile-row__meta-item--success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.schedule-mobile-row__meta-item--warn {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.schedule-mobile-row__meta-item--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.schedule-mobile-row__meta-item--secondary {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.schedule-mobile-row__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.schedule-mobile-row__count {
+  font-weight: 700;
+  color: var(--rm-text);
+}
+
+.schedule-mobile-row__count--success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.schedule-mobile-row__count--warn {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.schedule-mobile-row__count--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+@media (min-width: 768px) and (max-width: 1119px) {
+  .schedule-calendar-panel :deep(.p-panel-content),
+  .schedule-table-panel :deep(.p-panel-content) {
+    padding: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+
+  .schedule-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .schedule-weekday-grid {
-    display: none;
-  }
-
-  .schedule-day-card {
-    min-height: 122px;
+  .schedule-main-card__content {
+    gap: 16px;
   }
 
   .schedule-month-toolbar {
     align-items: stretch;
   }
 
-  .schedule-month-toolbar :deep(.p-button) {
+  .schedule-panel-header,
+  .schedule-panel-header__actions,
+  .schedule-selected-overview,
+  .schedule-dialog-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-dialog-header__meta {
+    justify-content: flex-start;
+  }
+
+  .schedule-selected-overview :deep(.p-button),
+  .schedule-panel-header__actions :deep(.p-button) {
     width: 100%;
   }
 
+  .schedule-calendar-grid {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .schedule-day-grid,
+  .schedule-weekday-grid {
+    gap: 8px;
+  }
+
+  .schedule-day-card {
+    min-height: 118px;
+    gap: 8px;
+  }
+
+  .schedule-day-card__date {
+    font-size: 1.12rem;
+  }
+
+  .schedule-day-card__weekday,
+  .schedule-count-pill {
+    font-size: 0.74rem;
+  }
+
+  .schedule-dialog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-day-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .schedule-calendar-panel :deep(.p-panel-content),
+  .schedule-table-panel :deep(.p-panel-content) {
+    padding: 12px;
+    overflow-x: hidden;
+  }
+
+  .schedule-month-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'title title'
+      'prev next';
+    align-items: stretch;
+  }
+
+  .schedule-month-toolbar > :nth-child(1) {
+    grid-area: prev;
+  }
+
+  .schedule-month-toolbar > :nth-child(2) {
+    grid-area: title;
+  }
+
+  .schedule-month-toolbar > :nth-child(3) {
+    grid-area: next;
+  }
+
+  .schedule-month-toolbar__title {
+    text-align: center;
+  }
+
+  .schedule-dialog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-selected-overview,
+  .schedule-dialog-header,
   .schedule-panel-header,
   .schedule-panel-header__actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .schedule-calendar-frame__hint {
+    font-size: 0.78rem;
+  }
+
+  .schedule-selected-overview {
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .schedule-dialog-header__meta {
+    justify-content: flex-start;
+  }
+
+  .schedule-calendar-grid {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .schedule-weekday-grid,
+  .schedule-day-grid {
+    gap: 6px;
+  }
+
+  .schedule-weekday-grid__item {
+    font-size: 0.74rem;
+  }
+
+  .schedule-day-card {
+    min-height: 96px;
+    padding: 8px 6px;
+    gap: 6px;
+  }
+
+  .schedule-day-card__date {
+    font-size: 1.04rem;
+  }
+
+  .schedule-day-card__weekday,
+  .schedule-count-pill {
+    font-size: 0.72rem;
+  }
+
+  .schedule-day-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-editor-card__actions,
+  .schedule-breakdown-section__head,
+  .schedule-breakdown-member__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-selected-overview :deep(.p-button),
+  .schedule-panel-header__actions :deep(.p-button) {
+    width: 100%;
+  }
+
+  .schedule-month-toolbar :deep(.p-button),
+  .schedule-selected-overview :deep(.p-button) {
+    justify-content: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .schedule-table-scroll {
+    margin: 0;
+    padding: 0 0 6px;
+  }
+
+  .schedule-table :deep(.p-datatable-table) {
+    min-width: 840px;
+  }
+
+  .schedule-month-toolbar :deep(.p-button) {
+    width: 100%;
+  }
+}
+
+@media (max-width: 379px) {
+  .schedule-notice-card {
+    padding: 14px;
+    border-radius: 18px;
+    font-size: 0.92rem;
+  }
+
+  .schedule-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-summary-card__content,
+  .schedule-surface-card {
+    padding: 12px;
+  }
+
+  .schedule-panel-header__subtitle,
+  .schedule-selected-overview__meta,
+  .schedule-editor-card__note,
+  .schedule-breakdown-member__note {
+    font-size: 0.82rem;
+  }
+
+  .schedule-selected-overview {
+    padding: 12px;
+  }
+
+  .schedule-selected-overview__body,
+  .schedule-selected-overview :deep(.p-button) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .schedule-selected-overview__title,
+  .schedule-dialog-header__title,
+  .schedule-surface-card__title {
+    font-size: 0.94rem;
+  }
+
+  .schedule-detail-dialog :deep(.p-dialog-header),
+  .schedule-detail-dialog :deep(.p-dialog-content) {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .schedule-calendar-grid {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .schedule-table-scroll {
+    margin: 0;
+    padding: 0 0 6px;
+  }
+
+  .schedule-weekday-grid__item {
+    font-size: 0.68rem;
+  }
+
+  .schedule-weekday-grid,
+  .schedule-day-grid {
+    gap: 4px;
+  }
+
+  .schedule-day-card {
+    min-height: 78px;
+    padding: 6px 4px;
+    gap: 4px;
+    border-radius: 14px;
+  }
+
+  .schedule-day-card__date {
+    font-size: 0.96rem;
+  }
+
+  .schedule-day-card__counts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .schedule-count-pill {
+    justify-content: center;
+    padding: 3px 2px;
+    border-radius: 10px;
+    font-size: 0.58rem;
+  }
+
+  .schedule-day-card__tag {
+    width: 100%;
+    align-self: stretch;
+    justify-content: center;
+    font-size: 0.62rem;
+    padding: 0.18rem 0.35rem;
+  }
+
+  .schedule-editor-statuses__button {
+    min-height: 34px;
+    font-size: 0.74rem;
+  }
+
+  .schedule-day-summary-card {
+    padding: 10px;
+  }
+
+  .schedule-day-summary-card__label {
+    font-size: 0.74rem;
+  }
+
+  .schedule-breakdown-section {
+    padding: 12px;
+  }
+
+  .schedule-table :deep(.p-datatable-table) {
+    min-width: 840px;
+  }
+
+  .schedule-mobile-row {
+    padding: 10px;
+  }
+
+  .schedule-mobile-row__head {
+    gap: 8px;
   }
 }
 </style>
