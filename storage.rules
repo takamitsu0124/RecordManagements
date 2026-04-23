@@ -19,7 +19,7 @@ service firebase.storage {
 		}
 
 		function guildPath(guildId) {
-			return /databases/(default)/documents/guild/$(guildId);
+			return /databases/(default)/documents/guilds/$(guildId);
 		}
 
 		function hasUsersDoc(uid) {

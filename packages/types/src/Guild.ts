@@ -17,8 +17,6 @@ export type Guild = {
   guildMemo: string
   /** ギルドロゴ */
   guildLogo: string
-  /** 共有 Google Calendar ID */
-  googleCalendarId: string
   /** ギルドメンバー */
   guildMember: { [uid: string]: { name: AppUser['displayName'] } }
 } & DefaultType
@@ -38,7 +36,6 @@ export function defaultGuild(): Guild {
     officialMembers: 0,
     guildMemo: '',
     guildLogo: '',
-    googleCalendarId: '',
     guildMember: {}
   }
 }

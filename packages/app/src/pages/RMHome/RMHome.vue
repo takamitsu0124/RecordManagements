@@ -8,7 +8,6 @@ import {
   globalLoginUserData,
   lacksGuildId,
 } from 'src/boot/main'
-import { googleCalendarPublicConfig } from 'src/config/googleCalendar'
 import RMIcon from 'src/components/RMIcon/RMIcon.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useRouter } from 'vue-router'
@@ -80,15 +79,12 @@ const homeActions = computed(() => {
     },
   ]
 
-  if (
-    (googleCalendarPublicConfig.enableGuildCalendar && hasGuildId.value) ||
-    googleCalendarPublicConfig.enablePersonalCalendar
-  ) {
+  if (hasGuildId.value) {
     actions.push({
       key: 'calendar',
       title: 'イベントカレンダー',
       description:
-        'Google Calendar の予定を一覧表示し、権限があればダイアログから更新できます。',
+        'ギルドの共有予定を一覧表示し、権限があればアプリ内でそのまま更新できます。',
       icon: 'calendar_month',
       label: '表示する',
       onClick: goToCalendar,
