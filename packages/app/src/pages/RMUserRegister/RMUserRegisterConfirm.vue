@@ -8,18 +8,16 @@ import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { usePopupFun } from 'src/components/RMPopup/RMPopupFun'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
-import { globalRegisterForm } from './register'
+import {
+  getRegisterErrorMessage,
+  globalRegisterForm,
+  roleLabels,
+} from './register'
 
 const router = useRouter()
 const { registerInfo, defaultRegisterInfo } = globalRegisterForm()
 const uid = ref<string>('')
 const errorMsg = ref<string>('')
-const roleLabels: Record<string, string> = {
-  admin: 'Admin',
-  guild_admin: 'Guild Admin',
-  member: 'General Member',
-}
-
 const registerSave = async () => {
   await useSpinner(async () => {
     let userCredential = ''
@@ -30,23 +28,7 @@ const registerSave = async () => {
       )
       uid.value = userCredential
     } catch (error) {
-      const errorCode =
-        typeof error === 'object' && error && 'code' in error
-          ? String(error.code)
-          : String(error)
-
-      if (errorCode === 'auth/email-already-in-use') {
-        errorMsg.value = 'このメールアドレスは既に登録されています'
-      }
-      if (errorCode === 'auth/invalid-email') {
-        errorMsg.value = 'メールアドレスの形式が無効です'
-      }
-      if (errorCode === 'auth/operation-not-allowed') {
-        errorMsg.value = 'メール/パスワードログインが有効になっていません。'
-      }
-      if (errorCode === 'auth/weak-password') {
-        errorMsg.value = 'パスワードが弱すぎます'
-      }
+      errorMsg.value = getRegisterErrorMessage(error)
       if (errorMsg.value) {
         usePopupFun({
           question: `${errorMsg.value}`,

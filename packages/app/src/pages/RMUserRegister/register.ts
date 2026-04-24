@@ -22,6 +22,12 @@ export interface RegisterInfo {
   role: AppRole
 }
 
+export const roleLabels: Record<AppRole, string> = {
+  admin: 'Admin',
+  guild_admin: 'Guild Admin',
+  member: 'General Member',
+}
+
 const registerInfo = ref<RegisterInfo>({
   email: '',
   password: '',
@@ -66,6 +72,28 @@ export function validateRegisterInfo(registerInfo: {
   }
 
   return null // エラーがない場合はnullを返す
+}
+
+export function getRegisterErrorMessage(error: unknown) {
+  const errorCode =
+    typeof error === 'object' && error && 'code' in error
+      ? String(error.code)
+      : String(error)
+
+  if (errorCode === 'auth/email-already-in-use') {
+    return 'このメールアドレスは既に登録されています'
+  }
+  if (errorCode === 'auth/invalid-email') {
+    return 'メールアドレスの形式が無効です'
+  }
+  if (errorCode === 'auth/operation-not-allowed') {
+    return 'メール/パスワードログインが有効になっていません。'
+  }
+  if (errorCode === 'auth/weak-password') {
+    return 'パスワードが弱すぎます'
+  }
+
+  return ''
 }
 
 export const globalRegisterForm = () => ({
