@@ -2175,6 +2175,7 @@ onBeforeUnmount(() => {
   .schedule-selected-overview {
     gap: 10px;
     overflow: hidden;
+    padding: 10px;
   }
 
   .schedule-dialog-header__meta {
@@ -2196,18 +2197,38 @@ onBeforeUnmount(() => {
   }
 
   .schedule-day-card {
-    min-height: 96px;
-    padding: 8px 6px;
-    gap: 6px;
+    min-height: 86px;
+    padding: 7px 5px;
+    gap: 5px;
   }
 
   .schedule-day-card__date {
-    font-size: 1.04rem;
+    font-size: 0.98rem;
   }
 
   .schedule-day-card__weekday,
   .schedule-count-pill {
-    font-size: 0.72rem;
+    font-size: 0.66rem;
+  }
+
+  .schedule-day-card__counts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .schedule-count-pill {
+    justify-content: center;
+    padding: 3px 2px;
+    border-radius: 10px;
+  }
+
+  .schedule-day-card__tag {
+    width: 100%;
+    align-self: stretch;
+    justify-content: center;
+    padding: 0.18rem 0.35rem;
+    font-size: 0.62rem;
   }
 
   .schedule-day-summary-grid {
@@ -2244,6 +2265,47 @@ onBeforeUnmount(() => {
 
   .schedule-month-toolbar :deep(.p-button) {
     width: 100%;
+  }
+}
+
+@media (min-width: 380px) and (max-width: 767px) {
+  .schedule-calendar-panel :deep(.p-panel-content),
+  .schedule-table-panel :deep(.p-panel-content) {
+    padding: 10px;
+  }
+
+  .schedule-calendar-frame__hint,
+  .schedule-panel-header__subtitle,
+  .schedule-selected-overview__meta {
+    font-size: 0.8rem;
+  }
+
+  .schedule-weekday-grid,
+  .schedule-day-grid {
+    gap: 5px;
+  }
+
+  .schedule-day-card {
+    min-height: 82px;
+  }
+
+  .schedule-mobile-list {
+    gap: 6px;
+  }
+
+  .schedule-mobile-row {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .schedule-mobile-row__date {
+    font-size: 0.92rem;
+  }
+
+  .schedule-mobile-row__meta-item,
+  .schedule-mobile-row__hint,
+  .schedule-mobile-row__count {
+    font-size: 0.72rem;
   }
 }
 
