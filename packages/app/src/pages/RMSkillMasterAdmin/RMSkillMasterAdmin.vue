@@ -813,13 +813,19 @@ const importSkillMasterCsv = async () => {
 }
 
 .skill-master-admin-code {
-  display: inline-flex;
+  display: inline-block;
+  max-width: 100%;
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.08);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     'Liberation Mono', 'Courier New', monospace;
   font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
 }
 
 .skill-master-admin-import-toolbar {
@@ -981,6 +987,13 @@ const importSkillMasterCsv = async () => {
 }
 
 @media (max-width: 767px) {
+  .skill-master-admin-code {
+    display: block;
+    width: 100%;
+    margin: 6px 0;
+    border-radius: 14px;
+  }
+
   .skill-master-admin-card__hero {
     flex-direction: column;
   }
