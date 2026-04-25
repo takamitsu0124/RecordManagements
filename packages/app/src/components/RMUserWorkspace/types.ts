@@ -13,8 +13,10 @@ export type ImageItem = {
 export type OwnedSkillRow = OwnedSkill & {
   index: number
   name: string
-  attr: string
-  type: string
+  element: string
+  equipmentType: string
+  skillType: string
+  skillName: string
   image: string
   masterMissing: boolean
 }

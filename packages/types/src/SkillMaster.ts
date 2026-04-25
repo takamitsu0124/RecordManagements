@@ -1,19 +1,31 @@
 import { DefaultType } from './default'
 
 export type SkillMaster = {
-	/** Skill display name */
+	/** スキルの表示名 */
 	name: string
-	/** Attribute such as fire/water/earth */
-	attr: string
-	/** Detailed category such as sword/link or ability/chain */
-	type: string
-	/** Cooldown text */
-	cool: string
-	/** Switch gauge text */
-	swGauge: string
-	/** Burst gauge text */
-	brGauge: string
-	/** Skill image URL */
+	/** レアリティ */
+	rarity: string
+	/** コスト */
+	cost: number | null
+	/** 装備種別 */
+	equipmentType: string
+	/** 消費SP */
+	sp: number | null
+	/** 自然属性 */
+	element: string
+	/** スキル種別 */
+	skillType: string
+	/** 攻撃属性 */
+	attackType: string
+	/** ブレイクゲージ増加量 */
+	breakGauge: number | null
+	/** スイッチゲージ増加量 */
+	switchGauge: number | null
+	/** クールダウン */
+	cooldown: number | null
+	/** 技名 */
+	skillName: string
+	/** スキル画像URL */
 	image: string
 } & DefaultType
 
@@ -25,11 +37,17 @@ export function defaultSkillMaster(): SkillMaster {
 		updatedAt: new Date(),
 		updatedBy: '',
 		name: '',
-		attr: '',
-		type: '',
-		cool: '',
-		swGauge: '',
-		brGauge: '',
+		rarity: '',
+		cost: null,
+		equipmentType: '',
+		sp: null,
+		element: '',
+		skillType: '通常',
+		attackType: '',
+		breakGauge: null,
+		switchGauge: null,
+		cooldown: null,
+		skillName: '',
 		image: '',
 	}
 }

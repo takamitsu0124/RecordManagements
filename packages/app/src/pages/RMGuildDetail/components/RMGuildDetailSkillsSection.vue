@@ -29,12 +29,14 @@ const props = defineProps<{
   skillErrorMessage: string | null
   skillTableFilters: {
     skillName: { value: string; matchMode: string }
-    attr: { value: string | null; matchMode: string }
-    type: { value: string | null; matchMode: string }
+    element: { value: string | null; matchMode: string }
+    equipmentType: { value: string | null; matchMode: string }
+    breakGauge: { value: number | null; matchMode: string }
+    switchGauge: { value: number | null; matchMode: string }
     level: { value: number | null; matchMode: string }
   }
-  attrOptions: Array<{ label: string; value: string }>
-  typeOptions: Array<{ label: string; value: string }>
+  elementOptions: Array<{ label: string; value: string }>
+  equipmentTypeOptions: Array<{ label: string; value: string }>
   searchGuide: string
   roleSeverity: (role: AppRole) => string
   attrSeverity: (attr: string) => string
@@ -45,8 +47,10 @@ const emit = defineEmits<{
     e: 'update:skillTableFilters',
     value: {
       skillName: { value: string; matchMode: string }
-      attr: { value: string | null; matchMode: string }
-      type: { value: string | null; matchMode: string }
+      element: { value: string | null; matchMode: string }
+      equipmentType: { value: string | null; matchMode: string }
+      breakGauge: { value: number | null; matchMode: string }
+      switchGauge: { value: number | null; matchMode: string }
       level: { value: number | null; matchMode: string }
     }
   ): void
@@ -71,18 +75,34 @@ const updateSkillNameFilter = (value: string) =>
     },
   })
 
-const updateAttrFilter = (value: string | null) =>
+const updateElementFilter = (value: string | null) =>
   updateSkillTableFilters({
-    attr: {
-      ...props.skillTableFilters.attr,
+    element: {
+      ...props.skillTableFilters.element,
       value,
     },
   })
 
-const updateTypeFilter = (value: string | null) =>
+const updateEquipmentTypeFilter = (value: string | null) =>
   updateSkillTableFilters({
-    type: {
-      ...props.skillTableFilters.type,
+    equipmentType: {
+      ...props.skillTableFilters.equipmentType,
+      value,
+    },
+  })
+
+const updateBreakGaugeFilter = (value: number | null) =>
+  updateSkillTableFilters({
+    breakGauge: {
+      ...props.skillTableFilters.breakGauge,
+      value,
+    },
+  })
+
+const updateSwitchGaugeFilter = (value: number | null) =>
+  updateSkillTableFilters({
+    switchGauge: {
+      ...props.skillTableFilters.switchGauge,
       value,
     },
   })
@@ -192,7 +212,7 @@ const updateLevelFilter = (value: number | null) =>
           <div>
             <div class="guild-panel-header__title">スキル検索</div>
             <div class="guild-panel-header__subtitle">
-              スキル名、属性、種別、熟練度を組み合わせて絞り込めます。
+              名称、技名、自然属性、装備種別、Break/Switch、熟練度を組み合わせて絞り込めます。
             </div>
           </div>
           <Tag
@@ -206,27 +226,41 @@ const updateLevelFilter = (value: number | null) =>
       <div class="guild-search-toolbar rm-filter-toolbar">
         <InputText
           :modelValue="skillTableFilters.skillName.value"
-          placeholder="スキル名・ID・メンバー名で検索"
+          placeholder="名称・技名・ID・メンバー名で検索"
           @update:modelValue="updateSkillNameFilter"
         />
         <Dropdown
-          :modelValue="skillTableFilters.attr.value"
-          :options="attrOptions"
+          :modelValue="skillTableFilters.element.value"
+          :options="elementOptions"
           optionLabel="label"
           optionValue="value"
           showClear
-          placeholder="属性"
-          @update:modelValue="updateAttrFilter"
+          placeholder="自然属性"
+          @update:modelValue="updateElementFilter"
         />
         <Dropdown
-          :modelValue="skillTableFilters.type.value"
-          :options="typeOptions"
+          :modelValue="skillTableFilters.equipmentType.value"
+          :options="equipmentTypeOptions"
           optionLabel="label"
           optionValue="value"
           showClear
           filter
-          placeholder="種別"
-          @update:modelValue="updateTypeFilter"
+          placeholder="装備種別"
+          @update:modelValue="updateEquipmentTypeFilter"
+        />
+        <InputNumber
+          :modelValue="skillTableFilters.switchGauge.value"
+          :min="0"
+          :useGrouping="false"
+          placeholder="Switch 以上"
+          @update:modelValue="updateSwitchGaugeFilter"
+        />
+        <InputNumber
+          :modelValue="skillTableFilters.breakGauge.value"
+          :min="0"
+          :useGrouping="false"
+          placeholder="Break 以上"
+          @update:modelValue="updateBreakGaugeFilter"
         />
         <InputNumber
           :modelValue="skillTableFilters.level.value"
@@ -319,21 +353,25 @@ const updateLevelFilter = (value: number | null) =>
                   />
                   <div>
                     <div class="guild-search-table__skill-name">
-                      {{ data.skillName }}
+                      {{ data.name }}
                     </div>
                     <div class="guild-search-table__skill-meta">
-                      ID: {{ data.skillId }}
+                      {{ data.skillName }} / ID: {{ data.skillId }}
                     </div>
                   </div>
                 </div>
               </template>
             </Column>
-            <Column field="attr" header="属性" style="width: 110px">
+            <Column field="element" header="自然属性" style="width: 110px">
               <template #body="{ data }">
-                <Tag :value="data.attr" :severity="attrSeverity(data.attr)" />
+                <Tag :value="data.element" :severity="attrSeverity(data.element)" />
               </template>
             </Column>
-            <Column field="type" header="種別" style="min-width: 180px" />
+            <Column field="equipmentType" header="装備種別" style="min-width: 180px" />
+            <Column field="skillType" header="スキル種別" style="width: 120px" />
+            <Column field="attackType" header="攻撃属性" style="width: 110px" />
+            <Column field="switchGauge" header="Switch" style="width: 100px" />
+            <Column field="breakGauge" header="Break" style="width: 100px" />
             <Column field="level" header="熟練度" style="width: 120px">
               <template #body="{ data }">
                 <Tag :value="`Lv.${data.level}`" severity="contrast" />
@@ -356,17 +394,16 @@ const updateLevelFilter = (value: number | null) =>
           >
             <div class="guild-skill-mobile-item__head">
               <div>
-                <div class="guild-skill-mobile-item__skill">
-                  {{ row.skillName }}
-                </div>
+                <div class="guild-skill-mobile-item__skill">{{ row.name }}</div>
                 <div class="guild-skill-mobile-item__meta">
-                  {{ row.userName }} / {{ row.type }}
+                  {{ row.userName }} / {{ row.skillName }}
                 </div>
               </div>
               <Tag :value="`Lv.${row.level}`" severity="contrast" />
             </div>
             <div class="guild-skill-mobile-item__tags">
-              <Tag :value="row.attr" :severity="attrSeverity(row.attr)" />
+              <Tag :value="row.element" :severity="attrSeverity(row.element)" />
+              <Tag :value="row.equipmentType" severity="secondary" />
               <Tag
                 :value="roleLabels[row.role]"
                 :severity="roleSeverity(row.role)"

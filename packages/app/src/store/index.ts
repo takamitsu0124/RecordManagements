@@ -7,6 +7,7 @@ import {
 	defaultUserSkill,
 } from '@rm/types'
 import { dbSkillMasterModule, dbUserSkillsModule } from '@rm/db'
+import { normalizeSkillMasterRecord } from 'src/helpers/skillMasterSchema'
 
 export type SkillDetail = SkillMaster & {
 	skillId: string
@@ -164,9 +165,9 @@ const fetchMasterData = async (): Promise<SkillMaster[]> => {
 
 		try {
 			await dbSkillMasterModule.fetch()
-			state.masterData = Array.from(dbSkillMasterModule.data.values()).sort((a, b) =>
-				a.name.localeCompare(b.name, 'ja')
-			)
+			state.masterData = Array.from(dbSkillMasterModule.data.values())
+				.map((skill) => normalizeSkillMasterRecord(skill))
+				.sort((a, b) => a.name.localeCompare(b.name, 'ja'))
 			masterDataLoaded = true
 			return state.masterData
 		} catch (error) {

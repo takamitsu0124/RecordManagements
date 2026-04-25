@@ -59,9 +59,9 @@ scripts/skill-master/
 `skill-master.csv` / `skill-master.json` の `image` 列には、Firebase Storage URL ではなく**ローカル画像への相対パス**または**ファイル名**を書きます。
 
 ```csv
-id,name,attr,type,cool,swGauge,brGauge,image
-skill-fire-sword-link-001,火剣リンク,火,片手直剣(リンク),10,20,30,sword/skill-fire-sword-link-001.png
-skill-water-bow-002,水弓,水,弓,10,20,30,bow/skill-water-bow-002.webp
+id,name,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,switchGauge,cooldown,skillName,image
+skill-fire-sword-001,【記死回生の一撃】キリト,RRR,15,片手直剣,35,火,通常,斬,62,80,20,スターバースト・ストリーム,sword/skill-fire-sword-001.png
+skill-water-bow-002,【極めし一撃】ストレア,RRR,24,弓,13,水,コネクト,突,32,32,90,ギガント・フロウ,bow/skill-water-bow-002.webp
 ```
 
 実行例:
@@ -85,7 +85,7 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
 
 ### Input format
 
-- Required keys: `id`, `name`, `attr`, `type`, `cool`, `swGauge`, `brGauge`, `image`
+- Required keys: `id`, `name`, `rarity`, `cost`, `equipmentType`, `sp`, `element`, `skillType`, `attackType`, `breakGauge`, `switchGauge`, `cooldown`, `skillName`, `image`
 - Supported file types: `.json`, `.csv`
 - JSON can be either an array or `{ "skills": [...] }`
 - Re-import is **id-based upsert**
@@ -96,27 +96,28 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
 type SkillMaster = {
   id: string
   name: string
-  attr: string
-  type: string
-  cool: string
-  swGauge: string
-  brGauge: string
+  rarity: string
+  cost: number | null
+  equipmentType: string
+  sp: number | null
+  element: string
+  skillType: string
+  attackType: string
+  breakGauge: number | null
+  switchGauge: number | null
+  cooldown: number | null
+  skillName: string
   image: string
 }
 ```
 
 ### Normalization rules
 
-- `attr` is normalized to: `火`, `水`, `土`, `聖`, `闇`, `風`, `無`
-- `type` is normalized to the detailed Firestore categories used for search and ownership registration
-- Weapon skills support:
-  - `片手直剣`, `細剣`, `棍棒`, `短剣`, `斧`, `槍`, `弓`, `盾`
-  - plus each variant: `(覚醒)`, `(アクセル)`, `(MOD)`, `(コネクト)`, `(チェイン)`, `(リンク)`
-- Ability skills support:
-  - `アビリティ`
-  - plus variants: `(覚醒)`, `(アクセル)`, `(チェイン)`, `(リンク)`
-- Existing coarse categories such as `バースト/フルバースト`, `フリー` are still accepted for compatibility
-- Synonyms like `fire`, `dark`, `sword_link`, `ability:chain` are converted automatically
+- `element` is normalized to: `火`, `水`, `土`, `聖`, `闇`, `風`, `無`
+- `equipmentType` is normalized to: `片手直剣`, `細剣`, `棍棒`, `短剣`, `斧`, `槍`, `弓`, `盾`, `アビリティ`, `バースト/フルバースト`, `フリー`
+- `skillType` is normalized to: `通常`, `覚醒`, `アクセル`, `MOD`, `コネクト`, `チェイン`, `リンク`, `バースト`, `フルバースト`
+- `attackType` is normalized to: `斬`, `突`, `打`
+- 旧スキーマの `attr` / `type` / `cool` / `swGauge` / `brGauge` は読み込み時に新スキーマへ寄せて扱えます
 
 ### Safe update policy
 

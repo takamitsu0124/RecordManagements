@@ -7,6 +7,7 @@ import DataTable from 'primevue/datatable'
 import Divider from 'primevue/divider'
 import Dropdown from 'primevue/dropdown'
 import FileUpload from 'primevue/fileupload'
+import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
@@ -24,6 +25,14 @@ import {
   SkillMasterImportChangeType,
   SkillMasterImportPayload,
 } from 'src/helpers/skillMasterCsv'
+import {
+  attackTypeOptions,
+  buildSkillMasterSearchText,
+  normalizeSkillMasterRecord,
+  skillElements,
+  skillEquipmentTypes,
+  skillTypeOptions,
+} from 'src/helpers/skillMasterSchema'
 
 type SelectOption = {
   label: string
@@ -46,67 +55,61 @@ type SkillMasterImportResultRow = {
 type SkillMasterImportStats = {
   total: number
   valid: number
-  normalizedAttrCount: number
-  normalizedTypeCount: number
+  normalizedElementCount: number
+  normalizedEquipmentTypeCount: number
+  normalizedSkillTypeCount: number
+  normalizedAttackTypeCount: number
 }
 
 // CSV ヘッダを変更したい場合はこの配列だけを更新してください。
 // 画面内の案内文と必須ヘッダ判定の両方に反映されます。
 const requiredSkillMasterCsvHeaders = [
   'id', // skill_master ドキュメントID
-  'name', // スキルの表示名
-  'attr', // 属性 (火 / 水 / 土 / 聖 / 闇 / 風 / 無)
-  'type', // 種別 (武器種や派生種別を含む canonical type)
-  'cool', // クールタイム表記
-  'swGauge', // スイッチゲージ量の表記
-  'brGauge', // バーストゲージ量の表記
+  'name', // カードの表示名 (例: 【記死回生の一撃】キリト)
+  'rarity', // レアリティ
+  'cost', // コスト数値
+  'equipmentType', // 装備種別 (例: 片手直剣)
+  'sp', // 消費SP数値
+  'element', // 自然属性 (火 / 水 / 土 / 聖 / 闇 / 風 / 無)
+  'skillType', // スキル種別 (通常 / コネクト / チェイン / MOD / 覚醒 / アクセル / バースト など)
+  'attackType', // 攻撃属性 (斬 / 突 / 打)
+  'breakGauge', // ブレイクゲージ増加量
+  'switchGauge', // スイッチゲージ増加量
+  'cooldown', // クールダウン数値
+  'skillName', // 技名 (例: スターバースト・ストリーム)
   'image', // スキル画像URL
 ]
 const skillMasterCsvHeaderText = requiredSkillMasterCsvHeaders.join(',')
 
-const attrOptions: SelectOption[] = [
-  { label: '火', value: '火' },
-  { label: '水', value: '水' },
-  { label: '土', value: '土' },
-  { label: '聖', value: '聖' },
-  { label: '闇', value: '闇' },
-  { label: '風', value: '風' },
-  { label: '無', value: '無' },
-]
-
-const weaponBases = ['片手直剣', '細剣', '棍棒', '短剣', '斧', '槍', '弓', '盾']
-const weaponVariants = [
-  '覚醒',
-  'アクセル',
-  'MOD',
-  'コネクト',
-  'チェイン',
-  'リンク',
-]
-const abilityVariants = ['覚醒', 'アクセル', 'チェイン', 'リンク']
-
-const typeOptions: SelectOption[] = [
-  ...weaponBases.flatMap((base) => [
-    { label: base, value: base },
-    ...weaponVariants.map((variant) => ({
-      label: `${base} (${variant})`,
-      value: `${base}(${variant})`,
-    })),
-  ]),
-  { label: 'アビリティ', value: 'アビリティ' },
-  ...abilityVariants.map((variant) => ({
-    label: `アビリティ (${variant})`,
-    value: `アビリティ(${variant})`,
-  })),
-  { label: 'バースト/フルバースト', value: 'バースト/フルバースト' },
-  { label: 'フリー', value: 'フリー' },
-]
+const rarityOptions: SelectOption[] = ['N', 'R', 'RR', 'RRR', 'SR', 'SSR', 'UR'].map(
+  (value) => ({ label: value, value })
+)
+const elementOptions: SelectOption[] = skillElements.map((value) => ({
+  label: value,
+  value,
+}))
+const equipmentTypeOptions: SelectOption[] = skillEquipmentTypes.map((value) => ({
+  label: value,
+  value,
+}))
+const skillTypeSelectOptions: SelectOption[] = skillTypeOptions.map((value) => ({
+  label: value,
+  value,
+}))
+const attackTypeSelectOptions: SelectOption[] = attackTypeOptions.map((value) => ({
+  label: value,
+  value,
+}))
 
 const skillMasterList = ref<SkillMaster[]>([])
 const isLoading = ref(true)
 const searchText = ref('')
-const selectedAttr = ref('')
-const selectedType = ref('')
+const selectedElement = ref('')
+const selectedEquipmentType = ref('')
+const selectedSkillType = ref('')
+const selectedAttackType = ref('')
+const minBreakGauge = ref<number | null>(null)
+const minSwitchGauge = ref<number | null>(null)
 const isEditMode = ref(false)
 const form = ref<SkillMaster>(defaultSkillMaster())
 const errorMessage = ref('')
@@ -156,17 +159,33 @@ const filteredSkillMasterList = computed(() => {
 
   return skillMasterList.value.filter((skill) => {
     const matchesText =
-      query === '' ||
-      [skill.id, skill.name, skill.attr, skill.type].some((value) =>
-        value.toLowerCase().includes(query)
-      )
+      query === '' || buildSkillMasterSearchText(skill).includes(query)
 
-    const matchesAttr =
-      selectedAttr.value === '' || skill.attr === selectedAttr.value
-    const matchesType =
-      selectedType.value === '' || skill.type === selectedType.value
+    const matchesElement =
+      selectedElement.value === '' || skill.element === selectedElement.value
+    const matchesEquipmentType =
+      selectedEquipmentType.value === '' ||
+      skill.equipmentType === selectedEquipmentType.value
+    const matchesSkillType =
+      selectedSkillType.value === '' || skill.skillType === selectedSkillType.value
+    const matchesAttackType =
+      selectedAttackType.value === '' || skill.attackType === selectedAttackType.value
+    const matchesBreakGauge =
+      minBreakGauge.value === null ||
+      (skill.breakGauge ?? Number.NEGATIVE_INFINITY) >= minBreakGauge.value
+    const matchesSwitchGauge =
+      minSwitchGauge.value === null ||
+      (skill.switchGauge ?? Number.NEGATIVE_INFINITY) >= minSwitchGauge.value
 
-    return matchesText && matchesAttr && matchesType
+    return (
+      matchesText &&
+      matchesElement &&
+      matchesEquipmentType &&
+      matchesSkillType &&
+      matchesAttackType &&
+      matchesBreakGauge &&
+      matchesSwitchGauge
+    )
   })
 })
 
@@ -213,9 +232,9 @@ const loadSkillMaster = async () => {
   try {
     isLoading.value = true
     await dbSkillMasterModule.fetch()
-    skillMasterList.value = Array.from(dbSkillMasterModule.data.values()).sort(
-      (a, b) => a.name.localeCompare(b.name, 'ja')
-    )
+    skillMasterList.value = Array.from(dbSkillMasterModule.data.values())
+      .map((skill) => normalizeSkillMasterRecord(skill))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
   } catch (error) {
     notifyError('スキルマスターの読み込みに失敗しました。')
     console.error('Failed to fetch skill master:', error)
@@ -245,8 +264,14 @@ const validateForm = () => {
   const nextId = form.value.id.trim()
   const nextName = form.value.name.trim()
 
-  if (!nextId || !nextName || !form.value.attr || !form.value.type) {
-    return 'ID、名称、属性、種別は必須です。'
+  if (
+    !nextId ||
+    !nextName ||
+    !form.value.element ||
+    !form.value.equipmentType ||
+    !form.value.skillName.trim()
+  ) {
+    return 'ID、名称、自然属性、装備種別、技名は必須です。'
   }
 
   if (
@@ -271,11 +296,12 @@ const saveSkillMaster = async () => {
     ...form.value,
     id: form.value.id.trim(),
     name: form.value.name.trim(),
-    attr: form.value.attr.trim(),
-    type: form.value.type.trim(),
-    cool: form.value.cool.trim(),
-    swGauge: form.value.swGauge.trim(),
-    brGauge: form.value.brGauge.trim(),
+    rarity: form.value.rarity.trim(),
+    equipmentType: form.value.equipmentType.trim(),
+    element: form.value.element.trim(),
+    skillType: form.value.skillType.trim() || '通常',
+    attackType: form.value.attackType.trim(),
+    skillName: form.value.skillName.trim(),
     image: form.value.image.trim(),
   }
 
@@ -367,15 +393,23 @@ const importSkillMasterCsv = async () => {
         ...defaultSkillMaster(),
         id: row.id,
         name: row.name,
-        attr: row.attr,
-        type: row.type,
-        cool: row.cool,
-        swGauge: row.swGauge,
-        brGauge: row.brGauge,
+        rarity: row.rarity,
+        cost: row.cost,
+        equipmentType: row.equipmentType,
+        sp: row.sp,
+        element: row.element,
+        skillType: row.skillType,
+        attackType: row.attackType,
+        breakGauge: row.breakGauge,
+        switchGauge: row.switchGauge,
+        cooldown: row.cooldown,
+        skillName: row.skillName,
         image: row.image,
       }
 
       try {
+        const action: Exclude<SkillMasterImportChangeType, 'unchanged'> =
+          row.changeType === 'insert' ? 'insert' : 'update'
         if (row.changeType === 'insert') {
           await dbSkillMasterModule.doc(payload.id).insert(payload)
         } else {
@@ -386,16 +420,18 @@ const importSkillMasterCsv = async () => {
           rowNumber: row.rowNumber,
           id: row.id,
           name: row.name,
-          action: row.changeType,
+          action,
           status: 'success',
-          message: row.changeType === 'insert' ? '登録しました。' : '更新しました。',
+          message: action === 'insert' ? '登録しました。' : '更新しました。',
         })
       } catch (error) {
+        const action: Exclude<SkillMasterImportChangeType, 'unchanged'> =
+          row.changeType === 'insert' ? 'insert' : 'update'
         results.push({
           rowNumber: row.rowNumber,
           id: row.id,
           name: row.name,
-          action: row.changeType,
+          action,
           status: 'error',
           message:
             error instanceof Error && error.message
@@ -493,15 +529,27 @@ const importSkillMasterCsv = async () => {
                 </div>
               </div>
               <div class="skill-master-admin-metric">
-                <div class="skill-master-admin-metric__label">属性正規化</div>
+                <div class="skill-master-admin-metric__label">自然属性正規化</div>
                 <div class="skill-master-admin-metric__value">
-                  {{ skillCsvStats.normalizedAttrCount }}
+                  {{ skillCsvStats.normalizedElementCount }}
                 </div>
               </div>
               <div class="skill-master-admin-metric">
-                <div class="skill-master-admin-metric__label">種別正規化</div>
+                <div class="skill-master-admin-metric__label">装備種別正規化</div>
                 <div class="skill-master-admin-metric__value">
-                  {{ skillCsvStats.normalizedTypeCount }}
+                  {{ skillCsvStats.normalizedEquipmentTypeCount }}
+                </div>
+              </div>
+              <div class="skill-master-admin-metric">
+                <div class="skill-master-admin-metric__label">スキル種別正規化</div>
+                <div class="skill-master-admin-metric__value">
+                  {{ skillCsvStats.normalizedSkillTypeCount }}
+                </div>
+              </div>
+              <div class="skill-master-admin-metric">
+                <div class="skill-master-admin-metric__label">攻撃属性正規化</div>
+                <div class="skill-master-admin-metric__value">
+                  {{ skillCsvStats.normalizedAttackTypeCount }}
                 </div>
               </div>
             </div>
@@ -544,8 +592,11 @@ const importSkillMasterCsv = async () => {
                 <Column field="rowNumber" header="行" style="width: 72px" />
                 <Column field="id" header="ID" />
                 <Column field="name" header="名称" />
-                <Column field="attr" header="属性" style="width: 90px" />
-                <Column field="type" header="種別" />
+                <Column field="skillName" header="技名" />
+                <Column field="element" header="自然属性" style="width: 110px" />
+                <Column field="equipmentType" header="装備種別" />
+                <Column field="skillType" header="スキル種別" style="width: 120px" />
+                <Column field="attackType" header="攻撃属性" style="width: 110px" />
                 <Column header="差分" style="width: 140px">
                   <template #body="{ data }">
                     <Tag
@@ -619,30 +670,79 @@ const importSkillMasterCsv = async () => {
 
                 <div class="skill-master-admin-field">
                   <label class="skill-master-admin-label">名称 *</label>
-                  <InputText v-model="form.name" placeholder="スキル名" />
+                  <InputText
+                    v-model="form.name"
+                    placeholder="【記死回生の一撃】キリト"
+                  />
                 </div>
 
                 <div class="skill-master-admin-grid">
                   <div class="skill-master-admin-field">
-                    <label class="skill-master-admin-label">属性 *</label>
+                    <label class="skill-master-admin-label">レアリティ</label>
                     <Dropdown
-                      v-model="form.attr"
-                      :options="attrOptions"
+                      v-model="form.rarity"
+                      :options="rarityOptions"
                       optionLabel="label"
                       optionValue="value"
-                      placeholder="属性を選択"
+                      showClear
+                      placeholder="レアリティを選択"
                     />
                   </div>
 
                   <div class="skill-master-admin-field">
-                    <label class="skill-master-admin-label">種別 *</label>
+                    <label class="skill-master-admin-label">自然属性 *</label>
                     <Dropdown
-                      v-model="form.type"
-                      :options="typeOptions"
+                      v-model="form.element"
+                      :options="elementOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="自然属性を選択"
+                    />
+                  </div>
+                </div>
+
+                <div class="skill-master-admin-grid">
+                  <div class="skill-master-admin-field">
+                    <label class="skill-master-admin-label">装備種別 *</label>
+                    <Dropdown
+                      v-model="form.equipmentType"
+                      :options="equipmentTypeOptions"
                       optionLabel="label"
                       optionValue="value"
                       filter
-                      placeholder="種別を選択"
+                      placeholder="装備種別を選択"
+                    />
+                  </div>
+                  <div class="skill-master-admin-field">
+                    <label class="skill-master-admin-label">スキル種別</label>
+                    <Dropdown
+                      v-model="form.skillType"
+                      :options="skillTypeSelectOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      filter
+                      placeholder="スキル種別を選択"
+                    />
+                  </div>
+                </div>
+
+                <div class="skill-master-admin-grid">
+                  <div class="skill-master-admin-field">
+                    <label class="skill-master-admin-label">攻撃属性</label>
+                    <Dropdown
+                      v-model="form.attackType"
+                      :options="attackTypeSelectOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      showClear
+                      placeholder="攻撃属性を選択"
+                    />
+                  </div>
+                  <div class="skill-master-admin-field">
+                    <label class="skill-master-admin-label">技名 *</label>
+                    <InputText
+                      v-model="form.skillName"
+                      placeholder="スターバースト・ストリーム"
                     />
                   </div>
                 </div>
@@ -651,16 +751,56 @@ const importSkillMasterCsv = async () => {
                   class="skill-master-admin-grid skill-master-admin-grid--gauge"
                 >
                   <div class="skill-master-admin-field">
-                    <label class="skill-master-admin-label">cool</label>
-                    <InputText v-model="form.cool" placeholder="15" />
+                    <label class="skill-master-admin-label">cost</label>
+                    <InputNumber
+                      v-model="form.cost"
+                      :useGrouping="false"
+                      inputClass="w-full"
+                      placeholder="24"
+                    />
                   </div>
                   <div class="skill-master-admin-field">
-                    <label class="skill-master-admin-label">swGauge</label>
-                    <InputText v-model="form.swGauge" placeholder="12" />
+                    <label class="skill-master-admin-label">sp</label>
+                    <InputNumber
+                      v-model="form.sp"
+                      :useGrouping="false"
+                      inputClass="w-full"
+                      placeholder="35"
+                    />
                   </div>
                   <div class="skill-master-admin-field">
-                    <label class="skill-master-admin-label">brGauge</label>
-                    <InputText v-model="form.brGauge" placeholder="24" />
+                    <label class="skill-master-admin-label">cooldown</label>
+                    <InputNumber
+                      v-model="form.cooldown"
+                      :useGrouping="false"
+                      :minFractionDigits="0"
+                      :maxFractionDigits="1"
+                      inputClass="w-full"
+                      placeholder="20"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  class="skill-master-admin-grid skill-master-admin-grid--gauge"
+                >
+                  <div class="skill-master-admin-field">
+                    <label class="skill-master-admin-label">switchGauge</label>
+                    <InputNumber
+                      v-model="form.switchGauge"
+                      :useGrouping="false"
+                      inputClass="w-full"
+                      placeholder="80"
+                    />
+                  </div>
+                  <div class="skill-master-admin-field">
+                    <label class="skill-master-admin-label">breakGauge</label>
+                    <InputNumber
+                      v-model="form.breakGauge"
+                      :useGrouping="false"
+                      inputClass="w-full"
+                      placeholder="62"
+                    />
                   </div>
                 </div>
 
@@ -706,31 +846,63 @@ const importSkillMasterCsv = async () => {
               <RMPageHeader
                 title="登録済みスキル"
                 :subtitle="skillCountLabel"
-                description="検索文字、属性、種別の 3 つで絞り込み、結果が 0 件でも状態が分かるようにしています。"
+                description="名称、技名、自然属性、装備種別、スキル種別、攻撃属性、ゲージ量で絞り込めます。"
                 icon="pi pi-search"
               />
 
               <div class="skill-master-admin-filter-row rm-filter-toolbar">
                 <InputText
                   v-model="searchText"
-                  placeholder="ID・名称・属性・種別で検索"
+                  placeholder="ID・名称・技名・キャラ名で検索"
                 />
                 <Dropdown
-                  v-model="selectedAttr"
-                  :options="attrOptions"
+                  v-model="selectedElement"
+                  :options="elementOptions"
                   optionLabel="label"
                   optionValue="value"
                   showClear
-                  placeholder="属性"
+                  placeholder="自然属性"
                 />
                 <Dropdown
-                  v-model="selectedType"
-                  :options="typeOptions"
+                  v-model="selectedEquipmentType"
+                  :options="equipmentTypeOptions"
                   optionLabel="label"
                   optionValue="value"
                   filter
                   showClear
-                  placeholder="種別"
+                  placeholder="装備種別"
+                />
+              </div>
+
+              <div class="skill-master-admin-filter-row rm-filter-toolbar">
+                <Dropdown
+                  v-model="selectedSkillType"
+                  :options="skillTypeSelectOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  filter
+                  showClear
+                  placeholder="スキル種別"
+                />
+                <Dropdown
+                  v-model="selectedAttackType"
+                  :options="attackTypeSelectOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  showClear
+                  placeholder="攻撃属性"
+                />
+                <InputNumber
+                  v-model="minSwitchGauge"
+                  :useGrouping="false"
+                  inputClass="w-full"
+                  placeholder="Switch Gauge 以上"
+                />
+                <InputNumber
+                  v-model="minBreakGauge"
+                  :useGrouping="false"
+                  inputClass="w-full"
+                  placeholder="Break Gauge 以上"
                 />
               </div>
 
@@ -751,16 +923,22 @@ const importSkillMasterCsv = async () => {
                   <RMEmptyState
                     icon="pi pi-search"
                     title="条件に一致するスキルがありません"
-                    message="検索文字や属性・種別を見直すと、結果がすぐに再表示されます。"
+                    message="検索文字や各フィルタ条件を見直すと、結果がすぐに再表示されます。"
                   />
                 </template>
                 <Column field="id" header="ID" />
                 <Column field="name" header="名称" />
-                <Column field="attr" header="属性" />
-                <Column field="type" header="種別" />
-                <Column field="cool" header="cool" />
-                <Column field="swGauge" header="swGauge" />
-                <Column field="brGauge" header="brGauge" />
+                <Column field="skillName" header="技名" />
+                <Column field="rarity" header="レア" style="width: 100px" />
+                <Column field="element" header="自然属性" style="width: 110px" />
+                <Column field="equipmentType" header="装備種別" />
+                <Column field="skillType" header="スキル種別" style="width: 120px" />
+                <Column field="attackType" header="攻撃属性" style="width: 110px" />
+                <Column field="cost" header="Cost" style="width: 100px" />
+                <Column field="sp" header="SP" style="width: 100px" />
+                <Column field="cooldown" header="Cooldown" style="width: 120px" />
+                <Column field="switchGauge" header="Switch" style="width: 110px" />
+                <Column field="breakGauge" header="Break" style="width: 110px" />
                 <Column header="操作" style="width: 110px">
                   <template #body="{ data }">
                     <Button

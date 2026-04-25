@@ -21,18 +21,18 @@ const props = defineProps<{
   visibleSkillCatalogRows: SkillCatalogRow[]
   hiddenSkillCatalogCount: number
   skillCatalogQuery: string
-  skillCatalogAttr: string
-  skillCatalogType: string
+  skillCatalogElement: string
+  skillCatalogEquipmentType: string
   skillCatalogStatus: SkillCatalogStatus
-  skillCatalogAttrOptions: string[]
-  skillCatalogTypeOptions: string[]
+  skillCatalogElementOptions: string[]
+  skillCatalogEquipmentTypeOptions: string[]
 }>()
 
 const emit = defineEmits<{
   (e: 'update:ownedSkills', value: OwnedSkill[]): void
   (e: 'update:skillCatalogQuery', value: string): void
-  (e: 'update:skillCatalogAttr', value: string): void
-  (e: 'update:skillCatalogType', value: string): void
+  (e: 'update:skillCatalogElement', value: string): void
+  (e: 'update:skillCatalogEquipmentType', value: string): void
   (e: 'update:skillCatalogStatus', value: SkillCatalogStatus): void
   (e: 'toggle-skill', skill: SkillMaster): void
   (e: 'remove-skill', skillId: string): void
@@ -44,10 +44,10 @@ const skillCatalogQueryModel = computed({
   set: (value: string) => emit('update:skillCatalogQuery', value),
 })
 
-const setSkillCatalogAttr = (value: string) =>
-  emit('update:skillCatalogAttr', value)
-const setSkillCatalogType = (value: string) =>
-  emit('update:skillCatalogType', value)
+const setSkillCatalogElement = (value: string) =>
+  emit('update:skillCatalogElement', value)
+const setSkillCatalogEquipmentType = (value: string) =>
+  emit('update:skillCatalogEquipmentType', value)
 const setSkillCatalogStatus = (value: SkillCatalogStatus) =>
   emit('update:skillCatalogStatus', value)
 
@@ -84,13 +84,13 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
             </p>
           </div>
 
-          <RMInput
-            v-model="skillCatalogQueryModel"
-            search
-            shadow
-            class="skill-checker__search"
-            placeholder="スキル名・ID・属性・種別で検索"
-          />
+            <RMInput
+              v-model="skillCatalogQueryModel"
+              search
+              shadow
+              class="skill-checker__search"
+              placeholder="名称・技名・ID・キャラ名で検索"
+            />
 
           <div class="skill-checker__filter-group">
             <div class="skill-checker__filter-label">表示</div>
@@ -129,56 +129,64 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
           </div>
 
           <div class="skill-checker__filter-group">
-            <div class="skill-checker__filter-label">属性</div>
-            <div class="skill-checker__filter-actions">
-              <Button
-                type="button"
-                label="すべて"
-                size="small"
-                :severity="
-                  skillCatalogAttr === 'all' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogAttr !== 'all'"
-                @click="setSkillCatalogAttr('all')"
-              />
-              <Button
-                v-for="attr in skillCatalogAttrOptions"
-                :key="attr"
-                type="button"
-                :label="attr"
-                size="small"
-                :severity="skillCatalogAttr === attr ? 'contrast' : 'secondary'"
-                :outlined="skillCatalogAttr !== attr"
-                @click="setSkillCatalogAttr(attr)"
-              />
+              <div class="skill-checker__filter-label">自然属性</div>
+              <div class="skill-checker__filter-actions">
+                <Button
+                  type="button"
+                  label="すべて"
+                  size="small"
+                  :severity="
+                    skillCatalogElement === 'all' ? 'contrast' : 'secondary'
+                  "
+                  :outlined="skillCatalogElement !== 'all'"
+                  @click="setSkillCatalogElement('all')"
+                />
+                <Button
+                  v-for="element in skillCatalogElementOptions"
+                  :key="element"
+                  type="button"
+                  :label="element"
+                  size="small"
+                  :severity="
+                    skillCatalogElement === element ? 'contrast' : 'secondary'
+                  "
+                  :outlined="skillCatalogElement !== element"
+                  @click="setSkillCatalogElement(element)"
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="skill-checker__filter-group">
-            <div class="skill-checker__filter-label">種別</div>
-            <div class="skill-checker__filter-actions">
-              <Button
-                type="button"
-                label="すべて"
-                size="small"
-                :severity="
-                  skillCatalogType === 'all' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogType !== 'all'"
-                @click="setSkillCatalogType('all')"
-              />
-              <Button
-                v-for="type in skillCatalogTypeOptions"
-                :key="type"
-                type="button"
-                :label="type"
-                size="small"
-                :severity="skillCatalogType === type ? 'contrast' : 'secondary'"
-                :outlined="skillCatalogType !== type"
-                @click="setSkillCatalogType(type)"
-              />
+            <div class="skill-checker__filter-group">
+              <div class="skill-checker__filter-label">装備種別</div>
+              <div class="skill-checker__filter-actions">
+                <Button
+                  type="button"
+                  label="すべて"
+                  size="small"
+                  :severity="
+                    skillCatalogEquipmentType === 'all'
+                      ? 'contrast'
+                      : 'secondary'
+                  "
+                  :outlined="skillCatalogEquipmentType !== 'all'"
+                  @click="setSkillCatalogEquipmentType('all')"
+                />
+                <Button
+                  v-for="equipmentType in skillCatalogEquipmentTypeOptions"
+                  :key="equipmentType"
+                  type="button"
+                  :label="equipmentType"
+                  size="small"
+                  :severity="
+                    skillCatalogEquipmentType === equipmentType
+                      ? 'contrast'
+                      : 'secondary'
+                  "
+                  :outlined="skillCatalogEquipmentType !== equipmentType"
+                  @click="setSkillCatalogEquipmentType(equipmentType)"
+                />
+              </div>
             </div>
-          </div>
 
           <div class="skill-checker__summary">
             <div class="skill-checker__summary-tags">
@@ -240,9 +248,11 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
                 </div>
                 <div class="skill-catalog-card__meta">{{ skill.id }}</div>
                 <div class="skill-catalog-card__tags">
-                  <Tag :value="skill.attr" severity="secondary" />
-                  <Tag :value="skill.type" severity="secondary" />
+                  <Tag :value="skill.element" severity="secondary" />
+                  <Tag :value="skill.equipmentType" severity="secondary" />
+                  <Tag :value="skill.skillType" severity="secondary" />
                 </div>
+                <div class="skill-catalog-card__meta">{{ skill.skillName }}</div>
                 <div class="skill-catalog-card__hint">
                   {{
                     skill.isOwned
@@ -311,13 +321,17 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
                 />
               </div>
               <div class="owned-skill-item__tags">
-                <Tag :value="skill.attr" severity="secondary" />
-                <Tag :value="skill.type" severity="secondary" />
+                <Tag :value="skill.element" severity="secondary" />
+                <Tag :value="skill.equipmentType" severity="secondary" />
+                <Tag :value="skill.skillType" severity="secondary" />
                 <Tag
                   v-if="skill.masterMissing"
                   value="master未登録"
                   severity="danger"
                 />
+              </div>
+              <div class="owned-skill-item__meta">
+                {{ skill.skillName }}
               </div>
               <div class="owned-skill-item__level">
                 <div class="user-workspace-field__label">熟練度</div>

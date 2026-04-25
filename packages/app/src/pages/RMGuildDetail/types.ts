@@ -13,9 +13,15 @@ export type GuildSkillRow = {
   userName: string
   role: AppRole
   skillId: string
+  name: string
   skillName: string
-  attr: string
-  type: string
+  element: string
+  equipmentType: string
+  skillType: string
+  attackType: string
+  breakGauge: number | null
+  switchGauge: number | null
+  cooldown: number | null
   level: number
   unlockRate: number
   unlockRateText: string

@@ -44,6 +44,7 @@ import {
   notifySuccess,
 } from 'src/composables/useAppNotifications'
 import { useSkillStore } from 'src/store'
+import { buildSkillMasterSearchText } from 'src/helpers/skillMasterSchema'
 
 const props = withDefaults(
   defineProps<{
@@ -104,8 +105,8 @@ const originalGameStartDateAtStr = ref<string | null>(null)
 const originalBirthDateAtStr = ref<string | null>(null)
 
 const skillCatalogQuery = ref('')
-const skillCatalogAttr = ref('all')
-const skillCatalogType = ref('all')
+const skillCatalogElement = ref('all')
+const skillCatalogEquipmentType = ref('all')
 const skillCatalogStatus = ref<SkillCatalogStatus>('unowned')
 const imageUploadKey = ref(0)
 
@@ -148,17 +149,19 @@ const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
           name: ownedSkill.skillId,
         }
 
-    return {
-      index,
-      skillId: ownedSkill.skillId,
-      level: ownedSkill.level,
-      name: fallbackMaster.name || ownedSkill.skillId,
-      attr: fallbackMaster.attr || '未設定',
-      type: fallbackMaster.type || '未設定',
-      image: fallbackMaster.image,
-      masterMissing: !master,
-    }
-  })
+      return {
+        index,
+        skillId: ownedSkill.skillId,
+        level: ownedSkill.level,
+        name: fallbackMaster.name || ownedSkill.skillId,
+        element: fallbackMaster.element || '未設定',
+        equipmentType: fallbackMaster.equipmentType || '未設定',
+        skillType: fallbackMaster.skillType || '通常',
+        skillName: fallbackMaster.skillName || '未設定',
+        image: fallbackMaster.image,
+        masterMissing: !master,
+      }
+    })
 )
 
 const ownedSkillIdSet = computed(
@@ -173,14 +176,18 @@ const modeLabel = computed(() =>
 )
 const skillCatalogPreviewLimit = 60
 
-const skillCatalogAttrOptions = computed(() =>
-  [...new Set(skillStore.state.masterData.map((skill) => skill.attr.trim()))]
+const skillCatalogElementOptions = computed(() =>
+  [...new Set(skillStore.state.masterData.map((skill) => skill.element.trim()))]
     .filter((value): value is string => value !== '')
     .sort((a, b) => a.localeCompare(b, 'ja'))
 )
 
-const skillCatalogTypeOptions = computed(() =>
-  [...new Set(skillStore.state.masterData.map((skill) => skill.type.trim()))]
+const skillCatalogEquipmentTypeOptions = computed(() =>
+  [
+    ...new Set(
+      skillStore.state.masterData.map((skill) => skill.equipmentType.trim())
+    ),
+  ]
     .filter((value): value is string => value !== '')
     .sort((a, b) => a.localeCompare(b, 'ja'))
 )
@@ -202,20 +209,18 @@ const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
       if (skillCatalogStatus.value === 'owned' && !skill.isOwned) return false
       if (skillCatalogStatus.value === 'unowned' && skill.isOwned) return false
       if (
-        skillCatalogAttr.value !== 'all' &&
-        skill.attr !== skillCatalogAttr.value
+        skillCatalogElement.value !== 'all' &&
+        skill.element !== skillCatalogElement.value
       )
         return false
       if (
-        skillCatalogType.value !== 'all' &&
-        skill.type !== skillCatalogType.value
+        skillCatalogEquipmentType.value !== 'all' &&
+        skill.equipmentType !== skillCatalogEquipmentType.value
       )
         return false
       if (!query) return true
 
-      return [skill.id, skill.name, skill.attr, skill.type].some((value) =>
-        value.toLowerCase().includes(query)
-      )
+      return buildSkillMasterSearchText(skill).includes(query)
     })
 })
 
@@ -404,8 +409,8 @@ const createPendingImageItem = (file: File): ImageItem => {
 
 const resetSkillFilters = () => {
   skillCatalogQuery.value = ''
-  skillCatalogAttr.value = 'all'
-  skillCatalogType.value = 'all'
+  skillCatalogElement.value = 'all'
+  skillCatalogEquipmentType.value = 'all'
   skillCatalogStatus.value = 'unowned'
 }
 
@@ -988,11 +993,11 @@ const emitBack = () => {
           :visibleSkillCatalogRows="visibleSkillCatalogRows"
           :hiddenSkillCatalogCount="hiddenSkillCatalogCount"
           v-model:skillCatalogQuery="skillCatalogQuery"
-          v-model:skillCatalogAttr="skillCatalogAttr"
-          v-model:skillCatalogType="skillCatalogType"
+          v-model:skillCatalogElement="skillCatalogElement"
+          v-model:skillCatalogEquipmentType="skillCatalogEquipmentType"
           v-model:skillCatalogStatus="skillCatalogStatus"
-          :skillCatalogAttrOptions="skillCatalogAttrOptions"
-          :skillCatalogTypeOptions="skillCatalogTypeOptions"
+          :skillCatalogElementOptions="skillCatalogElementOptions"
+          :skillCatalogEquipmentTypeOptions="skillCatalogEquipmentTypeOptions"
           @toggle-skill="toggleOwnedSkill"
           @remove-skill="removeOwnedSkill"
           @reset-filters="resetSkillFilters"

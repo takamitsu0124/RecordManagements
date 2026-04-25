@@ -1,227 +1,51 @@
 import { SkillMaster } from '@rm/types'
 import { CsvRecord, normalizeCsvWhitespace } from './csv'
+import {
+  normalizeSkillMasterAttackType,
+  normalizeSkillMasterElement,
+  normalizeSkillMasterEquipmentType,
+  normalizeSkillMasterNumber,
+  normalizeSkillMasterRarity,
+  normalizeSkillMasterSkillType,
+} from './skillMasterSchema'
 
 export type SkillMasterImportPayload = Pick<
   SkillMaster,
-  'id' | 'name' | 'attr' | 'type' | 'cool' | 'swGauge' | 'brGauge' | 'image'
+  | 'id'
+  | 'name'
+  | 'rarity'
+  | 'cost'
+  | 'equipmentType'
+  | 'sp'
+  | 'element'
+  | 'skillType'
+  | 'attackType'
+  | 'breakGauge'
+  | 'switchGauge'
+  | 'cooldown'
+  | 'skillName'
+  | 'image'
 > & {
   rowNumber: number
 }
 
 export type SkillMasterImportChangeType = 'insert' | 'update' | 'unchanged'
 
-const canonicalAttributes = ['火', '水', '土', '聖', '闇', '風', '無']
-const weaponBases = ['片手直剣', '細剣', '棍棒', '短剣', '斧', '槍', '弓', '盾']
-const weaponVariants = ['', '覚醒', 'アクセル', 'MOD', 'コネクト', 'チェイン', 'リンク']
-const abilityVariants = ['', '覚醒', 'アクセル', 'チェイン', 'リンク']
-const legacyExtraTypes = ['バースト/フルバースト', 'フリー']
-const canonicalTypes = [
-  ...weaponBases.flatMap((base) =>
-    weaponVariants.map((variant) => (variant === '' ? base : `${base}(${variant})`))
-  ),
-  ...abilityVariants.map((variant) =>
-    variant === '' ? 'アビリティ' : `アビリティ(${variant})`
-  ),
-  ...legacyExtraTypes,
-]
-
-const attributeAliases = new Map([
-  ['火', '火'],
-  ['fire', '火'],
-  ['炎', '火'],
-  ['red', '火'],
-  ['水', '水'],
-  ['water', '水'],
-  ['blue', '水'],
-  ['土', '土'],
-  ['earth', '土'],
-  ['brown', '土'],
-  ['聖', '聖'],
-  ['holy', '聖'],
-  ['light', '聖'],
-  ['yellow', '聖'],
-  ['闇', '闇'],
-  ['dark', '闇'],
-  ['shadow', '闇'],
-  ['purple', '闇'],
-  ['風', '風'],
-  ['wind', '風'],
-  ['green', '風'],
-  ['air', '風'],
-  ['無', '無'],
-  ['none', '無'],
-  ['neutral', '無'],
-  ['colorless', '無'],
-])
-
-const baseTypeAliases = new Map([
-  ['片手直剣', '片手直剣'],
-  ['片手剣', '片手直剣'],
-  ['直剣', '片手直剣'],
-  ['剣', '片手直剣'],
-  ['sword', '片手直剣'],
-  ['細剣', '細剣'],
-  ['レイピア', '細剣'],
-  ['rapier', '細剣'],
-  ['棍棒', '棍棒'],
-  ['棍', '棍棒'],
-  ['club', '棍棒'],
-  ['mace', '棍棒'],
-  ['短剣', '短剣'],
-  ['dagger', '短剣'],
-  ['ナイフ', '短剣'],
-  ['斧', '斧'],
-  ['axe', '斧'],
-  ['槍', '槍'],
-  ['spear', '槍'],
-  ['lance', '槍'],
-  ['弓', '弓'],
-  ['bow', '弓'],
-  ['盾', '盾'],
-  ['shield', '盾'],
-  ['アビリティ', 'アビリティ'],
-  ['ability', 'アビリティ'],
-  ['バースト/フルバースト', 'バースト/フルバースト'],
-  ['burst/fullburst', 'バースト/フルバースト'],
-  ['burst_fullburst', 'バースト/フルバースト'],
-  ['フリー', 'フリー'],
-  ['free', 'フリー'],
-])
-
-const variantAliases = new Map([
-  ['', ''],
-  ['base', ''],
-  ['normal', ''],
-  ['覚醒', '覚醒'],
-  ['awaken', '覚醒'],
-  ['recollection', '覚醒'],
-  ['アクセル', 'アクセル'],
-  ['accele', 'アクセル'],
-  ['mod', 'MOD'],
-  ['connect', 'コネクト'],
-  ['コネクト', 'コネクト'],
-  ['chain', 'チェイン'],
-  ['チェイン', 'チェイン'],
-  ['link', 'リンク'],
-  ['リンク', 'リンク'],
-])
-
-function normalizeLookupKey(value: unknown) {
-  return normalizeCsvWhitespace(value).toLowerCase().replace(/[\s_()-]/g, '')
+type SkillMasterImportStats = {
+  total: number
+  valid: number
+  normalizedElementCount: number
+  normalizedEquipmentTypeCount: number
+  normalizedSkillTypeCount: number
+  normalizedAttackTypeCount: number
 }
 
-function normalizeAttribute(value: unknown) {
-  const raw = normalizeCsvWhitespace(value)
-  const normalized =
-    attributeAliases.get(normalizeLookupKey(raw)) ?? attributeAliases.get(raw)
-
+function normalizeRequiredTextField(value: unknown, fieldName: string) {
+  const normalized = normalizeCsvWhitespace(value)
   if (!normalized) {
-    throw new Error(
-      `Unsupported attr "${raw}". Supported canonical values: ${canonicalAttributes.join(', ')}`
-    )
+    throw new Error(`${fieldName} is required.`)
   }
-
   return normalized
-}
-
-function normalizeType(value: unknown) {
-  const raw = normalizeCsvWhitespace(value)
-  const directLegacyMatch = canonicalTypes.find((type) => type === raw)
-  if (directLegacyMatch) return directLegacyMatch
-
-  const normalizedRaw = raw.replace(/（/g, '(').replace(/）/g, ')')
-  const compactRaw = normalizeLookupKey(normalizedRaw)
-
-  const directBaseMatch =
-    baseTypeAliases.get(compactRaw) ?? baseTypeAliases.get(normalizedRaw)
-  if (directBaseMatch) {
-    return directBaseMatch
-  }
-
-  const rawMatch = normalizedRaw.match(/^(.*?)(?:\((.+)\))?$/)
-  const rawBase = normalizeCsvWhitespace(rawMatch?.[1] ?? normalizedRaw)
-  const rawVariant = normalizeCsvWhitespace(rawMatch?.[2] ?? '')
-  const normalizedBase =
-    baseTypeAliases.get(normalizeLookupKey(rawBase)) ?? baseTypeAliases.get(rawBase)
-  const normalizedVariant =
-    variantAliases.get(normalizeLookupKey(rawVariant)) ?? variantAliases.get(rawVariant)
-
-  if (
-    normalizedBase &&
-    normalizedVariant !== undefined &&
-    normalizedBase !== 'バースト/フルバースト' &&
-    normalizedBase !== 'フリー'
-  ) {
-    if (normalizedBase === 'アビリティ') {
-      if (!abilityVariants.includes(normalizedVariant)) {
-        throw new Error(
-          `Ability type "${raw}" cannot use variant "${normalizedVariant}".`
-        )
-      }
-
-      return normalizedVariant === ''
-        ? 'アビリティ'
-        : `アビリティ(${normalizedVariant})`
-    }
-
-    if (!weaponVariants.includes(normalizedVariant)) {
-      throw new Error(
-        `Weapon type "${raw}" cannot use variant "${normalizedVariant}".`
-      )
-    }
-
-    return normalizedVariant === ''
-      ? normalizedBase
-      : `${normalizedBase}(${normalizedVariant})`
-  }
-
-  const parts = normalizedRaw
-    .split(/[:/_-]/)
-    .map((part) => normalizeCsvWhitespace(part))
-    .filter(Boolean)
-
-  if (parts.length >= 1) {
-    const basePart = parts[0]
-    const variantPart = parts.slice(1).join('')
-    const normalizedSplitBase =
-      baseTypeAliases.get(normalizeLookupKey(basePart)) ?? baseTypeAliases.get(basePart)
-    const normalizedSplitVariant =
-      variantAliases.get(normalizeLookupKey(variantPart)) ??
-      variantAliases.get(variantPart)
-
-    if (
-      normalizedSplitBase &&
-      normalizedSplitVariant !== undefined &&
-      normalizedSplitBase !== 'バースト/フルバースト' &&
-      normalizedSplitBase !== 'フリー'
-    ) {
-      if (normalizedSplitBase === 'アビリティ') {
-        if (!abilityVariants.includes(normalizedSplitVariant)) {
-          throw new Error(
-            `Ability type "${raw}" cannot use variant "${normalizedSplitVariant}".`
-          )
-        }
-
-        return normalizedSplitVariant === ''
-          ? 'アビリティ'
-          : `アビリティ(${normalizedSplitVariant})`
-      }
-
-      if (!weaponVariants.includes(normalizedSplitVariant)) {
-        throw new Error(
-          `Weapon type "${raw}" cannot use variant "${normalizedSplitVariant}".`
-        )
-      }
-
-      return normalizedSplitVariant === ''
-        ? normalizedSplitBase
-        : `${normalizedSplitBase}(${normalizedSplitVariant})`
-    }
-  }
-
-  throw new Error(
-    `Unsupported type "${raw}". Supported canonical values: ${canonicalTypes.join(', ')}`
-  )
 }
 
 export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
@@ -229,50 +53,91 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
   const errors: string[] = []
   const duplicateIds = new Set<string>()
   const seenIds = new Set<string>()
-  let normalizedAttrCount = 0
-  let normalizedTypeCount = 0
+  let normalizedElementCount = 0
+  let normalizedEquipmentTypeCount = 0
+  let normalizedSkillTypeCount = 0
+  let normalizedAttackTypeCount = 0
 
   records.forEach((record) => {
     const rowNumber = record.__rowNumber
     const id = normalizeCsvWhitespace(record.id)
     const name = normalizeCsvWhitespace(record.name)
-    const attrInput = record.attr
-    const typeInput = record.type
-    const hasCool = Object.prototype.hasOwnProperty.call(record, 'cool')
-    const hasSwGauge = Object.prototype.hasOwnProperty.call(record, 'swGauge')
-    const hasBrGauge = Object.prototype.hasOwnProperty.call(record, 'brGauge')
+    const rawElement = record.element
+    const rawEquipmentType = record.equipmentType
+    const rawSkillType = record.skillType
+    const rawAttackType = record.attackType
+    const hasRarity = Object.prototype.hasOwnProperty.call(record, 'rarity')
+    const hasCost = Object.prototype.hasOwnProperty.call(record, 'cost')
+    const hasSp = Object.prototype.hasOwnProperty.call(record, 'sp')
+    const hasElement = Object.prototype.hasOwnProperty.call(record, 'element')
+    const hasEquipmentType = Object.prototype.hasOwnProperty.call(record, 'equipmentType')
+    const hasSkillType = Object.prototype.hasOwnProperty.call(record, 'skillType')
+    const hasAttackType = Object.prototype.hasOwnProperty.call(record, 'attackType')
+    const hasBreakGauge = Object.prototype.hasOwnProperty.call(record, 'breakGauge')
+    const hasSwitchGauge = Object.prototype.hasOwnProperty.call(record, 'switchGauge')
+    const hasCooldown = Object.prototype.hasOwnProperty.call(record, 'cooldown')
+    const hasSkillName = Object.prototype.hasOwnProperty.call(record, 'skillName')
     const hasImage = Object.prototype.hasOwnProperty.call(record, 'image')
 
     if (
       !id ||
       !name ||
-      normalizeCsvWhitespace(attrInput) === '' ||
-      normalizeCsvWhitespace(typeInput) === '' ||
-      !hasCool ||
-      !hasSwGauge ||
-      !hasBrGauge ||
+      !hasRarity ||
+      !hasCost ||
+      !hasEquipmentType ||
+      !hasSp ||
+      !hasElement ||
+      !hasSkillType ||
+      !hasAttackType ||
+      !hasBreakGauge ||
+      !hasSwitchGauge ||
+      !hasCooldown ||
+      !hasSkillName ||
       !hasImage
     ) {
       errors.push(
-        `Row ${rowNumber}: id, name, attr, type, cool, swGauge, brGauge, image are required keys.`
+        `Row ${rowNumber}: id, name, rarity, cost, equipmentType, sp, element, skillType, attackType, breakGauge, switchGauge, cooldown, skillName, image are required keys.`
       )
       return
     }
 
     try {
-      const attr = normalizeAttribute(attrInput)
-      const type = normalizeType(typeInput)
-      const cool = normalizeCsvWhitespace(record.cool)
-      const swGauge = normalizeCsvWhitespace(record.swGauge)
-      const brGauge = normalizeCsvWhitespace(record.brGauge)
-      const image = normalizeCsvWhitespace(record.image)
+      const equipmentType = normalizeRequiredTextField(
+        normalizeSkillMasterEquipmentType(rawEquipmentType),
+        'equipmentType'
+      )
+      const element = normalizeRequiredTextField(
+        normalizeSkillMasterElement(rawElement),
+        'element'
+      )
+      const skillType = normalizeSkillMasterSkillType(rawSkillType)
+      const attackType = normalizeSkillMasterAttackType(rawAttackType, equipmentType)
+      const rarity = normalizeSkillMasterRarity(record.rarity)
+      const cost = normalizeSkillMasterNumber(record.cost)
+      const sp = normalizeSkillMasterNumber(record.sp)
+      const breakGauge = normalizeSkillMasterNumber(record.breakGauge)
+      const switchGauge = normalizeSkillMasterNumber(record.switchGauge)
+      const cooldown = normalizeSkillMasterNumber(record.cooldown)
+      const skillName = normalizeRequiredTextField(record.skillName, 'skillName')
+      const image = normalizeRequiredTextField(record.image, 'image')
 
-      if (attr !== normalizeCsvWhitespace(attrInput)) {
-        normalizedAttrCount += 1
+      if (element !== normalizeCsvWhitespace(rawElement)) {
+        normalizedElementCount += 1
       }
 
-      if (type !== normalizeCsvWhitespace(typeInput)) {
-        normalizedTypeCount += 1
+      if (equipmentType !== normalizeCsvWhitespace(rawEquipmentType)) {
+        normalizedEquipmentTypeCount += 1
+      }
+
+      if (skillType !== normalizeCsvWhitespace(rawSkillType || '')) {
+        normalizedSkillTypeCount += 1
+      }
+
+      if (
+        attackType &&
+        attackType !== normalizeCsvWhitespace(rawAttackType || '')
+      ) {
+        normalizedAttackTypeCount += 1
       }
 
       if (seenIds.has(id)) {
@@ -285,11 +150,17 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
         rowNumber,
         id,
         name,
-        attr,
-        type,
-        cool,
-        swGauge,
-        brGauge,
+        rarity,
+        cost,
+        equipmentType,
+        sp,
+        element,
+        skillType,
+        attackType,
+        breakGauge,
+        switchGauge,
+        cooldown,
+        skillName,
         image,
       })
     } catch (error) {
@@ -309,9 +180,11 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
     stats: {
       total: records.length,
       valid: normalized.length,
-      normalizedAttrCount,
-      normalizedTypeCount,
-    },
+      normalizedElementCount,
+      normalizedEquipmentTypeCount,
+      normalizedSkillTypeCount,
+      normalizedAttackTypeCount,
+    } satisfies SkillMasterImportStats,
   }
 }
 
@@ -327,11 +200,17 @@ export function getSkillMasterImportChangeType(
 
   if (
     existing.name === payload.name &&
-    existing.attr === payload.attr &&
-    existing.type === payload.type &&
-    existing.cool === payload.cool &&
-    existing.swGauge === payload.swGauge &&
-    existing.brGauge === payload.brGauge &&
+    existing.rarity === payload.rarity &&
+    existing.cost === payload.cost &&
+    existing.equipmentType === payload.equipmentType &&
+    existing.sp === payload.sp &&
+    existing.element === payload.element &&
+    existing.skillType === payload.skillType &&
+    existing.attackType === payload.attackType &&
+    existing.breakGauge === payload.breakGauge &&
+    existing.switchGauge === payload.switchGauge &&
+    existing.cooldown === payload.cooldown &&
+    existing.skillName === payload.skillName &&
     existing.image === payload.image
   ) {
     return 'unchanged'
