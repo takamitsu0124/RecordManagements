@@ -15,4 +15,7 @@ secrets/*.json
 recordmanagements-756bf-firebase-adminsdk-g78ip-14eca293e2.json
 scripts/skill-master/*
 !scripts/skill-master/README.md
+!scripts/skill-master/ocr-to-csv.mjs
+!scripts/skill-master/image-region-tools.py
+!scripts/skill-master/annotate-ocr-regions.py
 tmp/*

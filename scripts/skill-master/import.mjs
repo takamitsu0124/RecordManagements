@@ -54,6 +54,7 @@ const weaponBases = [
 const weaponVariants = ['', '覚醒', 'アクセル', 'MOD', 'コネクト', 'チェイン', 'リンク']
 const abilityVariants = ['', '覚醒', 'アクセル', 'チェイン', 'リンク']
 const legacyExtraTypes = ['バースト/フルバースト', 'フリー']
+const canonicalSkillTypes = ['通常', '覚醒', 'アクセル', 'MOD', 'コネクト', 'チェイン', 'リンク', 'バースト', 'フルバースト']
 const canonicalTypes = [
 	...weaponBases.flatMap((base) =>
 		weaponVariants.map((variant) =>
@@ -146,6 +147,50 @@ const variantAliases = new Map([
 	['link', 'リンク'],
 	['リンク', 'リンク'],
 ])
+const skillTypeAliases = new Map([
+	['', '通常'],
+	['base', '通常'],
+	['normal', '通常'],
+	['通常', '通常'],
+	['覚醒', '覚醒'],
+	['覚醒レベル', '覚醒'],
+	['awaken', '覚醒'],
+	['recollection', '覚醒'],
+	['アクセル', 'アクセル'],
+	['アクセルスキル', 'アクセル'],
+	['accele', 'アクセル'],
+	['mod', 'MOD'],
+	['modslot', 'MOD'],
+	['mod slot', 'MOD'],
+	['コネクト', 'コネクト'],
+	['connect', 'コネクト'],
+	['connectskill', 'コネクト'],
+	['connect skill', 'コネクト'],
+	['connectslot', 'コネクト'],
+	['connect slot', 'コネクト'],
+	['チェイン', 'チェイン'],
+	['chain', 'チェイン'],
+	['chainskill', 'チェイン'],
+	['chain skill', 'チェイン'],
+	['チェインスキル', 'チェイン'],
+	['リンク', 'リンク'],
+	['link', 'リンク'],
+	['burst', 'バースト'],
+	['バースト', 'バースト'],
+	['バーストスキル', 'バースト'],
+	['fullburst', 'フルバースト'],
+	['full burst', 'フルバースト'],
+	['フルバースト', 'フルバースト'],
+	['フルバーストスキル', 'フルバースト'],
+])
+const attackTypeAliases = new Map([
+	['斬', '斬'],
+	['slash', '斬'],
+	['突', '突'],
+	['pierce', '突'],
+	['打', '打'],
+	['strike', '打'],
+])
 
 function parseArgs(argv) {
 	const args = {
@@ -209,6 +254,40 @@ function normalizeName(value) {
 
 function normalizeTextField(value) {
 	return normalizeWhitespace(value)
+}
+
+function normalizeRarity(value) {
+	const raw = normalizeWhitespace(value)
+	if (!raw) {
+		return ''
+	}
+
+	const match = raw.match(/(UR|SSR|SR|RRR|RR|R|N)/i)
+	return match ? match[1].toUpperCase() : raw.toUpperCase()
+}
+
+function normalizeNumber(value) {
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return value
+	}
+
+	const raw = normalizeWhitespace(value)
+	if (!raw) {
+		return null
+	}
+
+	const normalized = raw
+		.replace(/,/g, '')
+		.replace(/^\+/, '')
+		.replace(/秒$/u, '')
+		.replace(/s$/iu, '')
+	const match = normalized.match(/-?\d+(?:\.\d+)?/)
+	if (!match) {
+		return null
+	}
+
+	const parsed = Number(match[0])
+	return Number.isFinite(parsed) ? parsed : null
 }
 
 function normalizeAttribute(value) {
@@ -326,6 +405,87 @@ function normalizeType(value) {
 	)
 }
 
+function parseLegacyTypeParts(value) {
+	const normalizedType = normalizeType(value)
+
+	if (normalizedType === 'バースト/フルバースト') {
+		return {
+			equipmentType: 'バースト/フルバースト',
+			skillType: 'バースト',
+		}
+	}
+
+	if (normalizedType === 'フリー') {
+		return {
+			equipmentType: 'フリー',
+			skillType: '通常',
+		}
+	}
+
+	const match = normalizedType.match(/^(.*?)(?:\((.+)\))?$/)
+	const equipmentType = normalizeWhitespace(match?.[1] ?? normalizedType)
+	const variant = normalizeWhitespace(match?.[2] ?? '')
+
+	return {
+		equipmentType,
+		skillType:
+			skillTypeAliases.get(normalizeLookupKey(variant)) ??
+			skillTypeAliases.get(variant) ??
+			'通常',
+	}
+}
+
+function normalizeEquipmentType(value) {
+	const raw = normalizeWhitespace(value)
+	if (!raw) {
+		throw new Error(`Unsupported equipmentType "${raw}".`)
+	}
+
+	const direct =
+		baseTypeAliases.get(normalizeLookupKey(raw)) ?? baseTypeAliases.get(raw)
+
+	if (direct) {
+		return direct
+	}
+
+	return parseLegacyTypeParts(raw).equipmentType
+}
+
+function normalizeSkillType(value) {
+	const raw = normalizeWhitespace(value)
+	if (!raw) {
+		return '通常'
+	}
+
+	const direct =
+		skillTypeAliases.get(normalizeLookupKey(raw)) ?? skillTypeAliases.get(raw)
+	if (direct) {
+		return direct
+	}
+
+	return parseLegacyTypeParts(raw).skillType
+}
+
+function inferAttackTypeFromEquipmentType(equipmentType) {
+	if (['片手直剣', '短剣', '斧'].includes(equipmentType)) return '斬'
+	if (['細剣', '槍', '弓'].includes(equipmentType)) return '突'
+	if (['棍棒', '盾'].includes(equipmentType)) return '打'
+	return ''
+}
+
+function normalizeAttackType(value, equipmentType) {
+	const raw = normalizeWhitespace(value)
+	if (!raw) {
+		return inferAttackTypeFromEquipmentType(equipmentType)
+	}
+
+	return (
+		attackTypeAliases.get(normalizeLookupKey(raw)) ??
+		attackTypeAliases.get(raw) ??
+		inferAttackTypeFromEquipmentType(equipmentType)
+	)
+}
+
 function parseCsv(content) {
 	const rows = []
 	let current = ''
@@ -426,42 +586,64 @@ function normalizeRecords(records) {
 		const rowNumber = record.__rowNumber ?? index + 1
 		const id = normalizeId(record.id)
 		const name = normalizeName(record.name)
-		const attrInput = record.attr
-		const typeInput = record.type
-		const hasCool = Object.prototype.hasOwnProperty.call(record, 'cool')
-		const hasSwGauge = Object.prototype.hasOwnProperty.call(record, 'swGauge')
-		const hasBrGauge = Object.prototype.hasOwnProperty.call(record, 'brGauge')
+		const elementInput = record.element
+		const equipmentTypeInput = record.equipmentType
+		const skillTypeInput = record.skillType
+		const attackTypeInput = record.attackType
+		const hasRarity = Object.prototype.hasOwnProperty.call(record, 'rarity')
+		const hasCost = Object.prototype.hasOwnProperty.call(record, 'cost')
+		const hasEquipmentType = Object.prototype.hasOwnProperty.call(record, 'equipmentType')
+		const hasSp = Object.prototype.hasOwnProperty.call(record, 'sp')
+		const hasElement = Object.prototype.hasOwnProperty.call(record, 'element')
+		const hasSkillType = Object.prototype.hasOwnProperty.call(record, 'skillType')
+		const hasAttackType = Object.prototype.hasOwnProperty.call(record, 'attackType')
+		const hasBreakGauge = Object.prototype.hasOwnProperty.call(record, 'breakGauge')
+		const hasSwitchGauge = Object.prototype.hasOwnProperty.call(record, 'switchGauge')
+		const hasCooldown = Object.prototype.hasOwnProperty.call(record, 'cooldown')
+		const hasSkillName = Object.prototype.hasOwnProperty.call(record, 'skillName')
 		const hasImage = Object.prototype.hasOwnProperty.call(record, 'image')
 
 		if (
 			!id ||
 			!name ||
-			normalizeWhitespace(attrInput) === '' ||
-			normalizeWhitespace(typeInput) === '' ||
-			!hasCool ||
-			!hasSwGauge ||
-			!hasBrGauge ||
+			!hasRarity ||
+			!hasCost ||
+			!hasEquipmentType ||
+			!hasSp ||
+			!hasElement ||
+			!hasSkillType ||
+			!hasAttackType ||
+			!hasBreakGauge ||
+			!hasSwitchGauge ||
+			!hasCooldown ||
+			!hasSkillName ||
 			!hasImage
 		) {
 			errors.push(
-				`Row ${rowNumber}: id, name, attr, type, cool, swGauge, brGauge, image are required keys.`
+				`Row ${rowNumber}: id, name, rarity, cost, equipmentType, sp, element, skillType, attackType, breakGauge, switchGauge, cooldown, skillName, image are required keys.`
 			)
 			return
 		}
 
 		try {
-			const attr = normalizeAttribute(attrInput)
-			const type = normalizeType(typeInput)
-			const cool = normalizeTextField(record.cool)
-			const swGauge = normalizeTextField(record.swGauge)
-			const brGauge = normalizeTextField(record.brGauge)
+			const element = normalizeAttribute(elementInput)
+			const equipmentType = normalizeEquipmentType(equipmentTypeInput)
+			const skillType = normalizeSkillType(skillTypeInput)
+			const attackType = normalizeAttackType(attackTypeInput, equipmentType)
+			const rarity = normalizeRarity(record.rarity)
+			const cost = normalizeNumber(record.cost)
+			const sp = normalizeNumber(record.sp)
+			const breakGauge = normalizeNumber(record.breakGauge)
+			const switchGauge = normalizeNumber(record.switchGauge)
+			const cooldown = normalizeNumber(record.cooldown)
+			const skillName = normalizeTextField(record.skillName)
 			const image = normalizeTextField(record.image)
 
-			if (attr !== normalizeWhitespace(attrInput)) {
+			if (element !== normalizeWhitespace(elementInput)) {
 				normalizedAttrCount += 1
 			}
 
-			if (type !== normalizeWhitespace(typeInput)) {
+			if (equipmentType !== normalizeWhitespace(equipmentTypeInput)) {
 				normalizedTypeCount += 1
 			}
 
@@ -474,11 +656,17 @@ function normalizeRecords(records) {
 			normalized.push({
 				id,
 				name,
-				attr,
-				type,
-				cool,
-				swGauge,
-				brGauge,
+				rarity,
+				cost,
+				equipmentType,
+				sp,
+				element,
+				skillType,
+				attackType,
+				breakGauge,
+				switchGauge,
+				cooldown,
+				skillName,
 				image,
 			})
 		} catch (error) {
@@ -564,11 +752,17 @@ function diffSkillMaster(inputSkills, existingSkills) {
 
 		if (
 			existing.name === skill.name &&
-			existing.attr === skill.attr &&
-			existing.type === skill.type &&
-			existing.cool === skill.cool &&
-			existing.swGauge === skill.swGauge &&
-			existing.brGauge === skill.brGauge &&
+			existing.rarity === skill.rarity &&
+			existing.cost === skill.cost &&
+			existing.equipmentType === skill.equipmentType &&
+			existing.sp === skill.sp &&
+			existing.element === skill.element &&
+			existing.skillType === skill.skillType &&
+			existing.attackType === skill.attackType &&
+			existing.breakGauge === skill.breakGauge &&
+			existing.switchGauge === skill.switchGauge &&
+			existing.cooldown === skill.cooldown &&
+			existing.skillName === skill.skillName &&
 			existing.image === skill.image
 		) {
 			unchanged.push(skill)
@@ -606,11 +800,17 @@ async function applyChanges({
 			const payload = {
 				id: skill.id,
 				name: skill.name,
-				attr: skill.attr,
-				type: skill.type,
-				cool: skill.cool,
-				swGauge: skill.swGauge,
-				brGauge: skill.brGauge,
+				rarity: skill.rarity,
+				cost: skill.cost,
+				equipmentType: skill.equipmentType,
+				sp: skill.sp,
+				element: skill.element,
+				skillType: skill.skillType,
+				attackType: skill.attackType,
+				breakGauge: skill.breakGauge,
+				switchGauge: skill.switchGauge,
+				cooldown: skill.cooldown,
+				skillName: skill.skillName,
 				image: skill.image,
 				updatedAt: serverTimestamp(),
 				updatedBy: authUid,
@@ -661,8 +861,8 @@ function printSummary({
 }) {
 	console.log(`Input file: ${file}`)
 	console.log(`Valid rows: ${validationStats.valid}/${validationStats.total}`)
-	console.log(`Normalized attrs: ${validationStats.normalizedAttrCount}`)
-	console.log(`Normalized types: ${validationStats.normalizedTypeCount}`)
+	console.log(`Normalized elements: ${validationStats.normalizedAttrCount}`)
+	console.log(`Normalized equipment types: ${validationStats.normalizedTypeCount}`)
 
 	if (diffStats) {
 		console.log(`Insert: ${diffStats.inserts}`)

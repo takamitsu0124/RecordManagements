@@ -5,6 +5,7 @@
 ## 対象スクリプト
 
 - `npm run skill-master:ocr`
+- `npm run skill-master:annotate-regions`
 - `npm run skill-master:upload-images`
 - `npm run skill-master:import`
 
@@ -36,16 +37,22 @@ secrets/recordmanagements-service-account.json
 ## 生成される CSV のヘッダ
 
 ```csv
-id,name,attr,type,cool,swGauge,brGauge,image
+id,name,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,switchGauge,cooldown,skillName,image
 ```
 
 - `id`: OCR 結果とファイル名から生成した skill_master 用 ID
-- `name`: 画像から抽出したスキル名
-- `attr`: 属性 (`火` / `水` / `土` / `聖` / `闇` / `風` / `無`)
-- `type`: 武器種や派生種別
-- `cool`: クールタイム
-- `swGauge`: SW ゲージ増加量
-- `brGauge`: BR ゲージ増加量
+- `name`: カード表示名 (`【記死回生の一撃】キリト` など)
+- `rarity`: レアリティ
+- `cost`: コスト
+- `equipmentType`: 装備種別
+- `sp`: 消費SP
+- `element`: 自然属性 (`火` / `水` / `土` / `聖` / `闇` / `風` / `無`)
+- `skillType`: スキル種別 (`通常` / `コネクト` / `チェイン` / `MOD` / `覚醒` / `アクセル` / `バースト` など)
+- `attackType`: 攻撃属性 (`斬` / `突` / `打`)
+- `breakGauge`: ブレイクゲージ増加量
+- `switchGauge`: スイッチゲージ増加量
+- `cooldown`: クールダウン
+- `skillName`: 技名 (`スターバースト・ストリーム` など)
 - `image`: ローカル画像パス、または Storage upload 後の URL
 
 ## 実行パターン
@@ -99,7 +106,20 @@ npm run skill-master:import -- --file ./tmp/skill-master.ocr.sword-test.csv --dr
 
 差分確認だけ行い、FireStore には書き込みません。
 
-### 5. Firestore に反映する
+### 5. OCR の参照位置を画像に重ねて確認する
+
+```bash
+npm run skill-master:annotate-regions -- --folder sword-test
+```
+
+出力:
+
+- `tmp/skill-master.ocr-regions.sword-test/*.annotated.png`
+- `tmp/skill-master.ocr-regions.sword-test/annotations.json`
+
+OCR がどこを見ているかを画像上で確認したい時に使います。
+
+### 6. Firestore に反映する
 
 ```bash
 FIREBASE_AUTH_EMAIL=admin@example.com \
@@ -144,9 +164,16 @@ FIREBASE_AUTH_PASSWORD=secret \
 npm run skill-master:import -- --file ./tmp/skill-master.ocr.sword-test.csv --dry-run
 ```
 
+### OCR 参照位置の注釈画像を出す
+
+```bash
+npm run skill-master:annotate-regions -- --folder sword-test
+```
+
 ## 補足
 
-- OCR 結果は下書きです。`name` などは目視確認してから import してください。
+- OCR 結果は下書きです。`skillName`、`rarity`、`cost`、`sp` などは目視確認してから import してください。
+- `annotate-regions` は固定比率枠 (`TITLE-CROP` / `RARITY` / `ATTR`) と、OCR から選んだ動的枠 (`NAME` / `SKILL-*` / `SP-*` / `COOLDOWN-*` など) をまとめて可視化します。
 - `--folder <name>` は `scripts/skill-master/source-images/<name>` を自動解決します。
 - `--upload-images` は内部的に一時 CSV を作ってから `upload-images.mjs` を実行します。
 - upload に失敗した場合、古い出力 CSV が残って誤認されないよう既存出力は先に削除されます。
