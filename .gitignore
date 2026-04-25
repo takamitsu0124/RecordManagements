@@ -9,5 +9,10 @@ packages/app/.env.*
 packages/app/.env.local
 packages/app/.env.*.local
 !packages/app/.env.example
+# Local service-account JSONs for admin scripts.
+secrets/*.json
+!secrets/.gitkeep
 recordmanagements-756bf-firebase-adminsdk-g78ip-14eca293e2.json
 scripts/skill-master/*
+!scripts/skill-master/README.md
+tmp/*

@@ -2,6 +2,8 @@
 
 ## skill_master import flow
 
+詳細な OCR / Storage upload / import の実行手順は `scripts/skill-master/README.md` を参照してください。
+
 `skill_master` の**正本は Firestore**です。  
 ローカルの `.json` / `.csv` は、Firestore の `skill_master` に投入・更新するための**一時インポートソース**としてだけ使います。
 

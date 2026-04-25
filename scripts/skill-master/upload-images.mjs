@@ -460,7 +460,7 @@ async function syncImageTask(bucket, task, dryRun) {
     }
   }
 
-  await file.save(task.fileBuffer, {
+  await file.save(fileBuffer, {
     resumable: false,
     metadata: {
       cacheControl: DEFAULT_CACHE_CONTROL,
