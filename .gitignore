@@ -19,3 +19,4 @@ scripts/skill-master/*
 !scripts/skill-master/image-region-tools.py
 !scripts/skill-master/annotate-ocr-regions.py
 tmp/*
+packages/functions/lib

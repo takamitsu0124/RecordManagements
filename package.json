@@ -4,7 +4,9 @@
   "scripts": {
     "dev:app": "npm run dev -w app",
     "build:app": "npm run build -w app",
+    "build:functions": "npm run build -w @rm/functions",
     "deploy:app": "npm run build -w app && firebase use recordmanagements-756bf && firebase deploy --only hosting:app",
+    "deploy:functions": "firebase deploy --only functions --project recordmanagements-756bf",
     "skill-master:upload-images": "node ./scripts/skill-master/upload-images.mjs",
     "skill-master:ocr": "node ./scripts/skill-master/ocr-to-csv.mjs",
     "skill-master:annotate-regions": "python3 ./scripts/skill-master/annotate-ocr-regions.py",

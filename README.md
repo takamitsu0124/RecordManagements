@@ -296,3 +296,41 @@ Git へ commit しないファイル:
 - `member` は閲覧のみ、`guild_admin` / `admin` は予定の追加・更新・削除ができます
 - `RMGuildEdit` 画面に Google Calendar ID の入力はありません
 - Google 連携の再設定なしでローカル開発・本番利用ができます
+
+## Discord 通知 Cloud Functions
+
+Discord への送信は `packages/functions` の callable function `sendDiscordMessage` で行います。  
+Webhook URL はコードに置かず、Firebase Secret `DISCORD_WEBHOOK_URL` として設定してください。
+
+```bash
+firebase functions:secrets:set DISCORD_WEBHOOK_URL --project recordmanagements-756bf
+npm run deploy:functions
+```
+
+関数の入力:
+
+- `content` (必須): Discord に送る本文
+- `username` (任意): Webhook の表示名
+
+クライアント呼び出し例:
+
+```ts
+import { httpsCallable } from 'firebase/functions'
+import { cf } from '@rm/db'
+
+const sendDiscordMessage = httpsCallable<
+  { content: string; username?: string },
+  { ok: true }
+>(cf, 'sendDiscordMessage')
+
+await sendDiscordMessage({
+  content: 'Discord への通知テストです',
+  username: 'RecordManagements'
+})
+```
+
+補足:
+
+- この function は **Firebase Auth のログイン済みユーザー**のみ実行できます
+- Webhook では `@everyone` などの自動 mention を無効化しています
+- App Check を既に導入済みなら、`packages/functions/src/index.ts` の callable options に `enforceAppCheck: true` を追加するとさらに安全です
