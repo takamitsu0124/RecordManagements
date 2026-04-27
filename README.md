@@ -334,3 +334,14 @@ await sendDiscordMessage({
 - この function は **Firebase Auth のログイン済みユーザー**のみ実行できます
 - Webhook では `@everyone` などの自動 mention を無効化しています
 - App Check を既に導入済みなら、`packages/functions/src/index.ts` の callable options に `enforceAppCheck: true` を追加するとさらに安全です
+
+## Firebase Analytics
+
+Web アプリでは Firebase Analytics (GA4) を有効化し、Vue Router の画面遷移ごとに `page_view` を送信しています。  
+これで GA4 のレポート上から、どのページのアクセスが多いかを確認できます。
+
+補足:
+
+- Firebase Analytics / Google Analytics 4 の通常利用は **無料** です
+- 追加費用が出やすいのは BigQuery export などの周辺機能で、ページ閲覧の基本集計を見るだけなら通常は無料で足ります
+- レポート確認は Firebase Console から Analytics、または紐づく Google Analytics 4 プロパティで行えます

@@ -10,6 +10,7 @@ import ToastService from 'primevue/toastservice'
 import Aura from '@primeuix/themes/aura'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError } from 'src/composables/useAppNotifications'
+import { setupAnalytics } from 'src/services/analytics'
 import { useSkillStore } from 'src/store'
 
 export const globalPrePath = ref<string>('')
@@ -300,4 +301,6 @@ export default boot(async ({ app, router }) => {
 
 		next()
 	})
+
+	void setupAnalytics(router)
 })
