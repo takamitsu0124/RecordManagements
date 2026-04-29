@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import colorsys
 import csv
+import hashlib
 import json
 import mimetypes
 import re
@@ -57,7 +58,10 @@ MEANINGFUL_COLUMNS = [
 DEFAULT_MODEL_NAME = "gemini-2.5-flash-lite"
 DEFAULT_OUTPUT_PATH = "saoif_skills.csv"
 DEFAULT_SLEEP_SECONDS = 2.0
+DEFAULT_PROMPT_CACHE_TTL_SECONDS = 3600
 GENERATE_CONTENT_METHOD = "generateContent"
+ANALYSIS_SIGNATURE_VERSION = 1
+PROMPT_CACHE_DISPLAY_NAME_PREFIX = "saoif-skill-analyzer"
 SOURCE_KEYS = (
     "image",
     "imageUrl",
@@ -752,6 +756,14 @@ def image_to_png_bytes(image: Image.Image) -> bytes:
     return buffer.getvalue()
 
 
+def normalize_image_for_analysis(image_bytes: bytes) -> Image.Image:
+    return resize_image(load_pil_image(image_bytes), max_side=MAX_FULL_IMAGE_SIDE)
+
+
+def compute_image_sha256(image: Image.Image) -> str:
+    return hashlib.sha256(image_to_png_bytes(image)).hexdigest()
+
+
 def build_prompt_image_part(
     label: str,
     image: Image.Image,
@@ -772,9 +784,8 @@ def build_prompt_image_part(
     return label, image_to_png_bytes(prepared_image)
 
 
-def build_prompt_images(image_bytes: bytes) -> tuple[list[tuple[str, bytes]], Image.Image]:
-    image = resize_image(load_pil_image(image_bytes), max_side=MAX_FULL_IMAGE_SIDE)
-    prompt_images = [
+def build_prompt_images_from_image(image: Image.Image) -> list[tuple[str, bytes]]:
+    return [
         build_prompt_image_part(
             "カード全体",
             image,
@@ -831,7 +842,11 @@ def build_prompt_images(image_bytes: bytes) -> tuple[list[tuple[str, bytes]], Im
             min_side=ICON_CROP_MIN_SIDE,
         ),
     ]
-    return prompt_images, image
+
+
+def build_prompt_images(image_bytes: bytes) -> tuple[list[tuple[str, bytes]], Image.Image]:
+    image = normalize_image_for_analysis(image_bytes)
+    return build_prompt_images_from_image(image), image
 
 
 def detect_icon_skill_type(image: Image.Image) -> tuple[str | None, dict[str, Any]]:
@@ -893,6 +908,8 @@ def build_gemini_contents(
     source: str,
     prompt_images: list[tuple[str, bytes]],
     source_hints: dict[str, Any],
+    *,
+    include_prompt: bool = True,
 ) -> list[Any]:
     hint_lines = ["補助ヒントは画像と矛盾しない場合だけ使ってください。"]
     if source_hints.get("equipmentType"):
@@ -904,7 +921,10 @@ def build_gemini_contents(
             f"右下アイコン色のローカル判定ヒント: {source_hints['skillType']}"
         )
 
-    contents: list[Any] = [GEMINI_PROMPT, "\n".join(hint_lines), f"source: {source}"]
+    contents: list[Any] = []
+    if include_prompt:
+        contents.append(GEMINI_PROMPT)
+    contents.extend(("\n".join(hint_lines), f"source: {source}"))
     for index, (label, image_part) in enumerate(prompt_images, start=1):
         contents.append(f"画像 {index}: {label}")
         contents.append({"mime_type": "image/png", "data": image_part})
@@ -916,9 +936,16 @@ def analyze_image_with_gemini(
     source: str,
     prompt_images: list[tuple[str, bytes]],
     source_hints: dict[str, Any],
+    *,
+    include_prompt: bool = True,
 ) -> tuple[dict[str, Any], str]:
     response = model.generate_content(
-        build_gemini_contents(source, prompt_images, source_hints),
+        build_gemini_contents(
+            source,
+            prompt_images,
+            source_hints,
+            include_prompt=include_prompt,
+        ),
         generation_config={
             "temperature": 0,
             "response_mime_type": "application/json",
@@ -942,6 +969,8 @@ def append_debug_entry(debug_path: Path | None, entry: dict[str, Any]) -> None:
 def resolve_debug_path(
     output_path: str | Path,
     debug_jsonl_path: str | Path | None = None,
+    *,
+    clear_existing: bool = True,
 ) -> Path | None:
     if debug_jsonl_path == "":
         return None
@@ -951,47 +980,228 @@ def resolve_debug_path(
         output_file_path = Path(output_path).expanduser().resolve()
         resolved_path = output_file_path.parent / f"{output_file_path.name}{DEFAULT_DEBUG_SUFFIX}"
     resolved_path.parent.mkdir(parents=True, exist_ok=True)
-    if resolved_path.exists():
+    if clear_existing and resolved_path.exists():
         resolved_path.unlink()
     return resolved_path
 
 
-def analyze_single_source(
-    model: genai.GenerativeModel,
+def build_analysis_signature(model_resolution: dict[str, Any]) -> str:
+    signature_payload = {
+        "version": ANALYSIS_SIGNATURE_VERSION,
+        "resolvedModel": model_resolution.get("resolvedModel"),
+        "prompt": GEMINI_PROMPT,
+        "cropRatios": {
+            "title": TITLE_CROP_RATIOS,
+            "rarity": RARITY_CROP_RATIOS,
+            "rightTab": RIGHT_TAB_CROP_RATIOS,
+            "stats": STATS_CROP_RATIOS,
+            "element": ELEMENT_AREA_CROP_RATIOS,
+            "attackType": ATTACK_TYPE_ICON_CROP_RATIOS,
+            "skillIcon": SKILL_ICON_CROP_RATIOS,
+        },
+        "imageSizing": {
+            "full": MAX_FULL_IMAGE_SIDE,
+            "titleMax": TITLE_CROP_MAX_SIDE,
+            "titleMin": TITLE_CROP_MIN_SIDE,
+            "detailMax": DETAIL_CROP_MAX_SIDE,
+            "detailMin": DETAIL_CROP_MIN_SIDE,
+            "iconMax": ICON_CROP_MAX_SIDE,
+            "iconMin": ICON_CROP_MIN_SIDE,
+        },
+    }
+    payload_bytes = json.dumps(
+        signature_payload,
+        sort_keys=True,
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(payload_bytes).hexdigest()
+
+
+def build_prompt_cache_display_name(analysis_signature: str) -> str:
+    return f"{PROMPT_CACHE_DISPLAY_NAME_PREFIX}-{analysis_signature[:24]}"
+
+
+def get_prompt_cache(
+    model_name: str,
+    analysis_signature: str,
+    ttl_seconds: int,
+) -> tuple[Any | None, dict[str, Any]]:
+    cache_display_name = build_prompt_cache_display_name(analysis_signature)
+    cache_info: dict[str, Any] = {
+        "enabled": True,
+        "displayName": cache_display_name,
+        "ttlSeconds": ttl_seconds,
+    }
+    normalized_model_name = normalize_model_name(model_name)
+
+    try:
+        for cached_content in genai.caching.CachedContent.list(page_size=100):
+            if cached_content.display_name != cache_display_name:
+                continue
+            if normalize_model_name(cached_content.model) != normalized_model_name:
+                continue
+            cache_info.update(
+                {
+                    "status": "reused",
+                    "name": cached_content.name,
+                    "model": cached_content.model,
+                }
+            )
+            return cached_content, cache_info
+
+        cached_content = genai.caching.CachedContent.create(
+            model=model_name,
+            display_name=cache_display_name,
+            contents=[GEMINI_PROMPT],
+            ttl=ttl_seconds,
+        )
+        cache_info.update(
+            {
+                "status": "created",
+                "name": cached_content.name,
+                "model": cached_content.model,
+            }
+        )
+        return cached_content, cache_info
+    except Exception as error:
+        cache_info.update(
+            {
+                "enabled": False,
+                "status": "fallback",
+                "error": str(error),
+            }
+        )
+        return None, cache_info
+
+
+def build_analysis_model(
+    model_resolution: dict[str, Any],
+    analysis_signature: str,
+    *,
+    use_explicit_prompt_cache: bool,
+    prompt_cache_ttl_seconds: int,
+) -> tuple[genai.GenerativeModel, dict[str, Any], bool]:
+    if use_explicit_prompt_cache:
+        cached_content, cache_info = get_prompt_cache(
+            model_resolution["resolvedModel"],
+            analysis_signature,
+            prompt_cache_ttl_seconds,
+        )
+        if cached_content is not None:
+            return (
+                genai.GenerativeModel.from_cached_content(cached_content),
+                cache_info,
+                False,
+            )
+        return genai.GenerativeModel(model_resolution["resolvedModel"]), cache_info, True
+
+    return (
+        genai.GenerativeModel(model_resolution["resolvedModel"]),
+        {
+            "enabled": False,
+            "status": "disabled",
+        },
+        True,
+    )
+
+
+def coerce_output_row(
+    candidate: dict[str, Any] | None,
+    source: str,
+    source_hints: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    row = create_empty_record(source, source_hints=source_hints)
+    if isinstance(candidate, dict):
+        for column in CSV_COLUMNS:
+            if column in candidate:
+                row[column] = candidate[column]
+
+    row["image"] = source
+    if not normalize_whitespace(row.get("id")):
+        row["id"] = build_draft_id(row.get("element"), row.get("equipmentType"), source)
+    return row
+
+
+def load_resume_state(
+    debug_path: Path | None,
+    analysis_signature: str,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    by_source: dict[str, dict[str, Any]] = {}
+    by_image_sha256: dict[str, dict[str, Any]] = {}
+    if debug_path is None or not debug_path.exists():
+        return by_source, by_image_sha256
+
+    with debug_path.open("r", encoding="utf-8") as file:
+        for line in file:
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if entry.get("analysisSignature") != analysis_signature:
+                continue
+
+            status = normalize_whitespace(entry.get("status"))
+            source = normalize_whitespace(entry.get("source"))
+            if status not in {"ok", "empty"} or not source:
+                continue
+
+            source_hints = entry.get("sourceHints") if isinstance(entry.get("sourceHints"), dict) else None
+            normalized_record = coerce_output_row(
+                entry.get("normalizedRecord"),
+                source,
+                source_hints=source_hints,
+            )
+            resume_entry = {
+                "source": source,
+                "status": status,
+                "normalizedRecord": normalized_record,
+                "rawRecord": entry.get("rawRecord") if isinstance(entry.get("rawRecord"), dict) else None,
+                "rawResponseText": entry.get("rawResponseText"),
+                "sourceHints": source_hints,
+                "imageSha256": normalize_whitespace(entry.get("imageSha256")),
+            }
+            by_source[source] = resume_entry
+
+            if resume_entry["imageSha256"] and resume_entry["rawRecord"] is not None:
+                by_image_sha256[resume_entry["imageSha256"]] = resume_entry
+
+    return by_source, by_image_sha256
+
+
+def prepare_source_analysis(
     source: str | Path,
     model_resolution: dict[str, Any],
-) -> tuple[dict[str, Any], dict[str, Any]]:
+    analysis_signature: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any], dict[str, Any]]:
     normalized_source = normalize_whitespace(source)
     debug_entry: dict[str, Any] = {
         "source": normalized_source,
         "status": "error",
         "modelResolution": model_resolution,
+        "analysisSignature": analysis_signature,
     }
     source_hints: dict[str, Any] | None = None
 
     try:
         image_bytes, _mime_type, normalized_source = load_image_bytes(normalized_source)
-        prompt_images, normalized_image = build_prompt_images(image_bytes)
+        normalized_image = normalize_image_for_analysis(image_bytes)
         source_hints = build_source_hints(normalized_source, normalized_image)
-        raw_record, raw_response_text = analyze_image_with_gemini(
-            model,
-            normalized_source,
-            prompt_images,
-            source_hints,
-        )
-        row = normalize_record(raw_record, normalized_source, source_hints=source_hints)
-        status = "ok" if has_meaningful_data(row) else "empty"
+        image_sha256 = compute_image_sha256(normalized_image)
+        prepared_source = {
+            "source": normalized_source,
+            "normalizedImage": normalized_image,
+            "sourceHints": source_hints,
+            "imageSha256": image_sha256,
+        }
         debug_entry.update(
             {
                 "source": normalized_source,
-                "status": status,
-                "rawResponseText": raw_response_text,
-                "rawRecord": raw_record,
                 "sourceHints": source_hints,
-                "normalizedRecord": row,
+                "imageSha256": image_sha256,
             }
         )
-        return row, debug_entry
+        return prepared_source, create_empty_record(normalized_source, source_hints=source_hints), debug_entry
     except Exception as error:
         row = create_empty_record(
             normalized_source,
@@ -1006,7 +1216,66 @@ def analyze_single_source(
                 "normalizedRecord": row,
             }
         )
-        return row, debug_entry
+        return None, row, debug_entry
+
+
+def analyze_prepared_source(
+    model: genai.GenerativeModel,
+    prepared_source: dict[str, Any],
+    model_resolution: dict[str, Any],
+    analysis_signature: str,
+    *,
+    include_prompt: bool,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any] | None]:
+    normalized_source = normalize_whitespace(prepared_source["source"])
+    debug_entry: dict[str, Any] = {
+        "source": normalized_source,
+        "status": "error",
+        "modelResolution": model_resolution,
+        "analysisSignature": analysis_signature,
+        "sourceHints": prepared_source["sourceHints"],
+        "imageSha256": prepared_source["imageSha256"],
+    }
+
+    try:
+        prompt_images = build_prompt_images_from_image(prepared_source["normalizedImage"])
+        raw_record, raw_response_text = analyze_image_with_gemini(
+            model,
+            normalized_source,
+            prompt_images,
+            prepared_source["sourceHints"],
+            include_prompt=include_prompt,
+        )
+        row = normalize_record(
+            raw_record,
+            normalized_source,
+            source_hints=prepared_source["sourceHints"],
+        )
+        status = "ok" if has_meaningful_data(row) else "empty"
+        debug_entry.update(
+            {
+                "source": normalized_source,
+                "status": status,
+                "rawResponseText": raw_response_text,
+                "rawRecord": raw_record,
+                "normalizedRecord": row,
+            }
+        )
+        return row, debug_entry, raw_record
+    except Exception as error:
+        row = create_empty_record(
+            normalized_source,
+            source_hints=prepared_source["sourceHints"],
+        )
+        debug_entry.update(
+            {
+                "source": normalized_source,
+                "status": "error",
+                "error": str(error),
+                "normalizedRecord": row,
+            }
+        )
+        return row, debug_entry, None
 
 
 def analyze_skill_images_to_dataframe(
@@ -1016,27 +1285,58 @@ def analyze_skill_images_to_dataframe(
     sleep_seconds: float = DEFAULT_SLEEP_SECONDS,
     gemini_api_key: str | None = None,
     debug_jsonl_path: str | Path | None = None,
+    *,
+    resume_ok: bool = True,
+    dedupe_by_content: bool = True,
+    use_explicit_prompt_cache: bool = True,
+    prompt_cache_ttl_seconds: int = DEFAULT_PROMPT_CACHE_TTL_SECONDS,
 ) -> pd.DataFrame:
     if not image_sources:
         raise RuntimeError("No image sources were provided.")
 
     configure_gemini(gemini_api_key)
     rows: list[dict[str, Any]] = []
-    debug_path = resolve_debug_path(output_path, debug_jsonl_path)
-    summary = {"ok": 0, "empty": 0, "error": 0}
+    summary = {"ok": 0, "empty": 0, "error": 0, "resumed": 0, "deduped": 0}
     model_resolution: dict[str, Any] | None = None
 
     try:
         model_resolution = resolve_model_name(model_name)
+        analysis_signature = build_analysis_signature(model_resolution)
+        existing_debug_path = resolve_debug_path(
+            output_path,
+            debug_jsonl_path,
+            clear_existing=False,
+        )
+        resumed_by_source, resumed_by_image_sha256 = (
+            load_resume_state(existing_debug_path, analysis_signature)
+            if resume_ok
+            else ({}, {})
+        )
+        debug_path = resolve_debug_path(output_path, debug_jsonl_path, clear_existing=True)
+        model, prompt_cache_info, include_prompt = build_analysis_model(
+            model_resolution,
+            analysis_signature,
+            use_explicit_prompt_cache=use_explicit_prompt_cache,
+            prompt_cache_ttl_seconds=prompt_cache_ttl_seconds,
+        )
         append_debug_entry(
             debug_path,
             {
                 "phase": "preflight",
                 "status": "ok",
                 "modelResolution": model_resolution,
+                "analysisSignature": analysis_signature,
+                "resume": {
+                    "enabled": resume_ok,
+                    "resumableSources": len(resumed_by_source),
+                    "resumableFingerprints": len(resumed_by_image_sha256),
+                },
+                "dedupeByContent": dedupe_by_content,
+                "promptCache": prompt_cache_info,
             },
         )
     except Exception as error:
+        debug_path = resolve_debug_path(output_path, debug_jsonl_path, clear_existing=True)
         append_debug_entry(
             debug_path,
             {
@@ -1048,34 +1348,140 @@ def analyze_skill_images_to_dataframe(
         )
         raise
 
-    model = genai.GenerativeModel(model_resolution["resolvedModel"])
     print(
         f"Using Gemini model: requested={model_resolution['requestedModel']} "
         f"resolved={model_resolution['resolvedModel']}",
         file=sys.stderr,
     )
+    if prompt_cache_info.get("enabled"):
+        print(
+            f"Prompt cache: {prompt_cache_info.get('status')} "
+            f"({prompt_cache_info.get('name', prompt_cache_info.get('error', 'n/a'))})",
+            file=sys.stderr,
+        )
+    elif prompt_cache_info.get("status") == "fallback":
+        print(
+            f"Prompt cache unavailable, using direct prompts: {prompt_cache_info.get('error')}",
+            file=sys.stderr,
+        )
+
+    reusable_by_image_sha256 = dict(resumed_by_image_sha256)
 
     for index, source in enumerate(image_sources, start=1):
-        row, debug_entry = analyze_single_source(model, source, model_resolution)
+        normalized_source = normalize_whitespace(source)
+        resumed_entry = resumed_by_source.get(normalized_source)
+        if resumed_entry is not None:
+            row = coerce_output_row(
+                resumed_entry["normalizedRecord"],
+                normalized_source,
+                source_hints=resumed_entry.get("sourceHints"),
+            )
+            debug_entry = {
+                "source": normalized_source,
+                "status": resumed_entry["status"],
+                "modelResolution": model_resolution,
+                "analysisSignature": analysis_signature,
+                "sourceHints": resumed_entry.get("sourceHints"),
+                "imageSha256": resumed_entry.get("imageSha256"),
+                "rawResponseText": resumed_entry.get("rawResponseText"),
+                "rawRecord": resumed_entry.get("rawRecord"),
+                "normalizedRecord": row,
+                "reuse": {
+                    "kind": "resume",
+                },
+            }
+            status = resumed_entry["status"]
+            summary[status] = summary.get(status, 0) + 1
+            summary["resumed"] += 1
+            rows.append(row)
+            append_debug_entry(debug_path, debug_entry)
+            print(
+                f"[{index}/{len(image_sources)}] resumed: {normalized_source}",
+                file=sys.stderr,
+            )
+            continue
+
+        prepared_source, row, debug_entry = prepare_source_analysis(
+            normalized_source,
+            model_resolution,
+            analysis_signature,
+        )
+        if prepared_source is None:
+            status = "error"
+            summary[status] = summary.get(status, 0) + 1
+            rows.append(row)
+            append_debug_entry(debug_path, debug_entry)
+            print(
+                f"[{index}/{len(image_sources)}] failed: {normalized_source} ({debug_entry.get('error')})",
+                file=sys.stderr,
+            )
+            continue
+
+        if dedupe_by_content:
+            cached_entry = reusable_by_image_sha256.get(prepared_source["imageSha256"])
+            if cached_entry is not None and isinstance(cached_entry.get("rawRecord"), dict):
+                row = normalize_record(
+                    cached_entry["rawRecord"],
+                    prepared_source["source"],
+                    source_hints=prepared_source["sourceHints"],
+                )
+                status = "ok" if has_meaningful_data(row) else "empty"
+                debug_entry.update(
+                    {
+                        "status": status,
+                        "rawResponseText": cached_entry.get("rawResponseText"),
+                        "rawRecord": cached_entry["rawRecord"],
+                        "normalizedRecord": row,
+                        "reuse": {
+                            "kind": "duplicate-content",
+                            "fromSource": cached_entry.get("source"),
+                        },
+                    }
+                )
+                summary[status] = summary.get(status, 0) + 1
+                summary["deduped"] += 1
+                rows.append(row)
+                append_debug_entry(debug_path, debug_entry)
+                print(
+                    f"[{index}/{len(image_sources)}] reused duplicate: {prepared_source['source']}",
+                    file=sys.stderr,
+                )
+                continue
+
+        row, debug_entry, raw_record = analyze_prepared_source(
+            model,
+            prepared_source,
+            model_resolution,
+            analysis_signature,
+            include_prompt=include_prompt,
+        )
         status = str(debug_entry.get("status") or "error")
         summary[status] = summary.get(status, 0) + 1
         rows.append(row)
         append_debug_entry(debug_path, debug_entry)
+        if raw_record is not None and status in {"ok", "empty"}:
+            reusable_by_image_sha256[prepared_source["imageSha256"]] = {
+                "source": prepared_source["source"],
+                "status": status,
+                "rawRecord": raw_record,
+                "rawResponseText": debug_entry.get("rawResponseText"),
+                "sourceHints": prepared_source["sourceHints"],
+                "imageSha256": prepared_source["imageSha256"],
+            }
 
-        normalized_source = normalize_whitespace(source)
         if status == "ok":
             print(
-                f"[{index}/{len(image_sources)}] analyzed: {normalized_source}",
+                f"[{index}/{len(image_sources)}] analyzed: {prepared_source['source']}",
                 file=sys.stderr,
             )
         elif status == "empty":
             print(
-                f"[{index}/{len(image_sources)}] low-signal result: {normalized_source}",
+                f"[{index}/{len(image_sources)}] low-signal result: {prepared_source['source']}",
                 file=sys.stderr,
             )
         else:
             print(
-                f"[{index}/{len(image_sources)}] failed: {normalized_source} ({debug_entry.get('error')})",
+                f"[{index}/{len(image_sources)}] failed: {prepared_source['source']} ({debug_entry.get('error')})",
                 file=sys.stderr,
             )
 
@@ -1088,7 +1494,12 @@ def analyze_skill_images_to_dataframe(
     data_frame.to_csv(resolved_output_path, index=False)
 
     print(
-        f"Summary: ok={summary.get('ok', 0)} empty={summary.get('empty', 0)} error={summary.get('error', 0)}",
+        "Summary: "
+        f"ok={summary.get('ok', 0)} "
+        f"empty={summary.get('empty', 0)} "
+        f"error={summary.get('error', 0)} "
+        f"resumed={summary.get('resumed', 0)} "
+        f"deduped={summary.get('deduped', 0)}",
         file=sys.stderr,
     )
     if debug_path is not None:
@@ -1141,6 +1552,27 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="Optional limit for the number of images to analyze.",
     )
+    parser.add_argument(
+        "--no-resume-ok",
+        action="store_true",
+        help="Do not reuse matching successful rows from an existing debug JSONL.",
+    )
+    parser.add_argument(
+        "--no-dedupe-by-content",
+        action="store_true",
+        help="Do not reuse results for duplicate images with the same content hash.",
+    )
+    parser.add_argument(
+        "--disable-explicit-prompt-cache",
+        action="store_true",
+        help="Disable explicit Gemini prompt caching and always send the full prompt.",
+    )
+    parser.add_argument(
+        "--prompt-cache-ttl-seconds",
+        type=int,
+        default=DEFAULT_PROMPT_CACHE_TTL_SECONDS,
+        help=f"TTL for explicit Gemini prompt cache. Default: {DEFAULT_PROMPT_CACHE_TTL_SECONDS}",
+    )
     return parser.parse_args()
 
 
@@ -1162,6 +1594,10 @@ def main() -> None:
         sleep_seconds=args.sleep_seconds,
         gemini_api_key=args.gemini_api_key,
         debug_jsonl_path=args.debug_jsonl,
+        resume_ok=not args.no_resume_ok,
+        dedupe_by_content=not args.no_dedupe_by_content,
+        use_explicit_prompt_cache=not args.disable_explicit_prompt_cache,
+        prompt_cache_ttl_seconds=max(1, args.prompt_cache_ttl_seconds),
     )
     print(f"Saved {len(data_frame)} rows to {Path(args.output).expanduser().resolve()}")
 

@@ -180,6 +180,12 @@ python3 scripts/saoif_image_analysis/storage_uploader.py \
 
 さらに、右下アイコンの色をローカルで見て `skillType` の補助ヒントにも使います。
 
+追加のコスト削減として、現在は次も既定で有効です。
+
+- **同一内容の画像は 1 回だけ Gemini に送る**
+- **同じ設定・同じモデルで再実行した場合、既存の `*.debug.jsonl` から成功済み結果を再利用する**
+- **Paid で利用可能な場合は、固定プロンプトを Gemini の explicit prompt cache に載せる**
+
 出力カラム:
 
 ```text
@@ -230,6 +236,9 @@ python3 scripts/saoif_image_analysis/gemini_skill_csv.py \
 
 モデル自体が未対応の場合は、空 CSV を量産せず **preflight で停止**し、その理由を debug JSONL に残します。
 
+再実行時は、この `debug JSONL` を見て **同じ解析シグネチャの成功済み行だけ自動で再利用**します。  
+プロンプトや切り出し設定が変わると解析シグネチャも変わるため、古い結果を誤って流用しません。
+
 ### Python から使う
 
 ```python
@@ -244,19 +253,35 @@ data_frame = analyze_skill_images_to_dataframe(
     ],
     output_path="saoif_skills.csv",
     sleep_seconds=2.0,
+    resume_ok=True,
+    dedupe_by_content=True,
+    use_explicit_prompt_cache=True,
 )
 ```
 
 ### 仕様メモ
 
 - 1件ごとに **2 秒待機**して RPM を抑えます
+- ただし、**resume / duplicate reuse で Gemini を呼ばなかった行には待機しません**
 - 失敗した画像があっても処理は継続します
 - 失敗した行も CSV に残し、判定できなかった列は空欄になります
 - CSV と同時に `*.debug.jsonl` を出力し、空結果や失敗理由を追えるようにしています
 - `requested model` / `resolved model` / `API error` も debug JSONL に記録します
+- `analysis signature` / `imageSha256` / `resume` / `duplicate-content reuse` / `prompt cache` も debug JSONL に記録します
 - `image` 列には入力 URL、またはローカル画像の絶対パスを保存します
 - `id` は Gemini が確定できない場合、画像ソース名から `skill-...` 形式の draft ID を生成します
 - `locale: en-US` のような設定はこのスクリプトでは使っていません。ファイル入出力は `utf-8` です
+
+### コスト最適化を無効にしたい場合
+
+```bash
+GEMINI_API_KEY=your-gemini-api-key \
+python3 scripts/saoif_image_analysis/gemini_skill_csv.py \
+  --folder ./scripts/skill-master/source-images/sword-test \
+  --no-resume-ok \
+  --no-dedupe-by-content \
+  --disable-explicit-prompt-cache
+```
 
 ## `build_context()` が行うこと
 
