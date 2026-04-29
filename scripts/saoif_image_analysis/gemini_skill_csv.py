@@ -76,6 +76,7 @@ TITLE_CROP_RATIOS = (0.00, 0.00, 1.00, 0.24)
 RARITY_CROP_RATIOS = (0.62, 0.08, 0.88, 0.26)
 RIGHT_TAB_CROP_RATIOS = (0.72, 0.18, 0.98, 0.42)
 STATS_CROP_RATIOS = (0.52, 0.48, 0.98, 0.96)
+SKILL_HEADER_CROP_RATIOS = (0.71, 0.45, 0.98, 0.55)
 ELEMENT_AREA_CROP_RATIOS = (0.91, 0.30, 0.98, 0.38)
 ATTACK_TYPE_ICON_CROP_RATIOS = (0.72, 0.74, 0.82, 0.84)
 SKILL_ICON_CROP_RATIOS = (0.78, 0.74, 0.98, 0.98)
@@ -218,9 +219,10 @@ GEMINI_PROMPT = """
 3. レアリティ付近
 4. 右側タブ領域
 5. 下部ステータス領域
-6. 属性アイコン枠
-7. 攻撃属性アイコン枠
-8. 右下アイコン領域
+6. スキルヘッダー領域
+7. 属性アイコン枠
+8. 攻撃属性アイコン枠
+9. 右下アイコン領域
 
 重要ルール:
 - カード上の日本語を優先して読んでください
@@ -237,13 +239,19 @@ GEMINI_PROMPT = """
 - skillType: 通常, コネクト, チェイン, MOD, 覚醒, アクセル, バースト, フルバースト
 
 判定優先ルール:
+最優先: カードが「アビリティ」であるか確認してください。
+- スキル詳細欄に「アビリティ」と記載がある、または装備タイプが「アビリティ」の場合はアビリティです。
+- アビリティの場合、attackType と element は解析不要です。必ず null を返してください。
+- アビリティは武器属性アイコンを持たないので、背景色や雰囲気から補完しないでください。
+
+アビリティでない場合のみ、以下のルールを適用します。
 1. 属性(element):
-   - 消費SPの右側を確認。アイコン（火、水、風、土、聖、闇）がなければ「無」。
-   - 背景が何色であっても、アイコン枠が空なら「無」と回答すること。
-   - 背景イラストやエフェクトの色は属性判定に使わないこと。
+   - 消費SPの右側を確認してください。
+   - アイコン（火、水、風、土、聖、闇）が存在しない、つまりアイコン枠が空欄なら「無」と回答してください。
+   - 背景が何色であっても、背景イラストやエフェクトの色は属性判定に使わないこと。
 2. 攻撃属性(attackType):
-   - スキルアイコン内の図形を確認。
-   - 斬撃の軌跡なら「斬」、矢印・刺突なら「突」、衝撃波・重みのあるマークなら「打」と回答すること。
+   - スキルメインアイコン内の図形を確認してください。
+   - 斬撃の軌跡や剣のマークなら「斬」、矢印や鋭い刺突のマークなら「突」、衝撃波や重みのある鈍器のマークなら「打」と回答してください。
 
 スキルタイプ判定ヒント:
 - 右側タブに "MOD Skill" があれば MOD
@@ -532,6 +540,7 @@ def normalize_record(
     equipment_type = normalize_enum(
         raw_record.get("equipmentType"), EQUIPMENT_TYPE_ALIASES
     ) or source_hints.get("equipmentType") or infer_equipment_type_from_source(source)
+    is_ability = equipment_type == "アビリティ"
     skill_type = normalize_enum(raw_record.get("skillType"), SKILL_TYPE_ALIASES) or source_hints.get(
         "skillType"
     )
@@ -545,9 +554,11 @@ def normalize_record(
             "cost": parse_integer(raw_record.get("cost")),
             "equipmentType": equipment_type,
             "sp": parse_integer(raw_record.get("sp")),
-            "element": element,
+            "element": None if is_ability else element,
             "skillType": skill_type,
-            "attackType": normalize_enum(
+            "attackType": None
+            if is_ability
+            else normalize_enum(
                 raw_record.get("attackType"), ATTACK_TYPE_ALIASES
             ),
             "breakGauge": parse_integer(raw_record.get("breakGauge")),
@@ -821,6 +832,13 @@ def build_prompt_images_from_image(image: Image.Image) -> list[tuple[str, bytes]
             min_side=DETAIL_CROP_MIN_SIDE,
         ),
         build_prompt_image_part(
+            "スキルヘッダー領域",
+            image,
+            ratios=SKILL_HEADER_CROP_RATIOS,
+            max_side=DETAIL_CROP_MAX_SIDE,
+            min_side=DETAIL_CROP_MIN_SIDE,
+        ),
+        build_prompt_image_part(
             "属性アイコン枠",
             image,
             ratios=ELEMENT_AREA_CROP_RATIOS,
@@ -995,6 +1013,7 @@ def build_analysis_signature(model_resolution: dict[str, Any]) -> str:
             "rarity": RARITY_CROP_RATIOS,
             "rightTab": RIGHT_TAB_CROP_RATIOS,
             "stats": STATS_CROP_RATIOS,
+            "skillHeader": SKILL_HEADER_CROP_RATIOS,
             "element": ELEMENT_AREA_CROP_RATIOS,
             "attackType": ATTACK_TYPE_ICON_CROP_RATIOS,
             "skillIcon": SKILL_ICON_CROP_RATIOS,
