@@ -24,8 +24,49 @@ IMAGE_EXTENSIONS = {
     ".avif",
     ".bmp",
 }
-DEFAULT_DESTINATION_PREFIX = "saoif_image_analysis"
+DEFAULT_DESTINATION_ROOT = "skill-master/source-images"
 DEFAULT_CACHE_CONTROL = "public,max-age=31536000,immutable"
+ALLOWED_SOURCE_IMAGE_FOLDERS = (
+    "ability",
+    "axe",
+    "bow",
+    "club",
+    "dagger",
+    "rapier",
+    "shield",
+    "spear",
+    "sword",
+    "test",
+)
+
+
+def resolve_upload_folder_name(folder_path: str | Path) -> str:
+    folder_name = Path(folder_path).expanduser().resolve().name
+    if folder_name not in ALLOWED_SOURCE_IMAGE_FOLDERS:
+        allowed_folders = ", ".join(ALLOWED_SOURCE_IMAGE_FOLDERS)
+        raise ValueError(
+            f'Unsupported source image folder "{folder_name}". '
+            f"Use one of: {allowed_folders}."
+        )
+    return folder_name
+
+
+def resolve_destination_prefix(
+    folder_path: str | Path,
+    destination_prefix: str | None = None,
+) -> str:
+    folder_name = resolve_upload_folder_name(folder_path)
+    resolved_prefix = f"{DEFAULT_DESTINATION_ROOT}/{folder_name}"
+    if destination_prefix is None:
+        return resolved_prefix
+
+    normalized_prefix = destination_prefix.strip("/ ")
+    if normalized_prefix != resolved_prefix:
+        raise ValueError(
+            f'Unsupported destination prefix "{destination_prefix}". '
+            f'Uploaded images must use "{resolved_prefix}".'
+        )
+    return resolved_prefix
 
 
 def iter_image_files(folder_path: str | Path, recursive: bool = True) -> list[Path]:
@@ -45,14 +86,11 @@ def iter_image_files(folder_path: str | Path, recursive: bool = True) -> list[Pa
 def create_storage_object_path(
     file_path: Path,
     folder_root: Path,
-    destination_prefix: str = DEFAULT_DESTINATION_PREFIX,
+    destination_prefix: str | None = None,
 ) -> str:
     relative_path = file_path.relative_to(folder_root).as_posix()
-    normalized_prefix = destination_prefix.strip("/ ")
-    if not normalized_prefix:
-        return relative_path
-
-    return f"{normalized_prefix}/{relative_path}"
+    resolved_prefix = resolve_destination_prefix(folder_root, destination_prefix)
+    return f"{resolved_prefix}/{relative_path}"
 
 
 def create_download_url(bucket_name: str, object_path: str, download_token: str) -> str:
@@ -75,7 +113,7 @@ def upload_single_image(
     bucket: Any,
     file_path: Path,
     folder_root: Path,
-    destination_prefix: str = DEFAULT_DESTINATION_PREFIX,
+    destination_prefix: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, str | None]:
     object_path = create_storage_object_path(file_path, folder_root, destination_prefix)
@@ -117,13 +155,14 @@ def upload_single_image(
 
 def upload_images_in_folder(
     folder_path: str | Path,
-    destination_prefix: str = DEFAULT_DESTINATION_PREFIX,
+    destination_prefix: str | None = None,
     recursive: bool = True,
     service_account_path: str | Path | None = None,
     storage_bucket_name: str | None = None,
     dry_run: bool = False,
 ) -> list[dict[str, str | None]]:
     folder_root = Path(folder_path).expanduser().resolve()
+    resolved_destination_prefix = resolve_destination_prefix(folder_root, destination_prefix)
     image_files = iter_image_files(folder_root, recursive=recursive)
     _, bucket, _ = initialize_firebase_storage(
         service_account_path=service_account_path,
@@ -140,7 +179,7 @@ def upload_images_in_folder(
                     bucket=bucket,
                     file_path=file_path,
                     folder_root=folder_root,
-                    destination_prefix=destination_prefix,
+                    destination_prefix=resolved_destination_prefix,
                     dry_run=dry_run,
                 )
             )
@@ -150,7 +189,7 @@ def upload_images_in_folder(
                     "file_name": file_path.name,
                     "relative_path": file_path.relative_to(folder_root).as_posix(),
                     "storage_path": create_storage_object_path(
-                        file_path, folder_root, destination_prefix
+                        file_path, folder_root, resolved_destination_prefix
                     ),
                     "download_url": None,
                     "status": "error",
@@ -165,11 +204,21 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Upload image files in a folder to Firebase Storage."
     )
-    parser.add_argument("--folder", required=True, help="Folder containing images to upload.")
+    parser.add_argument(
+        "--folder",
+        required=True,
+        help=(
+            "Folder containing images to upload. The folder name must be one of: "
+            + ", ".join(ALLOWED_SOURCE_IMAGE_FOLDERS)
+            + "."
+        ),
+    )
     parser.add_argument(
         "--destination-prefix",
-        default=DEFAULT_DESTINATION_PREFIX,
-        help="Storage object prefix for uploaded images.",
+        help=(
+            "Deprecated. Uploaded images are always stored under "
+            "skill-master/source-images/<folder>."
+        ),
     )
     parser.add_argument(
         "--service-account",

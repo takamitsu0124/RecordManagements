@@ -112,12 +112,14 @@ context = build_context(
 
 `storage_uploader.py` の `upload_images_in_folder()` を使うと、指定フォルダ配下の画像を Firebase Storage にアップロードし、ファイル名とダウンロード URL をリスト形式で取得できます。
 
+アップロード対象のローカルフォルダ名は、`ability` / `axe` / `bow` / `club` / `dagger` / `rapier` / `shield` / `spear` / `sword` / `test` だけ受け付けます。  
+Storage 上の保存先は常に `skill-master/source-images/<folder>/...` です。
+
 ```python
 from scripts.saoif_image_analysis.storage_uploader import upload_images_in_folder
 
 results = upload_images_in_folder(
-    folder_path="./scripts/skill-master/source-images",
-    destination_prefix="saoif_image_analysis",
+    folder_path="./scripts/skill-master/source-images/sword",
 )
 ```
 
@@ -126,8 +128,8 @@ results = upload_images_in_folder(
 ```python
 {
     "file_name": "sample.png",
-    "relative_path": "sword/sample.png",
-    "storage_path": "saoif_image_analysis/sword/sample.png",
+    "relative_path": "sample.png",
+    "storage_path": "skill-master/source-images/sword/sample.png",
     "download_url": "https://firebasestorage.googleapis.com/...",
     "status": "uploaded",
     "error": None,
@@ -144,16 +146,14 @@ results = upload_images_in_folder(
 
 ```bash
 python3 scripts/saoif_image_analysis/storage_uploader.py \
-  --folder ./scripts/skill-master/source-images \
-  --destination-prefix saoif_image_analysis
+  --folder ./scripts/skill-master/source-images/sword
 ```
 
 `--dry-run` を付けると、Storage へ書き込まずに保存先と結果形式だけ確認できます。
 
 ```bash
 python3 scripts/saoif_image_analysis/storage_uploader.py \
-  --folder ./scripts/skill-master/source-images \
-  --destination-prefix saoif_image_analysis \
+  --folder ./scripts/skill-master/source-images/sword \
   --dry-run
 ```
 
