@@ -36,6 +36,15 @@ Gemini API キーは次のどちらかで渡します。
 python3 -m pip install -r scripts/saoif_image_analysis/requirements.txt
 ```
 
+ルート `package.json` には、コマンド崩れを避けるための npm scripts も用意しています。
+
+```bash
+npm run saoif:image-analysis:setup
+GOOGLE_APPLICATION_CREDENTIALS=./secrets/recordmanagements-service-account.json \
+GEMINI_API_KEY=your-gemini-api-key \
+npm run saoif:image-analysis:axe-pipeline
+```
+
 インストール対象:
 
 - `firebase-admin`
