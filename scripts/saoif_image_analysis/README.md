@@ -33,16 +33,25 @@ Gemini API キーは次のどちらかで渡します。
 ## インストール
 
 ```bash
-python3 -m pip install -r scripts/saoif_image_analysis/requirements.txt
+npm run saoif:image-analysis:setup
 ```
 
-ルート `package.json` には、コマンド崩れを避けるための npm scripts も用意しています。
+この setup は、`.venv` が存在しない場合は作成し、壊れている場合は自動で作り直します。  
+依存関係や Python 実行環境に変更がなければ、毎回の再インストールは走りません。
+
+ルート `package.json` には、`.venv` を自動修復しながら実行できる npm scripts も用意しています。
 
 ```bash
 npm run saoif:image-analysis:setup
 GOOGLE_APPLICATION_CREDENTIALS=./secrets/recordmanagements-service-account.json \
 GEMINI_API_KEY=your-gemini-api-key \
 npm run saoif:image-analysis:axe-pipeline
+
+GEMINI_API_KEY=your-gemini-api-key \
+npm run saoif:image-analysis:gemini -- \
+  --folder ./scripts/skill-master/source-images/rapier \
+  --model gemini-2.5-flash-lite \
+  --output ./tmp/saoif_skills.csv
 ```
 
 インストール対象:
@@ -154,14 +163,14 @@ results = upload_images_in_folder(
 ### CLI 実行例
 
 ```bash
-python3 scripts/saoif_image_analysis/storage_uploader.py \
+npm run --silent saoif:image-analysis:storage -- \
   --folder ./scripts/skill-master/source-images/sword
 ```
 
 `--dry-run` を付けると、Storage へ書き込まずに保存先と結果形式だけ確認できます。
 
 ```bash
-python3 scripts/saoif_image_analysis/storage_uploader.py \
+npm run --silent saoif:image-analysis:storage -- \
   --folder ./scripts/skill-master/source-images/sword \
   --dry-run
 ```
@@ -209,7 +218,7 @@ id,name,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,swi
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key \
-python3 scripts/saoif_image_analysis/gemini_skill_csv.py \
+npm run saoif:image-analysis:gemini -- \
   --folder ./scripts/skill-master/source-images/sword-test
 ```
 
@@ -226,7 +235,7 @@ https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key \
-python3 scripts/saoif_image_analysis/gemini_skill_csv.py \
+npm run saoif:image-analysis:gemini -- \
   --input-file ./urls.txt
 ```
 
@@ -234,7 +243,7 @@ python3 scripts/saoif_image_analysis/gemini_skill_csv.py \
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key \
-python3 scripts/saoif_image_analysis/gemini_skill_csv.py \
+npm run saoif:image-analysis:gemini -- \
   --folder ./scripts/skill-master/source-images/sword-test \
   --output ./tmp/saoif_skills.csv
 ```
@@ -289,7 +298,7 @@ data_frame = analyze_skill_images_to_dataframe(
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key \
-python3 scripts/saoif_image_analysis/gemini_skill_csv.py \
+npm run saoif:image-analysis:gemini -- \
   --folder ./scripts/skill-master/source-images/sword-test \
   --no-resume-ok \
   --no-dedupe-by-content \
