@@ -43,6 +43,9 @@ CSV_COLUMNS = [
     "skillName",
     "image",
 ]
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_SOURCE_IMAGE_ROOT = REPO_ROOT / "scripts" / "skill-master" / "source-images"
+STORAGE_SOURCE_IMAGE_ROOT = Path("skill-master/source-images")
 MEANINGFUL_COLUMNS = [
     "name",
     "rarity",
@@ -444,6 +447,101 @@ def decode_firebase_object_path(source: str) -> str:
     return unquote(parsed.path.split(marker, 1)[1])
 
 
+def create_source_spec(
+    source: str,
+    analysis_source: str | None = None,
+) -> dict[str, str]:
+    normalized_source = normalize_whitespace(source)
+    normalized_analysis_source = normalize_whitespace(analysis_source) or normalized_source
+    return {
+        "source": normalized_source,
+        "analysisSource": normalized_analysis_source,
+    }
+
+
+def extract_storage_relative_path(candidate: str) -> Path | None:
+    normalized_candidate = normalize_whitespace(candidate)
+    if not normalized_candidate:
+        return None
+
+    raw_path = (
+        decode_firebase_object_path(normalized_candidate)
+        if normalized_candidate.startswith(("http://", "https://"))
+        else normalized_candidate
+    )
+    normalized_path = Path(raw_path)
+    root_parts = STORAGE_SOURCE_IMAGE_ROOT.parts
+    if normalized_path.parts[: len(root_parts)] != root_parts:
+        return None
+
+    relative_parts = normalized_path.parts[len(root_parts) :]
+    if not relative_parts:
+        return None
+    return Path(*relative_parts)
+
+
+def resolve_local_source_from_storage_reference(candidate: str) -> str:
+    relative_path = extract_storage_relative_path(candidate)
+    if relative_path is None:
+        return ""
+
+    local_path = (LOCAL_SOURCE_IMAGE_ROOT / relative_path).resolve()
+    if not local_path.is_file():
+        return ""
+    return str(local_path)
+
+
+def build_source_spec_from_mapping(item: dict[str, Any]) -> dict[str, str] | None:
+    existing_source = normalize_whitespace(item.get("source"))
+    existing_analysis_source = normalize_whitespace(item.get("analysisSource"))
+    if existing_source:
+        return create_source_spec(existing_source, existing_analysis_source)
+
+    image_value = ""
+    for key in SOURCE_KEYS:
+        candidate = normalize_whitespace(item.get(key))
+        if candidate:
+            image_value = candidate
+            break
+
+    explicit_local_source = ""
+    for key in ("local_path", "localPath"):
+        candidate = normalize_whitespace(item.get(key))
+        if candidate:
+            explicit_local_source = candidate
+            break
+
+    generic_local_source = ""
+    for key in ("path", "file"):
+        candidate = normalize_whitespace(item.get(key))
+        if candidate and not candidate.startswith(("http://", "https://")):
+            generic_local_source = candidate
+            break
+
+    derived_local_source = (
+        resolve_local_source_from_storage_reference(
+            normalize_whitespace(item.get("storage_path") or item.get("storagePath"))
+        )
+        or resolve_local_source_from_storage_reference(image_value)
+    )
+    analysis_source = explicit_local_source or generic_local_source or derived_local_source or image_value
+    source = image_value or analysis_source
+    if not source:
+        return None
+    return create_source_spec(source, analysis_source)
+
+
+def coerce_source_spec(source: str | Path | dict[str, Any]) -> dict[str, str]:
+    if isinstance(source, dict):
+        source_spec = build_source_spec_from_mapping(source)
+        if source_spec is not None:
+            return source_spec
+        return create_source_spec("")
+
+    normalized_source = normalize_whitespace(source)
+    return create_source_spec(normalized_source)
+
+
 def extract_source_stem(source: str) -> str:
     if source.startswith(("http://", "https://")):
         firebase_object_path = decode_firebase_object_path(source)
@@ -503,6 +601,8 @@ def build_draft_id(element: str | None, equipment_type: str | None, source: str)
 
 def create_empty_record(
     source: str,
+    *,
+    image_value: str | None = None,
     source_hints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_hints = source_hints or {}
@@ -525,17 +625,23 @@ def create_empty_record(
         "switchGauge": None,
         "cooldown": None,
         "skillName": None,
-        "image": source,
+        "image": normalize_whitespace(image_value) or source,
     }
 
 
 def normalize_record(
     raw_record: dict[str, Any],
     source: str,
+    *,
+    image_value: str | None = None,
     source_hints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_hints = source_hints or {}
-    normalized_record = create_empty_record(source, source_hints=source_hints)
+    normalized_record = create_empty_record(
+        source,
+        image_value=image_value,
+        source_hints=source_hints,
+    )
     element = normalize_enum(raw_record.get("element"), ELEMENT_ALIASES)
     equipment_type = normalize_enum(
         raw_record.get("equipmentType"), EQUIPMENT_TYPE_ALIASES
@@ -565,7 +671,7 @@ def normalize_record(
             "switchGauge": parse_integer(raw_record.get("switchGauge")),
             "cooldown": parse_integer(raw_record.get("cooldown")),
             "skillName": normalize_whitespace(raw_record.get("skillName")) or None,
-            "image": source,
+            "image": normalize_whitespace(image_value) or source,
         }
     )
     return normalized_record
@@ -642,7 +748,7 @@ def load_image_bytes(source: str | Path) -> tuple[bytes, str, str]:
     return image_bytes, content_type, resolved_path
 
 
-def load_sources_from_json(file_path: Path) -> list[str]:
+def load_sources_from_json(file_path: Path) -> list[dict[str, str]]:
     parsed = json.loads(file_path.read_text(encoding="utf-8"))
     if isinstance(parsed, dict):
         for key in ("images", "items", "results"):
@@ -654,41 +760,37 @@ def load_sources_from_json(file_path: Path) -> list[str]:
     if not isinstance(parsed, list):
         raise ValueError("JSON input must be an array or an object containing an array.")
 
-    results: list[str] = []
+    results: list[dict[str, str]] = []
     for item in parsed:
         if isinstance(item, str):
             normalized = normalize_whitespace(item)
             if normalized:
-                results.append(normalized)
+                results.append(create_source_spec(normalized))
             continue
         if isinstance(item, dict):
-            for key in SOURCE_KEYS:
-                normalized = normalize_whitespace(item.get(key))
-                if normalized:
-                    results.append(normalized)
-                    break
+            source_spec = build_source_spec_from_mapping(item)
+            if source_spec is not None:
+                results.append(source_spec)
     return results
 
 
-def load_sources_from_csv(file_path: Path) -> list[str]:
-    results: list[str] = []
+def load_sources_from_csv(file_path: Path) -> list[dict[str, str]]:
+    results: list[dict[str, str]] = []
     with file_path.open("r", encoding="utf-8", newline="") as file:
         reader = csv.DictReader(file)
         for row in reader:
-            for key in SOURCE_KEYS:
-                normalized = normalize_whitespace(row.get(key))
-                if normalized:
-                    results.append(normalized)
-                    break
+            source_spec = build_source_spec_from_mapping(row)
+            if source_spec is not None:
+                results.append(source_spec)
     return results
 
 
-def load_sources_from_text(file_path: Path) -> list[str]:
-    results: list[str] = []
+def load_sources_from_text(file_path: Path) -> list[dict[str, str]]:
+    results: list[dict[str, str]] = []
     for line in file_path.read_text(encoding="utf-8").splitlines():
         normalized = normalize_whitespace(line)
         if normalized and not normalized.startswith("#"):
-            results.append(normalized)
+            results.append(create_source_spec(normalized))
     return results
 
 
@@ -697,11 +799,11 @@ def load_image_sources(
     input_file: str | None = None,
     recursive: bool = True,
     limit: int = 0,
-) -> list[str]:
-    sources: list[str] = []
+) -> list[dict[str, str]]:
+    sources: list[dict[str, str]] = []
 
     if folder_path:
-        sources.extend(str(path) for path in iter_image_files(folder_path, recursive))
+        sources.extend(create_source_spec(str(path)) for path in iter_image_files(folder_path, recursive))
 
     if input_file:
         resolved_input_path = Path(input_file).expanduser().resolve()
@@ -713,7 +815,15 @@ def load_image_sources(
         else:
             sources.extend(load_sources_from_text(resolved_input_path))
 
-    deduped_sources = list(dict.fromkeys(source for source in sources if source))
+    deduped_sources: list[dict[str, str]] = []
+    seen_sources: set[str] = set()
+    for source in sources:
+        source_spec = coerce_source_spec(source)
+        source_key = source_spec["source"] or source_spec["analysisSource"]
+        if not source_key or source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        deduped_sources.append(source_spec)
     if limit > 0:
         return deduped_sources[:limit]
     return deduped_sources
@@ -1127,15 +1237,17 @@ def build_analysis_model(
 def coerce_output_row(
     candidate: dict[str, Any] | None,
     source: str,
+    *,
+    image_value: str | None = None,
     source_hints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    row = create_empty_record(source, source_hints=source_hints)
+    row = create_empty_record(source, image_value=image_value, source_hints=source_hints)
     if isinstance(candidate, dict):
         for column in CSV_COLUMNS:
             if column in candidate:
                 row[column] = candidate[column]
 
-    row["image"] = source
+    row["image"] = normalize_whitespace(image_value) or normalize_whitespace(row.get("image")) or source
     if not normalize_whitespace(row.get("id")):
         row["id"] = build_draft_id(row.get("element"), row.get("equipmentType"), source)
     return row
@@ -1169,6 +1281,11 @@ def load_resume_state(
             normalized_record = coerce_output_row(
                 entry.get("normalizedRecord"),
                 source,
+                image_value=normalize_whitespace(
+                    entry.get("normalizedRecord", {}).get("image")
+                    if isinstance(entry.get("normalizedRecord"), dict)
+                    else ""
+                ),
                 source_hints=source_hints,
             )
             resume_entry = {
@@ -1189,11 +1306,13 @@ def load_resume_state(
 
 
 def prepare_source_analysis(
-    source: str | Path,
+    source: str | Path | dict[str, Any],
     model_resolution: dict[str, Any],
     analysis_signature: str,
 ) -> tuple[dict[str, Any] | None, dict[str, Any], dict[str, Any]]:
-    normalized_source = normalize_whitespace(source)
+    source_spec = coerce_source_spec(source)
+    normalized_source = source_spec["source"]
+    analysis_source = source_spec["analysisSource"]
     debug_entry: dict[str, Any] = {
         "source": normalized_source,
         "status": "error",
@@ -1203,32 +1322,45 @@ def prepare_source_analysis(
     source_hints: dict[str, Any] | None = None
 
     try:
-        image_bytes, _mime_type, normalized_source = load_image_bytes(normalized_source)
+        image_bytes, _mime_type, normalized_analysis_source = load_image_bytes(analysis_source)
         normalized_image = normalize_image_for_analysis(image_bytes)
         source_hints = build_source_hints(normalized_source, normalized_image)
         image_sha256 = compute_image_sha256(normalized_image)
         prepared_source = {
             "source": normalized_source,
+            "analysisSource": normalized_analysis_source,
             "normalizedImage": normalized_image,
             "sourceHints": source_hints,
             "imageSha256": image_sha256,
+            "imageValue": normalized_source,
         }
         debug_entry.update(
             {
                 "source": normalized_source,
+                "analysisSource": normalized_analysis_source,
                 "sourceHints": source_hints,
                 "imageSha256": image_sha256,
             }
         )
-        return prepared_source, create_empty_record(normalized_source, source_hints=source_hints), debug_entry
+        return (
+            prepared_source,
+            create_empty_record(
+                normalized_source,
+                image_value=normalized_source,
+                source_hints=source_hints,
+            ),
+            debug_entry,
+        )
     except Exception as error:
         row = create_empty_record(
             normalized_source,
+            image_value=normalized_source,
             source_hints=source_hints,
         )
         debug_entry.update(
             {
                 "source": normalized_source,
+                "analysisSource": analysis_source,
                 "status": "error",
                 "error": str(error),
                 "sourceHints": source_hints,
@@ -1268,6 +1400,7 @@ def analyze_prepared_source(
         row = normalize_record(
             raw_record,
             normalized_source,
+            image_value=normalize_whitespace(prepared_source.get("imageValue")),
             source_hints=prepared_source["sourceHints"],
         )
         status = "ok" if has_meaningful_data(row) else "empty"
@@ -1284,6 +1417,7 @@ def analyze_prepared_source(
     except Exception as error:
         row = create_empty_record(
             normalized_source,
+            image_value=normalize_whitespace(prepared_source.get("imageValue")),
             source_hints=prepared_source["sourceHints"],
         )
         debug_entry.update(
@@ -1298,7 +1432,7 @@ def analyze_prepared_source(
 
 
 def analyze_skill_images_to_dataframe(
-    image_sources: list[str | Path],
+    image_sources: list[str | Path | dict[str, Any]],
     model_name: str = DEFAULT_MODEL_NAME,
     output_path: str | Path = DEFAULT_OUTPUT_PATH,
     sleep_seconds: float = DEFAULT_SLEEP_SECONDS,
@@ -1387,12 +1521,14 @@ def analyze_skill_images_to_dataframe(
     reusable_by_image_sha256 = dict(resumed_by_image_sha256)
 
     for index, source in enumerate(image_sources, start=1):
-        normalized_source = normalize_whitespace(source)
+        source_spec = coerce_source_spec(source)
+        normalized_source = source_spec["source"]
         resumed_entry = resumed_by_source.get(normalized_source)
         if resumed_entry is not None:
             row = coerce_output_row(
                 resumed_entry["normalizedRecord"],
                 normalized_source,
+                image_value=normalize_whitespace(resumed_entry["normalizedRecord"].get("image")),
                 source_hints=resumed_entry.get("sourceHints"),
             )
             debug_entry = {

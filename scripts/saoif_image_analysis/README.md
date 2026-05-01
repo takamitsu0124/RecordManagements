@@ -239,6 +239,10 @@ npm run saoif:image-analysis:gemini -- \
   --input-file ./urls.txt
 ```
 
+`storage_uploader.py` が出力した JSON を `--input-file` に渡した場合は、  
+`download_url` を CSV の `image` 列に残しつつ、対応する `scripts/skill-master/source-images/...` のローカル元画像が見つかれば **そちらを Gemini 解析に使います**。  
+そのため、Storage URL の SSL 取得に失敗する環境でも、`upload -> gemini --input-file storage.json` の順でそのまま流せます。
+
 ### 出力ファイル名を指定する
 
 ```bash
