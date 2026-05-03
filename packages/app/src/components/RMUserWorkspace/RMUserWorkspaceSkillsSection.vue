@@ -252,7 +252,9 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
                   <Tag :value="skill.equipmentType" severity="secondary" />
                   <Tag :value="skill.skillType" severity="secondary" />
                 </div>
-                <div class="skill-catalog-card__meta">{{ skill.skillName }}</div>
+                <div class="skill-catalog-card__meta">
+                  {{ skill.effect || skill.skillName || '未設定' }}
+                </div>
                 <div class="skill-catalog-card__hint">
                   {{
                     skill.isOwned
@@ -330,9 +332,9 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
                   severity="danger"
                 />
               </div>
-              <div class="owned-skill-item__meta">
-                {{ skill.skillName }}
-              </div>
+                <div class="owned-skill-item__meta">
+                  {{ skill.effect || skill.skillName || '未設定' }}
+                </div>
               <div class="owned-skill-item__level">
                 <div class="user-workspace-field__label">熟練度</div>
                 <InputNumber

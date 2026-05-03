@@ -37,11 +37,12 @@ secrets/recordmanagements-service-account.json
 ## 生成される CSV のヘッダ
 
 ```csv
-id,name,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,switchGauge,cooldown,skillName,image
+id,name,characterName,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,switchGauge,cooldown,skillName,effect,image
 ```
 
 - `id`: OCR 結果とファイル名から生成した skill_master 用 ID
 - `name`: カード表示名 (`【記死回生の一撃】キリト` など)
+- `characterName`: キャラクター名 (`キリト` など)
 - `rarity`: レアリティ
 - `cost`: コスト
 - `equipmentType`: 装備種別
@@ -53,6 +54,7 @@ id,name,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,swi
 - `switchGauge`: スイッチゲージ増加量
 - `cooldown`: クールダウン
 - `skillName`: 技名 (`スターバースト・ストリーム` など)
+- `effect`: 効果内容
 - `image`: ローカル画像パス、または Storage upload 後の URL
 
 ## 実行パターン

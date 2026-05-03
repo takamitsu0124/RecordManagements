@@ -356,7 +356,7 @@ const updateLevelFilter = (value: number | null) =>
                       {{ data.name }}
                     </div>
                     <div class="guild-search-table__skill-meta">
-                      {{ data.skillName }} / ID: {{ data.skillId }}
+                      {{ data.effect || data.skillName || '未設定' }} / ID: {{ data.skillId }}
                     </div>
                   </div>
                 </div>

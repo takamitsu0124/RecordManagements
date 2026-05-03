@@ -3,6 +3,8 @@ import { DefaultType } from './default'
 export type SkillMaster = {
 	/** スキルの表示名 */
 	name: string
+	/** キャラクター名 */
+	characterName: string
 	/** レアリティ */
 	rarity: string
 	/** コスト */
@@ -25,6 +27,8 @@ export type SkillMaster = {
 	cooldown: number | null
 	/** 技名 */
 	skillName: string
+	/** 効果内容 */
+	effect: string
 	/** スキル画像URL */
 	image: string
 } & DefaultType
@@ -37,6 +41,7 @@ export function defaultSkillMaster(): SkillMaster {
 		updatedAt: new Date(),
 		updatedBy: '',
 		name: '',
+		characterName: '',
 		rarity: '',
 		cost: null,
 		equipmentType: '',
@@ -48,6 +53,7 @@ export function defaultSkillMaster(): SkillMaster {
 		switchGauge: null,
 		cooldown: null,
 		skillName: '',
+		effect: '',
 		image: '',
 	}
 }

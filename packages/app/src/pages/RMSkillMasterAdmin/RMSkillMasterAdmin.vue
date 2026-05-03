@@ -11,6 +11,7 @@ import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
+import Textarea from 'primevue/textarea'
 import { dbSkillMasterModule } from '@rm/db'
 import { SkillMaster, defaultSkillMaster } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -28,6 +29,7 @@ import {
 import {
   attackTypeOptions,
   buildSkillMasterSearchText,
+  extractCharacterNameFromSkillName,
   normalizeSkillMasterRecord,
   skillElements,
   skillEquipmentTypes,
@@ -66,6 +68,7 @@ type SkillMasterImportStats = {
 const requiredSkillMasterCsvHeaders = [
   'id', // skill_master ドキュメントID
   'name', // カードの表示名 (例: 【記死回生の一撃】キリト)
+  'characterName', // キャラクター名 (例: キリト)
   'rarity', // レアリティ
   'cost', // コスト数値
   'equipmentType', // 装備種別 (例: 片手直剣)
@@ -77,6 +80,7 @@ const requiredSkillMasterCsvHeaders = [
   'switchGauge', // スイッチゲージ増加量
   'cooldown', // クールダウン数値
   'skillName', // 技名 (例: スターバースト・ストリーム)
+  'effect', // 効果内容
   'image', // スキル画像URL
 ]
 const skillMasterCsvHeaderText = requiredSkillMasterCsvHeaders.join(',')
@@ -263,15 +267,19 @@ const startEdit = (skill: SkillMaster) => {
 const validateForm = () => {
   const nextId = form.value.id.trim()
   const nextName = form.value.name.trim()
+  const isAbility = form.value.equipmentType === 'アビリティ'
 
   if (
     !nextId ||
     !nextName ||
-    !form.value.element ||
     !form.value.equipmentType ||
-    !form.value.skillName.trim()
+    (!isAbility && !form.value.element) ||
+    (!isAbility && !form.value.skillName.trim()) ||
+    (isAbility && !form.value.effect.trim())
   ) {
-    return 'ID、名称、自然属性、装備種別、技名は必須です。'
+    return isAbility
+      ? 'アビリティでは ID、名称、装備種別、効果が必須です。'
+      : 'ID、名称、自然属性、装備種別、技名は必須です。'
   }
 
   if (
@@ -296,12 +304,17 @@ const saveSkillMaster = async () => {
     ...form.value,
     id: form.value.id.trim(),
     name: form.value.name.trim(),
+    characterName:
+      form.value.characterName.trim() || extractCharacterNameFromSkillName(form.value.name),
     rarity: form.value.rarity.trim(),
     equipmentType: form.value.equipmentType.trim(),
     element: form.value.element.trim(),
-    skillType: form.value.skillType.trim() || '通常',
+    skillType:
+      form.value.skillType.trim() ||
+      (form.value.equipmentType.trim() === 'アビリティ' ? 'アビリティ' : '通常'),
     attackType: form.value.attackType.trim(),
     skillName: form.value.skillName.trim(),
+    effect: form.value.effect.trim(),
     image: form.value.image.trim(),
   }
 
@@ -393,6 +406,7 @@ const importSkillMasterCsv = async () => {
         ...defaultSkillMaster(),
         id: row.id,
         name: row.name,
+        characterName: row.characterName,
         rarity: row.rarity,
         cost: row.cost,
         equipmentType: row.equipmentType,
@@ -404,6 +418,7 @@ const importSkillMasterCsv = async () => {
         switchGauge: row.switchGauge,
         cooldown: row.cooldown,
         skillName: row.skillName,
+        effect: row.effect,
         image: row.image,
       }
 
@@ -592,7 +607,9 @@ const importSkillMasterCsv = async () => {
                 <Column field="rowNumber" header="行" style="width: 72px" />
                 <Column field="id" header="ID" />
                 <Column field="name" header="名称" />
+                <Column field="characterName" header="キャラ名" />
                 <Column field="skillName" header="技名" />
+                <Column field="effect" header="効果" />
                 <Column field="element" header="自然属性" style="width: 110px" />
                 <Column field="equipmentType" header="装備種別" />
                 <Column field="skillType" header="スキル種別" style="width: 120px" />
@@ -676,6 +693,14 @@ const importSkillMasterCsv = async () => {
                   />
                 </div>
 
+                <div class="skill-master-admin-field">
+                  <label class="skill-master-admin-label">キャラ名</label>
+                  <InputText
+                    v-model="form.characterName"
+                    placeholder="キリト"
+                  />
+                </div>
+
                 <div class="skill-master-admin-grid">
                   <div class="skill-master-admin-field">
                     <label class="skill-master-admin-label">レアリティ</label>
@@ -696,6 +721,7 @@ const importSkillMasterCsv = async () => {
                       :options="elementOptions"
                       optionLabel="label"
                       optionValue="value"
+                      showClear
                       placeholder="自然属性を選択"
                     />
                   </div>
@@ -739,12 +765,30 @@ const importSkillMasterCsv = async () => {
                     />
                   </div>
                   <div class="skill-master-admin-field">
-                    <label class="skill-master-admin-label">技名 *</label>
+                    <label class="skill-master-admin-label">
+                      {{ form.equipmentType === 'アビリティ' ? '技名' : '技名 *' }}
+                    </label>
                     <InputText
                       v-model="form.skillName"
-                      placeholder="スターバースト・ストリーム"
+                      :placeholder="
+                        form.equipmentType === 'アビリティ'
+                          ? 'アビリティでは通常未入力'
+                          : 'スターバースト・ストリーム'
+                      "
                     />
                   </div>
+                </div>
+
+                <div class="skill-master-admin-field">
+                  <label class="skill-master-admin-label">
+                    {{ form.equipmentType === 'アビリティ' ? '効果 *' : '効果' }}
+                  </label>
+                  <Textarea
+                    v-model="form.effect"
+                    rows="4"
+                    autoResize
+                    placeholder="クリティカル発生率が10.5%上昇"
+                  />
                 </div>
 
                 <div
@@ -853,7 +897,7 @@ const importSkillMasterCsv = async () => {
               <div class="skill-master-admin-filter-row rm-filter-toolbar">
                 <InputText
                   v-model="searchText"
-                  placeholder="ID・名称・技名・キャラ名で検索"
+                  placeholder="ID・名称・技名・効果・キャラ名で検索"
                 />
                 <Dropdown
                   v-model="selectedElement"
@@ -928,7 +972,9 @@ const importSkillMasterCsv = async () => {
                 </template>
                 <Column field="id" header="ID" />
                 <Column field="name" header="名称" />
+                <Column field="characterName" header="キャラ名" />
                 <Column field="skillName" header="技名" />
+                <Column field="effect" header="効果" />
                 <Column field="rarity" header="レア" style="width: 100px" />
                 <Column field="element" header="自然属性" style="width: 110px" />
                 <Column field="equipmentType" header="装備種別" />

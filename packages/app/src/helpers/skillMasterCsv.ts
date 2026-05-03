@@ -1,6 +1,7 @@
 import { SkillMaster } from '@rm/types'
 import { CsvRecord, normalizeCsvWhitespace } from './csv'
 import {
+  extractCharacterNameFromSkillName,
   normalizeSkillMasterAttackType,
   normalizeSkillMasterElement,
   normalizeSkillMasterEquipmentType,
@@ -13,6 +14,7 @@ export type SkillMasterImportPayload = Pick<
   SkillMaster,
   | 'id'
   | 'name'
+  | 'characterName'
   | 'rarity'
   | 'cost'
   | 'equipmentType'
@@ -24,6 +26,7 @@ export type SkillMasterImportPayload = Pick<
   | 'switchGauge'
   | 'cooldown'
   | 'skillName'
+  | 'effect'
   | 'image'
 > & {
   rowNumber: number
@@ -62,6 +65,7 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
     const rowNumber = record.__rowNumber
     const id = normalizeCsvWhitespace(record.id)
     const name = normalizeCsvWhitespace(record.name)
+    const hasCharacterName = Object.prototype.hasOwnProperty.call(record, 'characterName')
     const rawElement = record.element
     const rawEquipmentType = record.equipmentType
     const rawSkillType = record.skillType
@@ -77,11 +81,13 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
     const hasSwitchGauge = Object.prototype.hasOwnProperty.call(record, 'switchGauge')
     const hasCooldown = Object.prototype.hasOwnProperty.call(record, 'cooldown')
     const hasSkillName = Object.prototype.hasOwnProperty.call(record, 'skillName')
+    const hasEffect = Object.prototype.hasOwnProperty.call(record, 'effect')
     const hasImage = Object.prototype.hasOwnProperty.call(record, 'image')
 
     if (
       !id ||
       !name ||
+      !hasCharacterName ||
       !hasRarity ||
       !hasCost ||
       !hasEquipmentType ||
@@ -93,10 +99,11 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
       !hasSwitchGauge ||
       !hasCooldown ||
       !hasSkillName ||
+      !hasEffect ||
       !hasImage
     ) {
       errors.push(
-        `Row ${rowNumber}: id, name, rarity, cost, equipmentType, sp, element, skillType, attackType, breakGauge, switchGauge, cooldown, skillName, image are required keys.`
+        `Row ${rowNumber}: id, name, characterName, rarity, cost, equipmentType, sp, element, skillType, attackType, breakGauge, switchGauge, cooldown, skillName, effect, image are required keys.`
       )
       return
     }
@@ -106,20 +113,34 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
         normalizeSkillMasterEquipmentType(rawEquipmentType),
         'equipmentType'
       )
-      const element = normalizeRequiredTextField(
-        normalizeSkillMasterElement(rawElement),
-        'element'
-      )
-      const skillType = normalizeSkillMasterSkillType(rawSkillType)
-      const attackType = normalizeSkillMasterAttackType(rawAttackType, equipmentType)
+      const isAbility = equipmentType === 'アビリティ'
+      const element = isAbility
+        ? ''
+        : normalizeRequiredTextField(normalizeSkillMasterElement(rawElement), 'element')
+      const skillType = isAbility
+        ? normalizeSkillMasterSkillType(rawSkillType || 'アビリティ')
+        : normalizeSkillMasterSkillType(rawSkillType)
+      const attackType = isAbility
+        ? ''
+        : normalizeSkillMasterAttackType(rawAttackType, equipmentType)
       const rarity = normalizeSkillMasterRarity(record.rarity)
       const cost = normalizeSkillMasterNumber(record.cost)
       const sp = normalizeSkillMasterNumber(record.sp)
+      const characterName =
+        normalizeCsvWhitespace(record.characterName) || extractCharacterNameFromSkillName(name)
       const breakGauge = normalizeSkillMasterNumber(record.breakGauge)
       const switchGauge = normalizeSkillMasterNumber(record.switchGauge)
       const cooldown = normalizeSkillMasterNumber(record.cooldown)
-      const skillName = normalizeRequiredTextField(record.skillName, 'skillName')
+      const skillName = normalizeCsvWhitespace(record.skillName)
+      const effect = normalizeCsvWhitespace(record.effect)
       const image = normalizeRequiredTextField(record.image, 'image')
+
+      if (!isAbility && !skillName) {
+        throw new Error('skillName is required for non-ability rows.')
+      }
+      if (isAbility && !effect) {
+        throw new Error('effect is required for ability rows.')
+      }
 
       if (element !== normalizeCsvWhitespace(rawElement)) {
         normalizedElementCount += 1
@@ -150,6 +171,7 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
         rowNumber,
         id,
         name,
+        characterName,
         rarity,
         cost,
         equipmentType,
@@ -161,6 +183,7 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
         switchGauge,
         cooldown,
         skillName,
+        effect,
         image,
       })
     } catch (error) {
@@ -200,6 +223,7 @@ export function getSkillMasterImportChangeType(
 
   if (
     existing.name === payload.name &&
+    existing.characterName === payload.characterName &&
     existing.rarity === payload.rarity &&
     existing.cost === payload.cost &&
     existing.equipmentType === payload.equipmentType &&
@@ -211,6 +235,7 @@ export function getSkillMasterImportChangeType(
     existing.switchGauge === payload.switchGauge &&
     existing.cooldown === payload.cooldown &&
     existing.skillName === payload.skillName &&
+    existing.effect === payload.effect &&
     existing.image === payload.image
   ) {
     return 'unchanged'

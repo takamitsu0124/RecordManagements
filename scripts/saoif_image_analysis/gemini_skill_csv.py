@@ -30,6 +30,7 @@ except ImportError:
 CSV_COLUMNS = [
     "id",
     "name",
+    "characterName",
     "rarity",
     "cost",
     "equipmentType",
@@ -41,6 +42,7 @@ CSV_COLUMNS = [
     "switchGauge",
     "cooldown",
     "skillName",
+    "effect",
     "image",
 ]
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +50,7 @@ LOCAL_SOURCE_IMAGE_ROOT = REPO_ROOT / "scripts" / "skill-master" / "source-image
 STORAGE_SOURCE_IMAGE_ROOT = Path("skill-master/source-images")
 MEANINGFUL_COLUMNS = [
     "name",
+    "characterName",
     "rarity",
     "cost",
     "sp",
@@ -57,6 +60,7 @@ MEANINGFUL_COLUMNS = [
     "switchGauge",
     "cooldown",
     "skillName",
+    "effect",
 ]
 DEFAULT_MODEL_NAME = "gemini-2.5-flash-lite"
 DEFAULT_OUTPUT_PATH = "saoif_skills.csv"
@@ -211,6 +215,21 @@ COMMON_MODEL_ALIASES = {
         "gemini-1.5-pro-001",
     ],
 }
+TEXT_PLACEHOLDERS = {
+    "skill",
+    "skill name",
+    "character name",
+    "effect",
+    "アビリティ",
+    "キャラ",
+    "キャラ名",
+    "キャラクター",
+    "キャラクター名",
+    "スキル",
+    "技",
+    "技名",
+    "効果",
+}
 
 GEMINI_PROMPT = """
 あなたは SAOIF (Sword Art Online Integral Factor) のスキルカード解析器です。
@@ -255,6 +274,21 @@ GEMINI_PROMPT = """
 2. 攻撃属性(attackType):
    - スキルメインアイコン内の図形を確認してください。
    - 斬撃の軌跡や剣のマークなら「斬」、矢印や鋭い刺突のマークなら「突」、衝撃波や重みのある鈍器のマークなら「打」と回答してください。
+3. キャラクター名(characterName):
+   - カード名のうち、キャラクター名だけを返してください。
+   - 例: 【智の探求】アリス → アリス
+   - 二つ名や【】は含めないでください。
+   - 判断できない場合は null
+4. 技名(skillName):
+   - カードに書かれている技名そのものを返してください。
+   - 例: スターバースト・ストリーム
+   - 効果説明文や「Effect」「効果」の見出しは入れないでください。
+   - 技名が見当たらない場合は null
+5. 効果内容(effect):
+   - 効果説明文の本文を返してください。
+   - 「Effect」「効果」の見出しそのものは含めず、その下の本文だけを返してください。
+   - 技名を effect に重ねて入れないでください。
+   - 効果説明文が見当たらない場合は null
 
 スキルタイプ判定ヒント:
 - 右側タブに "MOD Skill" があれば MOD
@@ -271,6 +305,7 @@ GEMINI_PROMPT = """
 {
   "id": null,
   "name": null,
+  "characterName": null,
   "rarity": null,
   "cost": null,
   "equipmentType": null,
@@ -282,6 +317,7 @@ GEMINI_PROMPT = """
   "switchGauge": null,
   "cooldown": null,
   "skillName": null,
+  "effect": null,
   "image": null
 }
 """.strip()
@@ -293,6 +329,9 @@ def normalize_whitespace(value: Any) -> str:
 
 def normalize_lookup_key(value: Any) -> str:
     return re.sub(r"[\s_()/:.-]+", "", normalize_whitespace(value).lower())
+
+
+TEXT_PLACEHOLDER_KEYS = {normalize_lookup_key(item) for item in TEXT_PLACEHOLDERS}
 
 
 def normalize_rarity(value: Any) -> str | None:
@@ -307,6 +346,61 @@ def normalize_enum(value: Any, aliases: dict[str, str]) -> str | None:
 
     lookup_key = normalize_lookup_key(normalized)
     return aliases.get(lookup_key) or aliases.get(normalized) or None
+
+
+def extract_character_name_from_name(value: Any) -> str | None:
+    normalized = normalize_whitespace(value)
+    if not normalized:
+        return None
+    matched = re.search(r"】\s*(.+)$", normalized)
+    if not matched:
+        return None
+    extracted = normalize_whitespace(matched.group(1))
+    return extracted or None
+
+
+def normalize_character_name_text(value: Any) -> str | None:
+    normalized = normalize_whitespace(value)
+    if not normalized:
+        return None
+    normalized = re.sub(
+        r"^(?:character\s*name|charactername|キャラクター名|キャラ名)\s*[:：]?\s*",
+        "",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    if not normalized:
+        return None
+    if normalize_lookup_key(normalized) in TEXT_PLACEHOLDER_KEYS:
+        return None
+    if "【" in normalized or "】" in normalized:
+        extracted = extract_character_name_from_name(normalized)
+        if extracted:
+            return extracted
+    return normalized
+
+
+def normalize_skill_name_text(value: Any) -> str | None:
+    normalized = normalize_whitespace(value)
+    if not normalized:
+        return None
+    if normalize_lookup_key(normalized) in TEXT_PLACEHOLDER_KEYS:
+        return None
+    if re.match(r"^(?:effect|効果)\s*[:：]?\s*", normalized, flags=re.IGNORECASE):
+        return None
+    return normalized
+
+
+def normalize_effect_text(value: Any) -> str | None:
+    normalized = normalize_whitespace(value)
+    if not normalized:
+        return None
+    normalized = re.sub(r"^(?:effect|効果)\s*[:：]?\s*", "", normalized, flags=re.IGNORECASE)
+    if not normalized:
+        return None
+    if normalize_lookup_key(normalized) in TEXT_PLACEHOLDER_KEYS:
+        return None
+    return normalized
 
 
 def parse_integer(value: Any) -> int | None:
@@ -614,6 +708,7 @@ def create_empty_record(
     return {
         "id": build_draft_id(None, equipment_type, source),
         "name": None,
+        "characterName": None,
         "rarity": None,
         "cost": None,
         "equipmentType": equipment_type,
@@ -625,6 +720,7 @@ def create_empty_record(
         "switchGauge": None,
         "cooldown": None,
         "skillName": None,
+        "effect": None,
         "image": normalize_whitespace(image_value) or source,
     }
 
@@ -650,12 +746,17 @@ def normalize_record(
     skill_type = normalize_enum(raw_record.get("skillType"), SKILL_TYPE_ALIASES) or source_hints.get(
         "skillType"
     )
+    name = normalize_whitespace(raw_record.get("name")) or None
+    character_name = normalize_character_name_text(raw_record.get("characterName"))
+    if character_name is None:
+        character_name = extract_character_name_from_name(name)
 
     normalized_record.update(
         {
             "id": normalize_whitespace(raw_record.get("id"))
             or build_draft_id(element, equipment_type, source),
-            "name": normalize_whitespace(raw_record.get("name")) or None,
+            "name": name,
+            "characterName": character_name,
             "rarity": normalize_rarity(raw_record.get("rarity")),
             "cost": parse_integer(raw_record.get("cost")),
             "equipmentType": equipment_type,
@@ -670,7 +771,8 @@ def normalize_record(
             "breakGauge": parse_integer(raw_record.get("breakGauge")),
             "switchGauge": parse_integer(raw_record.get("switchGauge")),
             "cooldown": parse_integer(raw_record.get("cooldown")),
-            "skillName": normalize_whitespace(raw_record.get("skillName")) or None,
+            "skillName": normalize_skill_name_text(raw_record.get("skillName")),
+            "effect": normalize_effect_text(raw_record.get("effect")),
             "image": normalize_whitespace(image_value) or source,
         }
     )

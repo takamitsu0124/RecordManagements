@@ -154,10 +154,12 @@ const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
         skillId: ownedSkill.skillId,
         level: ownedSkill.level,
         name: fallbackMaster.name || ownedSkill.skillId,
+        characterName: fallbackMaster.characterName || '',
         element: fallbackMaster.element || '未設定',
         equipmentType: fallbackMaster.equipmentType || '未設定',
         skillType: fallbackMaster.skillType || '通常',
         skillName: fallbackMaster.skillName || '未設定',
+        effect: fallbackMaster.effect || '',
         image: fallbackMaster.image,
         masterMissing: !master,
       }

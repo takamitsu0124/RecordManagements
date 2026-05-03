@@ -21,6 +21,7 @@ export const skillElements = ['火', '水', '土', '聖', '闇', '風', '無'] a
 export const skillEquipmentTypes = legacyWeaponBases
 export const skillTypeOptions = [
   '通常',
+  'アビリティ',
   '覚醒',
   'アクセル',
   'MOD',
@@ -100,6 +101,8 @@ const skillTypeAliasMap = new Map<string, SkillTypeOption>([
   ['normal', '通常'],
   ['base', '通常'],
   ['通常', '通常'],
+  ['アビリティ', 'アビリティ'],
+  ['ability', 'アビリティ'],
   ['覚醒', '覚醒'],
   ['覚醒レベル', '覚醒'],
   ['awaken', '覚醒'],
@@ -276,13 +279,21 @@ export function normalizeSkillMasterRecord(record: Partial<Record<string, unknow
     record.equipmentType,
     legacyType
   )
-  const skillType = normalizeSkillMasterSkillType(record.skillType, legacyType)
+  const skillType =
+    equipmentType === 'アビリティ'
+      ? normalizeSkillMasterSkillType(record.skillType || 'アビリティ', legacyType)
+      : normalizeSkillMasterSkillType(record.skillType, legacyType)
 
   return {
     ...fallback,
     ...record,
     id: normalizeSkillMasterWhitespace(record.id ?? fallback.id),
     name: normalizeSkillMasterWhitespace(record.name ?? fallback.name),
+    characterName:
+      normalizeSkillMasterWhitespace(record.characterName) ||
+      extractCharacterNameFromSkillName(
+        normalizeSkillMasterWhitespace(record.name ?? fallback.name)
+      ),
     rarity: normalizeSkillMasterRarity(record.rarity),
     cost: normalizeSkillMasterNumber(record.cost),
     equipmentType,
@@ -294,6 +305,7 @@ export function normalizeSkillMasterRecord(record: Partial<Record<string, unknow
     switchGauge: normalizeSkillMasterNumber(record.switchGauge ?? record.swGauge),
     cooldown: normalizeSkillMasterNumber(record.cooldown ?? record.cool),
     skillName: normalizeSkillMasterWhitespace(record.skillName),
+    effect: normalizeSkillMasterWhitespace(record.effect),
     image: normalizeSkillMasterWhitespace(record.image ?? fallback.image),
   } satisfies SkillMaster
 }
@@ -302,8 +314,10 @@ export function buildSkillMasterSearchText(skill: SkillMaster) {
   return [
     skill.id,
     skill.name,
+    skill.characterName,
     extractCharacterNameFromSkillName(skill.name),
     skill.skillName,
+    skill.effect,
     skill.rarity,
     skill.element,
     skill.equipmentType,

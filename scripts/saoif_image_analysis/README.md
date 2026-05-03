@@ -195,7 +195,8 @@ npm run --silent saoif:image-analysis:storage -- \
 9. 右下アイコン領域
 
 コストを抑えるため、送信前に各補助画像は **必要な領域と判定精度を保ったまま、過剰な拡大を避けるサイズ** に整えています。  
-解析対象の 9 領域、判定ルール、出力カラムはそのままです。
+解析対象の 9 領域、判定ルール、出力カラムはそのままです。  
+武器スキル系では、現在は **`characterName` / `skillName` / `effect`** を分けて読み取るようにしています。
 
 アビリティカードの誤判定を減らすため、現在は **「アビリティかどうか」を最優先で判定** します。  
 `equipmentType` が `アビリティ` と判断された場合、`element` と `attackType` は常に `null` に正規化します。
@@ -211,7 +212,7 @@ npm run --silent saoif:image-analysis:storage -- \
 出力カラム:
 
 ```text
-id,name,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,switchGauge,cooldown,skillName,image
+id,name,characterName,rarity,cost,equipmentType,sp,element,skillType,attackType,breakGauge,switchGauge,cooldown,skillName,effect,image
 ```
 
 ### ローカルフォルダをまとめて解析する
@@ -297,6 +298,85 @@ data_frame = analyze_skill_images_to_dataframe(
 - `image` 列には入力 URL、またはローカル画像の絶対パスを保存します
 - `id` は Gemini が確定できない場合、画像ソース名から `skill-...` 形式の draft ID を生成します
 - `locale: en-US` のような設定はこのスクリプトでは使っていません。ファイル入出力は `utf-8` です
+
+## アビリティ専用で CSV を作る
+
+`gemini_ability_csv.py` は **アビリティカード専用** の Gemini 解析スクリプトです。  
+武器スキル向けの属性・攻撃種別・右下アイコン色ヒントを使わず、次の 5 項目に集中して読み取ります。
+
+- `name`: カード上部の表示名
+- `characterName`: キャラクター名
+- `rarity`: 星の数を数えた数値
+- `cost`: コスト数値
+- `effect`: 効果本文
+
+次の列はスクリプト側で固定します。
+
+```text
+equipmentType=アビリティ
+sp=null
+element=null
+skillType=アビリティ
+attackType=null
+breakGauge=null
+switchGauge=null
+cooldown=null
+skillName=null
+```
+
+通常の `gemini_skill_csv.py` と同じく、入力はローカル画像フォルダ / URL リスト / JSON / CSV に対応し、`resume`, `duplicate-content reuse`, `prompt cache`, `debug JSONL` も使えます。
+
+### ローカルのアビリティ画像をまとめて解析する
+
+```bash
+GEMINI_API_KEY=your-gemini-api-key \
+npm run saoif:image-analysis:ability-gemini -- \
+  --folder ./scripts/skill-master/source-images/ability
+```
+
+### まず 5 枚だけ試験実行する
+
+```bash
+GEMINI_API_KEY=your-gemini-api-key \
+npm run saoif:image-analysis:ability-gemini-sample
+```
+
+このコマンドは `scripts/skill-master/source-images/ability` の先頭 5 枚だけを解析し、結果を `./tmp/saoif_abilities.sample.csv` に保存します。
+
+### 出力ファイル名を指定する
+
+```bash
+GEMINI_API_KEY=your-gemini-api-key \
+npm run saoif:image-analysis:ability-gemini -- \
+  --folder ./scripts/skill-master/source-images/ability \
+  --output ./tmp/saoif_abilities.csv
+```
+
+この場合、CSV とあわせて次のデバッグファイルも自動で出力されます。
+
+```text
+./tmp/saoif_abilities.csv.debug.jsonl
+```
+
+### Storage に upload して URL を `image` に残す
+
+```bash
+npm run saoif:image-analysis:ability-storage && \
+GEMINI_API_KEY=your-gemini-api-key \
+npm run saoif:image-analysis:ability-uploaded-gemini
+```
+
+または 1 コマンドで:
+
+```bash
+GEMINI_API_KEY=your-gemini-api-key \
+npm run saoif:image-analysis:ability-pipeline
+```
+
+この経路では、まず `storage_uploader.py` が `./tmp/ability.storage.json` を作り、  
+その `download_url` が CSV の `image` 列に入ります。  
+Gemini 解析では、その JSON を `--input-file` として受け取り、`image` 以外の列を更新します。  
+対応するローカル元画像が見つかる場合は、解析自体はそちらを使います。
 
 ### コスト最適化を無効にしたい場合
 
