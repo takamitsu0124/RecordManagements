@@ -84,13 +84,13 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
             </p>
           </div>
 
-            <RMInput
-              v-model="skillCatalogQueryModel"
-              search
-              shadow
-              class="skill-checker__search"
-              placeholder="名称・技名・ID・キャラ名で検索"
-            />
+          <RMInput
+            v-model="skillCatalogQueryModel"
+            search
+            shadow
+            class="skill-checker__search"
+            placeholder="名称・技名・ID・キャラ名で検索"
+          />
 
           <div class="skill-checker__filter-group">
             <div class="skill-checker__filter-label">表示</div>
@@ -129,64 +129,62 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
           </div>
 
           <div class="skill-checker__filter-group">
-              <div class="skill-checker__filter-label">自然属性</div>
-              <div class="skill-checker__filter-actions">
-                <Button
-                  type="button"
-                  label="すべて"
-                  size="small"
-                  :severity="
-                    skillCatalogElement === 'all' ? 'contrast' : 'secondary'
-                  "
-                  :outlined="skillCatalogElement !== 'all'"
-                  @click="setSkillCatalogElement('all')"
-                />
-                <Button
-                  v-for="element in skillCatalogElementOptions"
-                  :key="element"
-                  type="button"
-                  :label="element"
-                  size="small"
-                  :severity="
-                    skillCatalogElement === element ? 'contrast' : 'secondary'
-                  "
-                  :outlined="skillCatalogElement !== element"
-                  @click="setSkillCatalogElement(element)"
-                />
-              </div>
+            <div class="skill-checker__filter-label">自然属性</div>
+            <div class="skill-checker__filter-actions">
+              <Button
+                type="button"
+                label="すべて"
+                size="small"
+                :severity="
+                  skillCatalogElement === 'all' ? 'contrast' : 'secondary'
+                "
+                :outlined="skillCatalogElement !== 'all'"
+                @click="setSkillCatalogElement('all')"
+              />
+              <Button
+                v-for="element in skillCatalogElementOptions"
+                :key="element"
+                type="button"
+                :label="element"
+                size="small"
+                :severity="
+                  skillCatalogElement === element ? 'contrast' : 'secondary'
+                "
+                :outlined="skillCatalogElement !== element"
+                @click="setSkillCatalogElement(element)"
+              />
             </div>
+          </div>
 
-            <div class="skill-checker__filter-group">
-              <div class="skill-checker__filter-label">装備種別</div>
-              <div class="skill-checker__filter-actions">
-                <Button
-                  type="button"
-                  label="すべて"
-                  size="small"
-                  :severity="
-                    skillCatalogEquipmentType === 'all'
-                      ? 'contrast'
-                      : 'secondary'
-                  "
-                  :outlined="skillCatalogEquipmentType !== 'all'"
-                  @click="setSkillCatalogEquipmentType('all')"
-                />
-                <Button
-                  v-for="equipmentType in skillCatalogEquipmentTypeOptions"
-                  :key="equipmentType"
-                  type="button"
-                  :label="equipmentType"
-                  size="small"
-                  :severity="
-                    skillCatalogEquipmentType === equipmentType
-                      ? 'contrast'
-                      : 'secondary'
-                  "
-                  :outlined="skillCatalogEquipmentType !== equipmentType"
-                  @click="setSkillCatalogEquipmentType(equipmentType)"
-                />
-              </div>
+          <div class="skill-checker__filter-group">
+            <div class="skill-checker__filter-label">装備種別</div>
+            <div class="skill-checker__filter-actions">
+              <Button
+                type="button"
+                label="すべて"
+                size="small"
+                :severity="
+                  skillCatalogEquipmentType === 'all' ? 'contrast' : 'secondary'
+                "
+                :outlined="skillCatalogEquipmentType !== 'all'"
+                @click="setSkillCatalogEquipmentType('all')"
+              />
+              <Button
+                v-for="equipmentType in skillCatalogEquipmentTypeOptions"
+                :key="equipmentType"
+                type="button"
+                :label="equipmentType"
+                size="small"
+                :severity="
+                  skillCatalogEquipmentType === equipmentType
+                    ? 'contrast'
+                    : 'secondary'
+                "
+                :outlined="skillCatalogEquipmentType !== equipmentType"
+                @click="setSkillCatalogEquipmentType(equipmentType)"
+              />
             </div>
+          </div>
 
           <div class="skill-checker__summary">
             <div class="skill-checker__summary-tags">
@@ -226,6 +224,17 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
               @click="emit('toggle-skill', skill)"
             >
               <div class="skill-catalog-card__media">
+                <div class="skill-catalog-card__status">
+                  <i
+                    :class="[
+                      'pi',
+                      skill.isOwned ? 'pi-check-circle' : 'pi-circle',
+                    ]"
+                  />
+                  <span>{{
+                    skill.isOwned ? 'チェック済み' : '未チェック'
+                  }}</span>
+                </div>
                 <img
                   v-if="skill.image"
                   :src="skill.image"
@@ -237,30 +246,19 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
                 </div>
               </div>
               <div class="skill-catalog-card__body">
-                <div class="skill-catalog-card__head">
-                  <div class="skill-catalog-card__name">
-                    {{ skill.name }}
-                  </div>
-                  <Tag
-                    :value="skill.isOwned ? 'チェック済み' : '未チェック'"
-                    :severity="skill.isOwned ? 'success' : 'secondary'"
-                  />
+                <div class="skill-catalog-card__name">
+                  {{ skill.name }}
                 </div>
-                <div class="skill-catalog-card__meta">{{ skill.id }}</div>
-                <div class="skill-catalog-card__tags">
-                  <Tag :value="skill.element" severity="secondary" />
-                  <Tag :value="skill.equipmentType" severity="secondary" />
-                  <Tag :value="skill.skillType" severity="secondary" />
+                <div class="skill-catalog-card__attributes">
+                  <span class="skill-catalog-card__attribute">
+                    {{ skill.equipmentType || '未設定' }}
+                  </span>
+                  <span class="skill-catalog-card__attribute">
+                    {{ skill.element || '未設定' }}
+                  </span>
                 </div>
-                <div class="skill-catalog-card__meta">
-                  {{ skill.effect || skill.skillName || '未設定' }}
-                </div>
-                <div class="skill-catalog-card__hint">
-                  {{
-                    skill.isOwned
-                      ? `熟練度 ${skill.ownedLevel} / タップで解除`
-                      : 'タップで所持に追加'
-                  }}
+                <div class="skill-catalog-card__skill-name">
+                  {{ skill.skillName || '未設定' }}
                 </div>
               </div>
             </button>
@@ -268,9 +266,7 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
 
           <p v-if="hiddenSkillCatalogCount > 0" class="skill-checker__help">
             候補が多いため先頭
-            {{
-              visibleSkillCatalogRows.length
-            }}
+            {{ visibleSkillCatalogRows.length }}
             件だけ表示しています。検索や絞り込みを追加すると探しやすくなります。
           </p>
         </div>
@@ -332,9 +328,9 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
                   severity="danger"
                 />
               </div>
-                <div class="owned-skill-item__meta">
-                  {{ skill.effect || skill.skillName || '未設定' }}
-                </div>
+              <div class="owned-skill-item__meta">
+                {{ skill.effect || skill.skillName || '未設定' }}
+              </div>
               <div class="owned-skill-item__level">
                 <div class="user-workspace-field__label">熟練度</div>
                 <InputNumber
@@ -434,8 +430,7 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
 }
 
 .skill-checker__filter-actions,
-.skill-checker__summary-tags,
-.skill-catalog-card__tags {
+.skill-checker__summary-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -451,19 +446,18 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
 
 .skill-catalog-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
 }
 
 .skill-catalog-card {
   width: 100%;
   padding: 12px;
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border-radius: 24px;
   background: #fff;
   text-align: left;
   cursor: pointer;
@@ -472,38 +466,65 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
 }
 
 .skill-catalog-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: #94a3b8;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
 }
 
 .skill-catalog-card--owned {
-  border-color: #86efac;
-  background: rgba(240, 253, 244, 0.96);
+  border-color: #60a5fa;
+  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+  box-shadow: 0 18px 36px rgba(37, 99, 235, 0.12);
 }
 
 .skill-catalog-card__media {
-  display: flex;
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  aspect-ratio: 10 / 11;
+  background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+}
+
+.skill-catalog-card__status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+
+.skill-catalog-card__status .pi {
+  font-size: 0.9rem;
 }
 
 .skill-catalog-card__image,
 .skill-catalog-card__placeholder {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
+  width: 100%;
+  height: 100%;
 }
 
 .skill-catalog-card__image {
+  display: block;
   object-fit: cover;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  object-position: left center;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
 .skill-catalog-card__placeholder {
   display: grid;
   place-items: center;
-  background: #e2e8f0;
+  background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -515,30 +536,36 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
   gap: 8px;
 }
 
-.skill-catalog-card__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .skill-catalog-card__name {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #1f2937;
   word-break: break-word;
+  line-height: 1.4;
 }
 
-.skill-catalog-card__meta {
-  font-size: 0.8rem;
-  color: #64748b;
-  word-break: break-all;
+.skill-catalog-card__attributes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.skill-catalog-card__hint {
+.skill-catalog-card__attribute {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f1f5f9;
   color: #475569;
-  font-size: 0.85rem;
-  line-height: 1.5;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.skill-catalog-card__skill-name {
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  word-break: break-word;
 }
 
 .user-workspace-empty {
@@ -663,13 +690,19 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
   }
 
   .skill-catalog-card {
-    grid-template-columns: 64px minmax(0, 1fr);
+    padding: 12px;
+    border-radius: 20px;
   }
 
-  .skill-catalog-card__image,
-  .skill-catalog-card__placeholder {
-    width: 64px;
-    height: 64px;
+  .skill-catalog-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .skill-catalog-card__status {
+    top: 10px;
+    right: 10px;
+    padding: 6px 10px;
   }
 
   .owned-skill-item {

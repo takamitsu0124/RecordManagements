@@ -66,19 +66,22 @@ const phoneModel = computed({
   set: (value: string) => updateUser({ phone: value }),
 })
 
-const affiliationDateModel = computed({
-  get: () => props.affiliationDateStr,
-  set: (value: string | null) => emit('update:affiliationDateStr', value),
+const affiliationDateModel = computed<string | undefined>({
+  get: () => props.affiliationDateStr ?? undefined,
+  set: (value) =>
+    emit('update:affiliationDateStr', typeof value === 'string' ? value : null),
 })
 
-const gameStartDateAtModel = computed({
-  get: () => props.gameStartDateAtStr,
-  set: (value: string | null) => emit('update:gameStartDateAtStr', value),
+const gameStartDateAtModel = computed<string | undefined>({
+  get: () => props.gameStartDateAtStr ?? undefined,
+  set: (value) =>
+    emit('update:gameStartDateAtStr', typeof value === 'string' ? value : null),
 })
 
-const birthDateModel = computed({
-  get: () => props.birthDateAtStr,
-  set: (value: string | null) => emit('update:birthDateAtStr', value),
+const birthDateModel = computed<string | undefined>({
+  get: () => props.birthDateAtStr ?? undefined,
+  set: (value) =>
+    emit('update:birthDateAtStr', typeof value === 'string' ? value : null),
 })
 </script>
 

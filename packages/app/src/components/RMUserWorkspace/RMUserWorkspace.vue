@@ -78,7 +78,7 @@ const emit = defineEmits<{
 
 const skillStore = useSkillStore()
 
-const situationOptions = ['現役', '隠居', '引退', '']
+const situationOptions: AppUser['situation'][] = ['現役', '隠居', '引退', '']
 
 const isLoading = ref(true)
 const isEditMode = ref(false)
@@ -149,21 +149,21 @@ const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
           name: ownedSkill.skillId,
         }
 
-      return {
-        index,
-        skillId: ownedSkill.skillId,
-        level: ownedSkill.level,
-        name: fallbackMaster.name || ownedSkill.skillId,
-        characterName: fallbackMaster.characterName || '',
-        element: fallbackMaster.element || '未設定',
-        equipmentType: fallbackMaster.equipmentType || '未設定',
-        skillType: fallbackMaster.skillType || '通常',
-        skillName: fallbackMaster.skillName || '未設定',
-        effect: fallbackMaster.effect || '',
-        image: fallbackMaster.image,
-        masterMissing: !master,
-      }
-    })
+    return {
+      index,
+      skillId: ownedSkill.skillId,
+      level: ownedSkill.level,
+      name: fallbackMaster.name || ownedSkill.skillId,
+      characterName: fallbackMaster.characterName || '',
+      element: fallbackMaster.element || '未設定',
+      equipmentType: fallbackMaster.equipmentType || '未設定',
+      skillType: fallbackMaster.skillType || '通常',
+      skillName: fallbackMaster.skillName || '未設定',
+      effect: fallbackMaster.effect || '',
+      image: fallbackMaster.image,
+      masterMissing: !master,
+    }
+  })
 )
 
 const ownedSkillIdSet = computed(
@@ -858,7 +858,12 @@ const emitBack = () => {
       </RMEmptyState>
     </div>
 
-    <form v-else class="user-workspace-form" @submit.prevent="onSubmit">
+    <form
+      v-else
+      class="user-workspace-form"
+      :class="{ 'user-workspace-form--compact': isCompactMode }"
+      @submit.prevent="onSubmit"
+    >
       <Card class="user-workspace-card">
         <template #content>
           <div class="user-workspace-card__content">
@@ -876,7 +881,7 @@ const emitBack = () => {
                   label="変更を保存"
                   type="submit"
                   color="primary"
-                  width="150px"
+                  width="175px"
                 />
                 <RMModeToggle v-model="isEditMode" />
               </template>
@@ -925,7 +930,8 @@ const emitBack = () => {
                   画像管理を開く
                 </div>
                 <div class="user-workspace-overlay-action__text">
-                  画像追加、並び替え、プレビュー確認は Drawer で集中して行えます。
+                  画像追加、並び替え、プレビュー確認は Drawer
+                  で集中して行えます。
                 </div>
               </button>
             </div>
@@ -1147,6 +1153,10 @@ const emitBack = () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.user-workspace-form--compact {
+  width: min(100%, 1440px);
 }
 
 .user-workspace-card {
