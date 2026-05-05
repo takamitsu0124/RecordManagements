@@ -6,7 +6,13 @@ import Card from 'primevue/card'
 import Drawer from 'primevue/drawer'
 import ProgressSpinner from 'primevue/progressspinner'
 import { dbGuildModule, dbUsersModule } from '@rm/db'
-import { AppRole, AppUser, Guild } from '@rm/types'
+import {
+  AppRole,
+  AppUser,
+  Guild,
+  normalizeWeaponProficiencyLevels,
+  weaponProficiencyDefinitions,
+} from '@rm/types'
 import RMGuildDetailMembersSection from './components/RMGuildDetailMembersSection.vue'
 import RMGuildDetailOverviewSection from './components/RMGuildDetailOverviewSection.vue'
 import RMGuildDetailSkillsSection from './components/RMGuildDetailSkillsSection.vue'
@@ -169,11 +175,22 @@ const userSkillsByUserId = computed(() => {
 
 const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
   return approvedMembers.value.map((member) => {
+    const appUser = guildUsersByUid.value.get(member.uid)
     const userSkill = userSkillsByUserId.value.get(member.uid)
     const ownedSkills = userSkill?.ownedSkills ?? []
     const ownedCount = ownedSkills.length
     const unlockRate =
       masterCount.value > 0 ? (ownedCount / masterCount.value) * 100 : 0
+    const weaponProficiencyLevels = normalizeWeaponProficiencyLevels(
+      appUser?.weaponProficiencyLevels
+    )
+    const weaponProficiencyCount = weaponProficiencyDefinitions.filter(
+      ({ key }) => weaponProficiencyLevels[key] !== null
+    ).length
+    const weaponProficiencyProgressRate =
+      weaponProficiencyDefinitions.length > 0
+        ? (weaponProficiencyCount / weaponProficiencyDefinitions.length) * 100
+        : 0
     const topSkills = ownedSkills
       .map((ownedSkill) => {
         const master = skillStore.masterDataById.value.get(ownedSkill.skillId)
@@ -193,6 +210,11 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
       ownedCount,
       unlockRate,
       unlockRateText: `${unlockRate.toFixed(1)}%`,
+      weaponProficiencyCount,
+      weaponProficiencyProgressRate,
+      weaponProficiencyProgressRateText: `${weaponProficiencyProgressRate.toFixed(
+        1
+      )}%`,
       topSkills,
     }
   })
@@ -203,6 +225,16 @@ const averageUnlockRate = computed(() => {
   return (
     memberSkillSummaries.value.reduce(
       (total, member) => total + member.unlockRate,
+      0
+    ) / memberSkillSummaries.value.length
+  )
+})
+
+const averageWeaponProficiencyProgressRate = computed(() => {
+  if (!memberSkillSummaries.value.length) return 0
+  return (
+    memberSkillSummaries.value.reduce(
+      (total, member) => total + member.weaponProficiencyProgressRate,
       0
     ) / memberSkillSummaries.value.length
   )
@@ -379,6 +411,12 @@ const summaryItems = computed(() => [
     value: `${averageUnlockRate.value.toFixed(1)}%`,
     icon: 'pi pi-chart-line',
     tone: 'unlock',
+  },
+  {
+    label: '平均熟練度進捗',
+    value: `${averageWeaponProficiencyProgressRate.value.toFixed(1)}%`,
+    icon: 'pi pi-chart-bar',
+    tone: 'progress',
   },
   {
     label: '現在の表示モード',

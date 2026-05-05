@@ -119,7 +119,7 @@ defineProps<{
         <div class="guild-operations__item">
           <div class="guild-operations__title">メンバー概要</div>
           <p class="guild-operations__text">
-            左側のメンバーカードで所持数と解放率を確認し、右側の結果表で該当スキルを探せます。
+            左側のメンバーカードで所持数、解放率、武器熟練度の入力進捗率を確認し、右側の結果表で該当スキルを探せます。
           </p>
         </div>
         <div class="guild-operations__item">
@@ -221,6 +221,10 @@ defineProps<{
 
 .guild-summary-card--mode {
   border-color: #dbeafe;
+}
+
+.guild-summary-card--progress {
+  border-color: #93c5fd;
 }
 
 .guild-detail-overview-grid {

@@ -1,4 +1,9 @@
-import { AppUser, OwnedSkill, SkillMaster } from '@rm/types'
+import {
+  AppUser,
+  OwnedSkill,
+  SkillMaster,
+  WeaponProficiencyLevels,
+} from '@rm/types'
 
 export type ImageItem = {
   id: string
@@ -42,6 +47,7 @@ export type WorkspaceProfile = {
   phone: string
   birthDateAt: Date | null
   imageUrls: string[]
+  weaponProficiencyLevels: WeaponProficiencyLevels
 }
 
 export const defaultWorkspaceProfile = (): WorkspaceProfile => ({
@@ -56,4 +62,14 @@ export const defaultWorkspaceProfile = (): WorkspaceProfile => ({
   phone: '',
   birthDateAt: null,
   imageUrls: [],
+  weaponProficiencyLevels: {
+    oneHandSword: null,
+    rapier: null,
+    club: null,
+    dagger: null,
+    axe: null,
+    spear: null,
+    bow: null,
+    shield: null,
+  },
 })

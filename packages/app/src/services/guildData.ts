@@ -5,13 +5,19 @@ import {
   Guild,
   GuildCalendarEvent,
   GuildScheduleResponse,
+  defaultAppUser,
   defaultGuildCalendarEvent,
+  normalizeWeaponProficiencyLevels,
 } from '@rm/types'
 
 const normalizeAppUser = (docId: string, data: AppUser): AppUser => ({
+  ...defaultAppUser(),
   ...data,
   id: data.id || docId,
   uid: data.uid || docId,
+  weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
+    data.weaponProficiencyLevels
+  ),
 })
 
 const normalizeGuildScheduleResponse = (

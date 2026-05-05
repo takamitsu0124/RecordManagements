@@ -1,5 +1,10 @@
 import { onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth'
-import { AppRole, AppUser, defaultAppUser } from '@rm/types'
+import {
+	AppRole,
+	AppUser,
+	defaultAppUser,
+	normalizeWeaponProficiencyLevels,
+} from '@rm/types'
 import { auth, dbUsersModule } from '@rm/db'
 import { Router } from 'vue-router'
 import { boot } from 'quasar/wrappers'
@@ -76,6 +81,9 @@ const ensureAppUserDocument = async (authUser: FirebaseAuthUser): Promise<AppUse
 				id: existingAppUser.id || authUser.uid,
 				uid: existingAppUser.uid || authUser.uid,
 				email: existingAppUser.email || authUser.email || '',
+				weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
+					existingAppUser.weaponProficiencyLevels
+				),
 				displayName:
 					existingAppUser.displayName ||
 					authUser.displayName ||
@@ -98,6 +106,9 @@ const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
 			id: appUser.id || authUser.uid,
 			uid: appUser.uid || authUser.uid,
 			email: appUser.email || authUser.email || '',
+			weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
+				appUser.weaponProficiencyLevels
+			),
 			displayName:
 				appUser.displayName || authUser.displayName || authUser.email || '',
 		}

@@ -39,5 +39,8 @@ export type GuildMemberSkillSummary = {
   ownedCount: number
   unlockRate: number
   unlockRateText: string
+  weaponProficiencyCount: number
+  weaponProficiencyProgressRate: number
+  weaponProficiencyProgressRateText: string
   topSkills: string[]
 }

@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
 import Drawer from 'primevue/drawer'
+import InputNumber from 'primevue/inputnumber'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import {
@@ -17,9 +18,12 @@ import {
   OwnedSkill,
   SkillMaster,
   UserSkill,
+  WeaponProficiencyKey,
   defaultAppUser,
   defaultSkillMaster,
   defaultUserSkill,
+  normalizeWeaponProficiencyLevels,
+  weaponProficiencyDefinitions,
 } from '@rm/types'
 import RMUserWorkspaceImagesSection from './RMUserWorkspaceImagesSection.vue'
 import RMUserWorkspaceProfileSection from './RMUserWorkspaceProfileSection.vue'
@@ -127,7 +131,9 @@ const pageSubtitle = computed(() => user.value.displayName || '登録内容未�
 const showProfile = computed(() => props.includeProfile)
 const isCompactMode = computed(() => props.compactMode)
 const useDrawerLayout = computed(() => !isCompactMode.value)
-const activeCompactSection = ref<'skills' | 'images'>('skills')
+const activeCompactSection = ref<
+  'skills' | 'images' | 'level' | 'proficiency-skill'
+>('skills')
 const canEditGuildId = computed(() => hasAdmin.value)
 const showProfileInline = computed(
   () => showProfile.value && !useDrawerLayout.value
@@ -137,6 +143,20 @@ const showSkillsInline = computed(
 )
 const showImagesInline = computed(
   () => !useDrawerLayout.value && activeCompactSection.value === 'images'
+)
+const showLevelInline = computed(
+  () => !useDrawerLayout.value && activeCompactSection.value === 'level'
+)
+const showProficiencySkillInline = computed(
+  () =>
+    !useDrawerLayout.value &&
+    activeCompactSection.value === 'proficiency-skill'
+)
+const weaponProficiencyFields = computed(() =>
+  weaponProficiencyDefinitions.map((definition) => ({
+    ...definition,
+    value: user.value.weaponProficiencyLevels[definition.key],
+  }))
 )
 
 const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
@@ -257,12 +277,18 @@ const cloneUser = (
           (url): url is string => typeof url === 'string'
         )
       : [],
+    weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
+      payload?.weaponProficiencyLevels
+    ),
   }
 }
 
 const cloneAppUser = (payload?: Partial<AppUser> | null): AppUser => ({
   ...defaultAppUser(),
   ...(payload || {}),
+  weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
+    payload?.weaponProficiencyLevels
+  ),
   role: payload?.role || 'member',
 })
 
@@ -281,6 +307,7 @@ const createUserProfileFromAppUser = (
     phone: payload?.phone || '',
     birthDateAt: payload?.birthDateAt || null,
     imageUrls: payload?.imageUrls || [],
+    weaponProficiencyLevels: payload?.weaponProficiencyLevels,
   })
 }
 
@@ -514,6 +541,22 @@ const removeOwnedSkill = (skillId: string) => {
   )
 }
 
+const updateWeaponProficiencyLevel = (
+  key: WeaponProficiencyKey,
+  value: number | null
+) => {
+  user.value = cloneUser({
+    ...user.value,
+    weaponProficiencyLevels: {
+      ...user.value.weaponProficiencyLevels,
+      [key]:
+        typeof value === 'number' && Number.isFinite(value)
+          ? Math.max(0, Math.round(value))
+          : null,
+    },
+  })
+}
+
 const toggleOwnedSkill = (skill: SkillMaster) => {
   if (ownedSkillIdSet.value.has(skill.id)) {
     removeOwnedSkill(skill.id)
@@ -655,6 +698,12 @@ watch(
   }
 )
 
+watch(isEditMode, (nextIsEditMode) => {
+  if (!nextIsEditMode && activeCompactSection.value === 'level') {
+    activeCompactSection.value = 'skills'
+  }
+})
+
 watch(
   () => props.userId,
   async (nextUserId, previousUserId) => {
@@ -744,6 +793,7 @@ const onSubmit = async () => {
         birthDateAt: nextUser.birthDateAt,
         phone: nextUser.phone,
         imageUrls: resolvedImageUrls,
+        weaponProficiencyLevels: nextUser.weaponProficiencyLevels,
       })
       const nextUsersPayload = props.includeProfile
         ? {
@@ -756,10 +806,12 @@ const onSubmit = async () => {
             birthDateAt: nextAppUser.birthDateAt,
             phone: nextAppUser.phone,
             imageUrls: nextAppUser.imageUrls,
+            weaponProficiencyLevels: nextAppUser.weaponProficiencyLevels,
             ...(canEditGuildId.value ? { guildId: nextAppUser.guildId } : {}),
           }
         : {
             imageUrls: nextAppUser.imageUrls,
+            weaponProficiencyLevels: nextAppUser.weaponProficiencyLevels,
           }
       const nextUserSkill: UserSkill = {
         ...defaultUserSkill(),
@@ -979,6 +1031,69 @@ const emitBack = () => {
                   :outlined="activeCompactSection !== 'images'"
                   @click="activeCompactSection = 'images'"
                 />
+                <Button
+                  type="button"
+                  label="熟練度Lv"
+                  :severity="
+                    activeCompactSection === 'level' ? 'contrast' : 'secondary'
+                  "
+                  :outlined="activeCompactSection !== 'level'"
+                  @click="activeCompactSection = 'level'"
+                />
+                <Button
+                  type="button"
+                  label="熟練度スキル"
+                  :severity="
+                    activeCompactSection === 'proficiency-skill'
+                      ? 'contrast'
+                      : 'secondary'
+                  "
+                  :outlined="activeCompactSection !== 'proficiency-skill'"
+                  @click="activeCompactSection = 'proficiency-skill'"
+                />
+              </div>
+              <div
+                v-if="showLevelInline"
+                class="user-workspace-focus-switch__level-panel"
+              >
+                <div class="user-workspace-focus-switch__level-label">
+                  武器熟練度Lvを登録
+                </div>
+                <div class="user-workspace-focus-switch__level-note">
+                  各武器種の熟練度スキルLvを入力できます。未登録の項目は空欄のままで保存されます。
+                </div>
+                <div class="user-workspace-focus-switch__level-grid">
+                  <div
+                    v-for="field in weaponProficiencyFields"
+                    :key="field.key"
+                    class="user-workspace-focus-switch__level-field"
+                  >
+                    <div class="user-workspace-field__label">
+                      {{ field.label }}
+                    </div>
+                    <InputNumber
+                      :modelValue="field.value"
+                      :min="0"
+                      :useGrouping="false"
+                      :disabled="!isEditMode"
+                      placeholder="未設定"
+                      class="user-workspace-focus-switch__level-input"
+                      @update:modelValue="
+                        updateWeaponProficiencyLevel(field.key, $event)
+                      "
+                    />
+                  </div>
+                </div>
+              </div>
+              <div
+                v-if="showProficiencySkillInline"
+                class="user-workspace-focus-switch__placeholder"
+              >
+                <RMEmptyState
+                  icon="pi pi-clock"
+                  title="熟練度スキル"
+                  message="近日反映予定です。"
+                />
               </div>
             </div>
 
@@ -1171,7 +1286,7 @@ const emitBack = () => {
 
 <style lang="scss" scoped>
 .user-workspace-form {
-  width: min(100%, 1120px);
+  width: min(100%, 1440px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1258,7 +1373,44 @@ const emitBack = () => {
 .user-workspace-focus-switch__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: stretch;
   gap: 10px;
+}
+
+.user-workspace-focus-switch__level-panel {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.user-workspace-focus-switch__level-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+.user-workspace-focus-switch__level-note {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.user-workspace-focus-switch__level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.user-workspace-focus-switch__level-field {
+  min-width: 0;
+}
+
+.user-workspace-focus-switch__level-input,
+.user-workspace-focus-switch__level-panel :deep(.p-inputnumber) {
+  width: 100%;
 }
 
 .user-workspace-summary__item {
@@ -1803,6 +1955,10 @@ const emitBack = () => {
 
   .user-workspace-focus-switch__actions :deep(.p-button) {
     width: 100%;
+  }
+
+  .user-workspace-focus-switch__level-grid {
+    grid-template-columns: 1fr;
   }
 
   .skill-checker__summary {

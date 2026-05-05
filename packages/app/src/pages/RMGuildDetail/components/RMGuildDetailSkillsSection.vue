@@ -8,7 +8,7 @@ import InputText from 'primevue/inputtext'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
-import type { AppRole } from '@rm/types'
+import { AppRole, weaponProficiencyDefinitions } from '@rm/types'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import type {
   GuildMemberSkillSummary,
@@ -124,7 +124,7 @@ const updateLevelFilter = (value: number | null) =>
           <div>
             <div class="guild-panel-header__title">メンバー別スキル状況</div>
             <div class="guild-panel-header__subtitle">
-              所持数と解放率を見ながら、誰を深掘りするか判断できます。
+              所持数、解放率、熟練度進捗率を見ながら、誰を深掘りするか判断できます。
             </div>
           </div>
           <Tag
@@ -174,6 +174,7 @@ const updateLevelFilter = (value: number | null) =>
               outlined
               severity="contrast"
               size="small"
+              class="guild-skill-overview-item__edit"
               @click="emit('edit-member', member)"
             />
           </div>
@@ -185,6 +186,39 @@ const updateLevelFilter = (value: number | null) =>
             <div class="guild-skill-overview-item__stat">
               <span>解放率</span>
               <strong>{{ member.unlockRateText }}</strong>
+            </div>
+            <div class="guild-skill-overview-item__stat">
+              <span>熟練度入力</span>
+              <strong>
+                {{ member.weaponProficiencyCount }} /
+                {{ weaponProficiencyDefinitions.length }}種
+              </strong>
+            </div>
+          </div>
+          <div class="guild-skill-overview-item__progress">
+            <div class="guild-skill-overview-item__progress-head">
+              <span>武器熟練度進捗率</span>
+              <strong>{{ member.weaponProficiencyProgressRateText }}</strong>
+            </div>
+            <div class="guild-skill-overview-item__progress-track" aria-hidden="true">
+              <div
+                class="guild-skill-overview-item__progress-bar"
+                :style="{ width: `${member.weaponProficiencyProgressRate}%` }"
+              />
+            </div>
+            <div class="guild-skill-overview-item__progress-note">
+              <span>
+                {{ member.weaponProficiencyCount }} /
+                {{ weaponProficiencyDefinitions.length }}武器種で入力済み
+              </span>
+              <span
+                v-if="
+                  member.weaponProficiencyCount === 0 &&
+                  weaponProficiencyDefinitions.length > 0
+                "
+              >
+                未入力のメンバーは 0% として表示します
+              </span>
             </div>
           </div>
           <div class="guild-skill-overview-item__skills">
@@ -488,6 +522,11 @@ const updateLevelFilter = (value: number | null) =>
   gap: 12px;
 }
 
+.guild-skill-overview-item__edit {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .guild-skill-overview-item__name {
   font-size: 1rem;
   font-weight: 800;
@@ -503,7 +542,7 @@ const updateLevelFilter = (value: number | null) =>
 
 .guild-skill-overview-item__stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 10px;
 }
 
@@ -524,6 +563,48 @@ const updateLevelFilter = (value: number | null) =>
 .guild-skill-overview-item__stat strong {
   font-size: 1rem;
   color: #1f2937;
+}
+
+.guild-skill-overview-item__progress {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.guild-skill-overview-item__progress-head,
+.guild-skill-overview-item__progress-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.guild-skill-overview-item__progress-head span,
+.guild-skill-overview-item__progress-note {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.guild-skill-overview-item__progress-head strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.guild-skill-overview-item__progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.guild-skill-overview-item__progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8 0%, #2563eb 100%);
 }
 
 .guild-skill-overview-item__skills {
