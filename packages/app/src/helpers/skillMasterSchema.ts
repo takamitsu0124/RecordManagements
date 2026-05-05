@@ -31,7 +31,11 @@ export const skillTypeOptions = [
   'バースト',
   'フルバースト',
 ] as const satisfies readonly SkillTypeOption[]
-export const attackTypeOptions = ['斬', '突', '打'] as const satisfies readonly AttackTypeOption[]
+export const attackTypeOptions = [
+  '斬',
+  '突',
+  '打',
+] as const satisfies readonly AttackTypeOption[]
 
 const elementAliasMap = new Map([
   ['火', '火'],
@@ -145,6 +149,15 @@ const attackTypeAliasMap = new Map<string, AttackTypeOption>([
 ])
 
 const rarityPattern = /(UR|SSR|SR|RRR|RR|R|N)/i
+const rarityAliasMap = new Map<string, number>([
+  ['N', 1],
+  ['R', 2],
+  ['RR', 3],
+  ['RRR', 4],
+  ['SR', 5],
+  ['SSR', 6],
+  ['UR', 7],
+])
 
 export function normalizeSkillMasterWhitespace(value: unknown) {
   return String(value ?? '')
@@ -170,7 +183,9 @@ function resolveAlias<T extends string>(
 }
 
 function parseLegacyTypeParts(typeValue: unknown) {
-  const raw = normalizeSkillMasterWhitespace(typeValue).replace(/（/g, '(').replace(/）/g, ')')
+  const raw = normalizeSkillMasterWhitespace(typeValue)
+    .replace(/（/g, '(')
+    .replace(/）/g, ')')
   if (!raw) {
     return { equipmentType: '', skillType: '通常' as SkillTypeOption }
   }
@@ -240,10 +255,20 @@ export function normalizeSkillMasterAttackType(
 }
 
 export function normalizeSkillMasterRarity(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
   const raw = normalizeSkillMasterWhitespace(value)
-  if (!raw) return ''
+  if (!raw) return null
+
+  const numeric = normalizeSkillMasterNumber(raw)
+  if (numeric !== null) {
+    return numeric
+  }
+
   const matched = raw.match(rarityPattern)
-  return matched ? matched[1].toUpperCase() : raw.toUpperCase()
+  return matched ? rarityAliasMap.get(matched[1].toUpperCase()) ?? null : null
 }
 
 export function normalizeSkillMasterNumber(value: unknown) {
@@ -272,7 +297,9 @@ export function extractCharacterNameFromSkillName(value: string) {
   return normalizeSkillMasterWhitespace(match?.[1] ?? '')
 }
 
-export function normalizeSkillMasterRecord(record: Partial<Record<string, unknown>>) {
+export function normalizeSkillMasterRecord(
+  record: Partial<Record<string, unknown>>
+) {
   const fallback = defaultSkillMaster()
   const legacyType = normalizeSkillMasterWhitespace(record.type)
   const equipmentType = normalizeSkillMasterEquipmentType(
@@ -281,7 +308,10 @@ export function normalizeSkillMasterRecord(record: Partial<Record<string, unknow
   )
   const skillType =
     equipmentType === 'アビリティ'
-      ? normalizeSkillMasterSkillType(record.skillType || 'アビリティ', legacyType)
+      ? normalizeSkillMasterSkillType(
+          record.skillType || 'アビリティ',
+          legacyType
+        )
       : normalizeSkillMasterSkillType(record.skillType, legacyType)
 
   return {
@@ -300,9 +330,14 @@ export function normalizeSkillMasterRecord(record: Partial<Record<string, unknow
     sp: normalizeSkillMasterNumber(record.sp),
     element: normalizeSkillMasterElement(record.element ?? record.attr),
     skillType,
-    attackType: normalizeSkillMasterAttackType(record.attackType, equipmentType),
+    attackType: normalizeSkillMasterAttackType(
+      record.attackType,
+      equipmentType
+    ),
     breakGauge: normalizeSkillMasterNumber(record.breakGauge ?? record.brGauge),
-    switchGauge: normalizeSkillMasterNumber(record.switchGauge ?? record.swGauge),
+    switchGauge: normalizeSkillMasterNumber(
+      record.switchGauge ?? record.swGauge
+    ),
     cooldown: normalizeSkillMasterNumber(record.cooldown ?? record.cool),
     skillName: normalizeSkillMasterWhitespace(record.skillName),
     effect: normalizeSkillMasterWhitespace(record.effect),
