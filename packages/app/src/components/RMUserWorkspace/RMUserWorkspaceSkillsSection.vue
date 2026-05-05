@@ -5,6 +5,7 @@ import Card from 'primevue/card'
 import Divider from 'primevue/divider'
 import InputNumber from 'primevue/inputnumber'
 import Tag from 'primevue/tag'
+import Tooltip from 'primevue/tooltip'
 import type { OwnedSkill, SkillMaster } from '@rm/types'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import type {
@@ -57,6 +58,40 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
   )
 
   emit('update:ownedSkills', nextOwnedSkills)
+}
+
+const vTooltip = Tooltip
+
+const equipmentTypeToneMap: Record<string, string> = {
+  片手直剣: 'sword',
+  細剣: 'rapier',
+  短剣: 'dagger',
+  弓: 'bow',
+  槍: 'spear',
+  斧: 'axe',
+  棍棒: 'club',
+  盾: 'shield',
+}
+
+const elementToneMap: Record<string, string> = {
+  火: 'fire',
+  水: 'water',
+  風: 'wind',
+  土: 'earth',
+  光: 'light',
+  聖: 'light',
+  闇: 'dark',
+  無: 'none',
+}
+
+const getEquipmentTypeClass = (value: string) => {
+  const tone = equipmentTypeToneMap[value] || 'default'
+  return ['skill-catalog-card__attribute--equipment', `is-${tone}`]
+}
+
+const getElementClass = (value: string) => {
+  const tone = elementToneMap[value] || 'default'
+  return ['skill-catalog-card__attribute--element', `is-${tone}`]
 }
 </script>
 
@@ -250,10 +285,20 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
                   {{ skill.name }}
                 </div>
                 <div class="skill-catalog-card__attributes">
-                  <span class="skill-catalog-card__attribute">
+                  <span
+                    v-tooltip.bottom="
+                      `装備種別: ${skill.equipmentType || '未設定'}`
+                    "
+                    class="skill-catalog-card__attribute"
+                    :class="getEquipmentTypeClass(skill.equipmentType)"
+                  >
                     {{ skill.equipmentType || '未設定' }}
                   </span>
-                  <span class="skill-catalog-card__attribute">
+                  <span
+                    v-tooltip.bottom="`自然属性: ${skill.element || '未設定'}`"
+                    class="skill-catalog-card__attribute"
+                    :class="getElementClass(skill.element)"
+                  >
                     {{ skill.element || '未設定' }}
                   </span>
                 </div>
@@ -555,10 +600,112 @@ const setOwnedSkillLevel = (index: number, value: number | null) => {
   align-items: center;
   padding: 6px 12px;
   border-radius: 999px;
-  background: #f1f5f9;
+  border: 1px solid transparent;
+  background: #f8fafc;
   color: #475569;
   font-size: 0.82rem;
   font-weight: 700;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.skill-catalog-card__attribute:hover {
+  transform: translateY(-1px);
+}
+
+.skill-catalog-card__attribute--equipment.is-sword {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.skill-catalog-card__attribute--equipment.is-rapier {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #6d28d9;
+}
+
+.skill-catalog-card__attribute--equipment.is-dagger {
+  background: #fdf2f8;
+  border-color: #fbcfe8;
+  color: #be185d;
+}
+
+.skill-catalog-card__attribute--equipment.is-bow {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+  color: #0f766e;
+}
+
+.skill-catalog-card__attribute--equipment.is-spear {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+.skill-catalog-card__attribute--equipment.is-axe {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+}
+
+.skill-catalog-card__attribute--equipment.is-club {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #a16207;
+}
+
+.skill-catalog-card__attribute--equipment.is-shield {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.skill-catalog-card__attribute--element.is-fire {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.skill-catalog-card__attribute--element.is-water {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.skill-catalog-card__attribute--element.is-wind {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #059669;
+}
+
+.skill-catalog-card__attribute--element.is-earth {
+  background: #fefce8;
+  border-color: #fde68a;
+  color: #a16207;
+}
+
+.skill-catalog-card__attribute--element.is-light {
+  background: #fffbea;
+  border-color: #fde68a;
+  color: #ca8a04;
+}
+
+.skill-catalog-card__attribute--element.is-dark {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #7c3aed;
+}
+
+.skill-catalog-card__attribute--element.is-none {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.skill-catalog-card__attribute.is-default {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
 }
 
 .skill-catalog-card__skill-name {
