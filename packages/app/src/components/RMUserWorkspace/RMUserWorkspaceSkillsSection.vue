@@ -491,7 +491,7 @@ const getElementClass = (value: string) => {
 
 .skill-catalog-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 16px;
 }
 
@@ -532,19 +532,20 @@ const getElementClass = (value: string) => {
 
 .skill-catalog-card__status {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 1px;
+  right: 1px;
   z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.78);
   color: #fff;
   font-size: 0.8rem;
   font-weight: 700;
   backdrop-filter: blur(6px);
+  opacity: 0.8;
 }
 
 .skill-catalog-card__status .pi {
