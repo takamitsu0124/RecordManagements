@@ -108,6 +108,7 @@ const skillCatalogQuery = ref('')
 const skillCatalogElement = ref('all')
 const skillCatalogEquipmentType = ref('all')
 const skillCatalogStatus = ref<SkillCatalogStatus>('unowned')
+const skillCatalogPage = ref(0)
 const imageUploadKey = ref(0)
 
 const isCarouselVisible = ref(false)
@@ -176,7 +177,7 @@ const imageCountLabel = computed(() => `${imageItems.value.length}件`)
 const modeLabel = computed(() =>
   isEditMode.value ? '編集モード' : '閲覧モード'
 )
-const skillCatalogPreviewLimit = 60
+const skillCatalogPageSize = 25
 
 const skillCatalogElementOptions = computed(() =>
   [...new Set(skillStore.state.masterData.map((skill) => skill.element.trim()))]
@@ -226,16 +227,13 @@ const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
     })
 })
 
-const visibleSkillCatalogRows = computed(() =>
-  filteredSkillCatalogRows.value.slice(0, skillCatalogPreviewLimit)
-)
-
-const hiddenSkillCatalogCount = computed(() =>
-  Math.max(
-    0,
-    filteredSkillCatalogRows.value.length - visibleSkillCatalogRows.value.length
+const visibleSkillCatalogRows = computed(() => {
+  const first = skillCatalogPage.value * skillCatalogPageSize
+  return filteredSkillCatalogRows.value.slice(
+    first,
+    first + skillCatalogPageSize
   )
-)
+})
 
 const createImageId = () =>
   globalThis.crypto?.randomUUID?.() ||
@@ -414,6 +412,7 @@ const resetSkillFilters = () => {
   skillCatalogElement.value = 'all'
   skillCatalogEquipmentType.value = 'all'
   skillCatalogStatus.value = 'unowned'
+  skillCatalogPage.value = 0
 }
 
 const resetDraft = () => {
@@ -633,6 +632,28 @@ watch(isCarouselVisible, (visible) => {
 
   window.removeEventListener('keydown', handleKeydown)
 })
+
+watch(
+  [
+    skillCatalogQuery,
+    skillCatalogElement,
+    skillCatalogEquipmentType,
+    skillCatalogStatus,
+  ],
+  () => {
+    skillCatalogPage.value = 0
+  }
+)
+
+watch(
+  () => filteredSkillCatalogRows.value.length,
+  (total) => {
+    const maxPage = Math.max(Math.ceil(total / skillCatalogPageSize) - 1, 0)
+    if (skillCatalogPage.value > maxPage) {
+      skillCatalogPage.value = maxPage
+    }
+  }
+)
 
 watch(
   () => props.userId,
@@ -999,7 +1020,8 @@ const emitBack = () => {
           :ownedSkillRows="ownedSkillRows"
           :filteredSkillCatalogRows="filteredSkillCatalogRows"
           :visibleSkillCatalogRows="visibleSkillCatalogRows"
-          :hiddenSkillCatalogCount="hiddenSkillCatalogCount"
+          v-model:skillCatalogPage="skillCatalogPage"
+          :skillCatalogPageSize="skillCatalogPageSize"
           v-model:skillCatalogQuery="skillCatalogQuery"
           v-model:skillCatalogElement="skillCatalogElement"
           v-model:skillCatalogEquipmentType="skillCatalogEquipmentType"

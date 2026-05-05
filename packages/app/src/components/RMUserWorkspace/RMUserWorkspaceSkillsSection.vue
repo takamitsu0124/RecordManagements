@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Divider from 'primevue/divider'
 import InputNumber from 'primevue/inputnumber'
+import Paginator from 'primevue/paginator'
 import Tag from 'primevue/tag'
 import Tooltip from 'primevue/tooltip'
 import type { OwnedSkill, SkillMaster } from '@rm/types'
@@ -20,7 +21,8 @@ const props = defineProps<{
   ownedSkillRows: OwnedSkillRow[]
   filteredSkillCatalogRows: SkillCatalogRow[]
   visibleSkillCatalogRows: SkillCatalogRow[]
-  hiddenSkillCatalogCount: number
+  skillCatalogPage: number
+  skillCatalogPageSize: number
   skillCatalogQuery: string
   skillCatalogElement: string
   skillCatalogEquipmentType: string
@@ -31,6 +33,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:ownedSkills', value: OwnedSkill[]): void
+  (e: 'update:skillCatalogPage', value: number): void
   (e: 'update:skillCatalogQuery', value: string): void
   (e: 'update:skillCatalogElement', value: string): void
   (e: 'update:skillCatalogEquipmentType', value: string): void
@@ -51,6 +54,37 @@ const setSkillCatalogEquipmentType = (value: string) =>
   emit('update:skillCatalogEquipmentType', value)
 const setSkillCatalogStatus = (value: SkillCatalogStatus) =>
   emit('update:skillCatalogStatus', value)
+const setSkillCatalogPage = (event: { page: number }) =>
+  emit('update:skillCatalogPage', event.page)
+const skillCatalogGridRef = ref<HTMLElement | null>(null)
+const shouldScrollOnMobilePageChange = ref(false)
+
+const isMobilePagerViewport = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(max-width: 767px)').matches
+
+const scrollSkillCatalogGridIntoView = () => {
+  if (!skillCatalogGridRef.value || !isMobilePagerViewport()) return
+
+  const behavior =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth'
+
+  skillCatalogGridRef.value.scrollIntoView({
+    behavior,
+    block: 'start',
+  })
+}
+
+const updateSkillCatalogPage = (page: number) => {
+  const nextPage = Math.min(Math.max(page, 0), skillCatalogTotalPages.value - 1)
+  if (nextPage === props.skillCatalogPage) return
+
+  shouldScrollOnMobilePageChange.value = isMobilePagerViewport()
+  emit('update:skillCatalogPage', nextPage)
+}
 
 const setOwnedSkillLevel = (index: number, value: number | null) => {
   const nextOwnedSkills = props.ownedSkills.map((skill, skillIndex) =>
@@ -93,6 +127,27 @@ const getElementClass = (value: string) => {
   const tone = elementToneMap[value] || 'default'
   return ['skill-catalog-card__attribute--element', `is-${tone}`]
 }
+
+const skillCatalogTotalPages = computed(() =>
+  Math.max(
+    1,
+    Math.ceil(
+      props.filteredSkillCatalogRows.length / props.skillCatalogPageSize
+    )
+  )
+)
+
+watch(
+  () => props.skillCatalogPage,
+  async (nextPage, previousPage) => {
+    if (!shouldScrollOnMobilePageChange.value || nextPage === previousPage)
+      return
+
+    shouldScrollOnMobilePageChange.value = false
+    await nextTick()
+    scrollSkillCatalogGridIntoView()
+  }
+)
 </script>
 
 <template>
@@ -248,7 +303,7 @@ const getElementClass = (value: string) => {
             条件に合うスキルがありません。検索条件をゆるめてください。
           </div>
 
-          <div v-else class="skill-catalog-grid">
+          <div v-else ref="skillCatalogGridRef" class="skill-catalog-grid">
             <button
               v-for="skill in visibleSkillCatalogRows"
               :key="skill.id"
@@ -309,11 +364,65 @@ const getElementClass = (value: string) => {
             </button>
           </div>
 
-          <p v-if="hiddenSkillCatalogCount > 0" class="skill-checker__help">
-            候補が多いため先頭
-            {{ visibleSkillCatalogRows.length }}
-            件だけ表示しています。検索や絞り込みを追加すると探しやすくなります。
-          </p>
+          <div
+            v-if="filteredSkillCatalogRows.length > skillCatalogPageSize"
+            class="skill-checker__pagination"
+          >
+            <p class="skill-checker__help">
+              {{ filteredSkillCatalogRows.length }} 件を
+              {{ skillCatalogPageSize }} 件ずつ表示しています。
+            </p>
+            <div class="skill-checker__pager-status">
+              {{ skillCatalogPage + 1 }} / {{ skillCatalogTotalPages }}
+            </div>
+            <div class="skill-checker__pager-mobile">
+              <button
+                type="button"
+                class="skill-checker__pager-button"
+                :disabled="skillCatalogPage === 0"
+                @click="updateSkillCatalogPage(0)"
+              >
+                &lt;&lt;
+              </button>
+              <button
+                type="button"
+                class="skill-checker__pager-button"
+                :disabled="skillCatalogPage === 0"
+                @click="updateSkillCatalogPage(skillCatalogPage - 1)"
+              >
+                &lt;
+              </button>
+              <div
+                class="skill-checker__pager-status skill-checker__pager-status--mobile"
+              >
+                {{ skillCatalogPage + 1 }} / {{ skillCatalogTotalPages }}
+              </div>
+              <button
+                type="button"
+                class="skill-checker__pager-button"
+                :disabled="skillCatalogPage >= skillCatalogTotalPages - 1"
+                @click="updateSkillCatalogPage(skillCatalogPage + 1)"
+              >
+                &gt;
+              </button>
+              <button
+                type="button"
+                class="skill-checker__pager-button"
+                :disabled="skillCatalogPage >= skillCatalogTotalPages - 1"
+                @click="updateSkillCatalogPage(skillCatalogTotalPages - 1)"
+              >
+                &gt;&gt;
+              </button>
+            </div>
+            <Paginator
+              class="skill-checker__paginator"
+              :first="skillCatalogPage * skillCatalogPageSize"
+              :rows="skillCatalogPageSize"
+              :totalRecords="filteredSkillCatalogRows.length"
+              template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+              @page="setSkillCatalogPage"
+            />
+          </div>
         </div>
 
         <div v-if="ownedSkillRows.length === 0" class="user-workspace-empty">
@@ -489,10 +598,58 @@ const getElementClass = (value: string) => {
   gap: 12px;
 }
 
+.skill-checker__pagination {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skill-checker__pager-status {
+  display: none;
+}
+
+.skill-checker__pager-mobile {
+  display: none;
+}
+
+.skill-checker__paginator :deep(.p-paginator) {
+  justify-content: center;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.skill-checker__pager-button {
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease, opacity 0.18s ease;
+}
+
+.skill-checker__pager-button:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.skill-checker__pager-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .skill-catalog-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 16px;
+  scroll-margin-top: calc(var(--rm-header-height, 0px) + 16px);
 }
 
 .skill-catalog-card {
@@ -835,6 +992,30 @@ const getElementClass = (value: string) => {
 
   .skill-checker__summary :deep(.p-button) {
     width: 100%;
+  }
+
+  .skill-checker__paginator :deep(.p-paginator) {
+    display: none;
+  }
+
+  .skill-checker__pager-mobile {
+    display: grid;
+    grid-template-columns: 40px 40px minmax(72px, auto) 40px 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .skill-checker__pager-status {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #475569;
+  }
+
+  .skill-checker__pager-status--mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .skill-catalog-card {
