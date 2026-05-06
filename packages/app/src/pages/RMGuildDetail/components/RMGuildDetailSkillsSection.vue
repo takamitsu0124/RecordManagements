@@ -8,7 +8,11 @@ import InputText from 'primevue/inputtext'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
-import { AppRole, weaponProficiencyDefinitions } from '@rm/types'
+import {
+  AppRole,
+  weaponProficiencyDefinitions,
+  weaponProficiencyMaxTotalLevel,
+} from '@rm/types'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import type {
   GuildMemberSkillSummary,
@@ -200,7 +204,10 @@ const updateLevelFilter = (value: number | null) =>
               <span>武器熟練度進捗率</span>
               <strong>{{ member.weaponProficiencyProgressRateText }}</strong>
             </div>
-            <div class="guild-skill-overview-item__progress-track" aria-hidden="true">
+            <div
+              class="guild-skill-overview-item__progress-track"
+              aria-hidden="true"
+            >
               <div
                 class="guild-skill-overview-item__progress-bar"
                 :style="{ width: `${member.weaponProficiencyProgressRate}%` }"
@@ -208,8 +215,8 @@ const updateLevelFilter = (value: number | null) =>
             </div>
             <div class="guild-skill-overview-item__progress-note">
               <span>
-                {{ member.weaponProficiencyCount }} /
-                {{ weaponProficiencyDefinitions.length }}武器種で入力済み
+                合計Lv {{ member.weaponProficiencyTotalLevel }} /
+                {{ weaponProficiencyMaxTotalLevel }}
               </span>
               <span
                 v-if="
@@ -390,7 +397,8 @@ const updateLevelFilter = (value: number | null) =>
                       {{ data.name }}
                     </div>
                     <div class="guild-search-table__skill-meta">
-                      {{ data.effect || data.skillName || '未設定' }} / ID: {{ data.skillId }}
+                      {{ data.effect || data.skillName || '未設定' }} / ID:
+                      {{ data.skillId }}
                     </div>
                   </div>
                 </div>
@@ -398,11 +406,22 @@ const updateLevelFilter = (value: number | null) =>
             </Column>
             <Column field="element" header="自然属性" style="width: 110px">
               <template #body="{ data }">
-                <Tag :value="data.element" :severity="attrSeverity(data.element)" />
+                <Tag
+                  :value="data.element"
+                  :severity="attrSeverity(data.element)"
+                />
               </template>
             </Column>
-            <Column field="equipmentType" header="装備種別" style="min-width: 180px" />
-            <Column field="skillType" header="スキル種別" style="width: 120px" />
+            <Column
+              field="equipmentType"
+              header="装備種別"
+              style="min-width: 180px"
+            />
+            <Column
+              field="skillType"
+              header="スキル種別"
+              style="width: 120px"
+            />
             <Column field="attackType" header="攻撃属性" style="width: 110px" />
             <Column field="switchGauge" header="Switch" style="width: 100px" />
             <Column field="breakGauge" header="Break" style="width: 100px" />

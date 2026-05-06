@@ -172,6 +172,12 @@ watch(
             <p class="skill-checker__description">
               持っているスキルをタップすると追加、もう一度タップすると解除できます。細かい熟練度は下の一覧でまとめて調整してください。
             </p>
+            <div class="skill-checker__tap-guide">
+              <i class="pi pi-chevron-right" aria-hidden="true" />
+              <span
+                >スキルレコードのカードをタップしてチェック、もう一度で解除できます。</span
+              >
+            </div>
           </div>
 
           <RMInput
@@ -359,6 +365,17 @@ watch(
                 </div>
                 <div class="skill-catalog-card__skill-name">
                   {{ skill.skillName || '未設定' }}
+                </div>
+                <div
+                  class="skill-catalog-card__tap-hint"
+                  :class="{
+                    'skill-catalog-card__tap-hint--owned': skill.isOwned,
+                  }"
+                >
+                  <i class="pi pi-chevron-right" aria-hidden="true" />
+                  <span>{{
+                    skill.isOwned ? 'もう一度タップで解除' : 'タップでチェック'
+                  }}</span>
                 </div>
               </div>
             </button>
@@ -571,6 +588,26 @@ watch(
   line-height: 1.6;
 }
 
+.skill-checker__tap-guide {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  color: #1d4ed8;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.skill-checker__tap-guide .pi {
+  font-size: 0.9rem;
+  animation: skill-checker-tap-guide-bounce 1.5s ease-in-out infinite;
+}
+
 .skill-checker__filter-group {
   display: flex;
   flex-direction: column;
@@ -667,10 +704,20 @@ watch(
     box-shadow 0.18s ease;
 }
 
-.skill-catalog-card:hover {
+.skill-catalog-card:hover,
+.skill-catalog-card:focus-visible {
   transform: translateY(-2px);
   border-color: #94a3b8;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+}
+
+.skill-catalog-card:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 3px;
+}
+
+.skill-catalog-card:active {
+  transform: scale(0.985);
 }
 
 .skill-catalog-card--owned {
@@ -866,11 +913,60 @@ watch(
   color: #475569;
 }
 
+@keyframes skill-checker-tap-guide-bounce {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-checker__tap-guide .pi {
+    animation: none;
+  }
+
+  .skill-catalog-card {
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+}
+
 .skill-catalog-card__skill-name {
   color: #475569;
   font-size: 0.88rem;
   line-height: 1.6;
   word-break: break-word;
+}
+
+.skill-catalog-card__tap-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px dashed #93c5fd;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.skill-catalog-card__tap-hint--owned {
+  background: rgba(219, 234, 254, 0.82);
+  border-style: solid;
+  border-color: #60a5fa;
+  color: #1e40af;
+}
+
+.skill-catalog-card__tap-hint .pi {
+  font-size: 0.82rem;
 }
 
 .user-workspace-empty {

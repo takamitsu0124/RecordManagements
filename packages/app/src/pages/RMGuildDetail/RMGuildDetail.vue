@@ -10,8 +10,7 @@ import {
   AppRole,
   AppUser,
   Guild,
-  normalizeWeaponProficiencyLevels,
-  weaponProficiencyDefinitions,
+  summarizeWeaponProficiencyProgress,
 } from '@rm/types'
 import RMGuildDetailMembersSection from './components/RMGuildDetailMembersSection.vue'
 import RMGuildDetailOverviewSection from './components/RMGuildDetailOverviewSection.vue'
@@ -181,16 +180,9 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
     const ownedCount = ownedSkills.length
     const unlockRate =
       masterCount.value > 0 ? (ownedCount / masterCount.value) * 100 : 0
-    const weaponProficiencyLevels = normalizeWeaponProficiencyLevels(
+    const weaponProficiencySummary = summarizeWeaponProficiencyProgress(
       appUser?.weaponProficiencyLevels
     )
-    const weaponProficiencyCount = weaponProficiencyDefinitions.filter(
-      ({ key }) => weaponProficiencyLevels[key] !== null
-    ).length
-    const weaponProficiencyProgressRate =
-      weaponProficiencyDefinitions.length > 0
-        ? (weaponProficiencyCount / weaponProficiencyDefinitions.length) * 100
-        : 0
     const topSkills = ownedSkills
       .map((ownedSkill) => {
         const master = skillStore.masterDataById.value.get(ownedSkill.skillId)
@@ -210,9 +202,10 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
       ownedCount,
       unlockRate,
       unlockRateText: `${unlockRate.toFixed(1)}%`,
-      weaponProficiencyCount,
-      weaponProficiencyProgressRate,
-      weaponProficiencyProgressRateText: `${weaponProficiencyProgressRate.toFixed(
+      weaponProficiencyCount: weaponProficiencySummary.registeredCount,
+      weaponProficiencyTotalLevel: weaponProficiencySummary.totalLevel,
+      weaponProficiencyProgressRate: weaponProficiencySummary.progressRate,
+      weaponProficiencyProgressRateText: `${weaponProficiencySummary.progressRate.toFixed(
         1
       )}%`,
       topSkills,
@@ -329,13 +322,15 @@ const filteredGuildSkillRows = computed(() => {
         .includes(normalizedSkillNameFilter.value)
 
     const matchesElement =
-      selectedElementFilter.value === '' || row.element === selectedElementFilter.value
+      selectedElementFilter.value === '' ||
+      row.element === selectedElementFilter.value
     const matchesEquipmentType =
       selectedEquipmentTypeFilter.value === '' ||
       row.equipmentType === selectedEquipmentTypeFilter.value
     const matchesBreakGauge =
       selectedBreakGaugeFilter.value <= 0 ||
-      (row.breakGauge ?? Number.NEGATIVE_INFINITY) >= selectedBreakGaugeFilter.value
+      (row.breakGauge ?? Number.NEGATIVE_INFINITY) >=
+        selectedBreakGaugeFilter.value
     const matchesSwitchGauge =
       selectedSwitchGaugeFilter.value <= 0 ||
       (row.switchGauge ?? Number.NEGATIVE_INFINITY) >=
@@ -778,7 +773,8 @@ const attrSeverity = (attr: string) => {
             >
               <div class="guild-detail-shortcut__title">ギルド概要を見る</div>
               <div class="guild-detail-shortcut__text">
-                基本情報・運用メモ・全体サマリーは Drawer でまとめて確認できます。
+                基本情報・運用メモ・全体サマリーは Drawer
+                でまとめて確認できます。
               </div>
             </button>
             <button
@@ -788,7 +784,8 @@ const attrSeverity = (attr: string) => {
             >
               <div class="guild-detail-shortcut__title">メンバー運用を開く</div>
               <div class="guild-detail-shortcut__text">
-                承認待ち確認、権限変更、個別のスキル編集導線を Drawer に集約しています。
+                承認待ち確認、権限変更、個別のスキル編集導線を Drawer
+                に集約しています。
               </div>
             </button>
           </div>

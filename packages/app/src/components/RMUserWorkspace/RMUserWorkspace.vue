@@ -3,8 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
+import Dropdown from 'primevue/dropdown'
 import Drawer from 'primevue/drawer'
-import InputNumber from 'primevue/inputnumber'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import {
@@ -24,6 +24,9 @@ import {
   defaultUserSkill,
   normalizeWeaponProficiencyLevels,
   weaponProficiencyDefinitions,
+  weaponProficiencyLevelOptions,
+  weaponProficiencyMaxLevel,
+  weaponProficiencyMinLevel,
 } from '@rm/types'
 import RMUserWorkspaceImagesSection from './RMUserWorkspaceImagesSection.vue'
 import RMUserWorkspaceProfileSection from './RMUserWorkspaceProfileSection.vue'
@@ -149,8 +152,7 @@ const showLevelInline = computed(
 )
 const showProficiencySkillInline = computed(
   () =>
-    !useDrawerLayout.value &&
-    activeCompactSection.value === 'proficiency-skill'
+    !useDrawerLayout.value && activeCompactSection.value === 'proficiency-skill'
 )
 const weaponProficiencyFields = computed(() =>
   weaponProficiencyDefinitions.map((definition) => ({
@@ -197,6 +199,7 @@ const imageCountLabel = computed(() => `${imageItems.value.length}件`)
 const modeLabel = computed(() =>
   isEditMode.value ? '編集モード' : '閲覧モード'
 )
+const weaponProficiencyLevelRangeLabel = `${weaponProficiencyMinLevel}〜${weaponProficiencyMaxLevel}`
 const skillCatalogPageSize = 25
 
 const skillCatalogElementOptions = computed(() =>
@@ -549,10 +552,7 @@ const updateWeaponProficiencyLevel = (
     ...user.value,
     weaponProficiencyLevels: {
       ...user.value.weaponProficiencyLevels,
-      [key]:
-        typeof value === 'number' && Number.isFinite(value)
-          ? Math.max(0, Math.round(value))
-          : null,
+      [key]: typeof value === 'number' && Number.isFinite(value) ? value : null,
     },
   })
 }
@@ -1060,7 +1060,9 @@ const emitBack = () => {
                   武器熟練度Lvを登録
                 </div>
                 <div class="user-workspace-focus-switch__level-note">
-                  各武器種の熟練度スキルLvを入力できます。未登録の項目は空欄のままで保存されます。
+                  各武器種の熟練度Lvを
+                  {{ weaponProficiencyLevelRangeLabel }}
+                  から選択できます。未登録の項目は空欄のままで保存されます。
                 </div>
                 <div class="user-workspace-focus-switch__level-grid">
                   <div
@@ -1071,12 +1073,14 @@ const emitBack = () => {
                     <div class="user-workspace-field__label">
                       {{ field.label }}
                     </div>
-                    <InputNumber
+                    <Dropdown
                       :modelValue="field.value"
-                      :min="0"
-                      :useGrouping="false"
+                      :options="weaponProficiencyLevelOptions"
+                      optionLabel="label"
+                      optionValue="value"
                       :disabled="!isEditMode"
-                      placeholder="未設定"
+                      placeholder="Lvを選択"
+                      showClear
                       class="user-workspace-focus-switch__level-input"
                       @update:modelValue="
                         updateWeaponProficiencyLevel(field.key, $event)
@@ -1409,7 +1413,7 @@ const emitBack = () => {
 }
 
 .user-workspace-focus-switch__level-input,
-.user-workspace-focus-switch__level-panel :deep(.p-inputnumber) {
+.user-workspace-focus-switch__level-panel :deep(.p-dropdown) {
   width: 100%;
 }
 
