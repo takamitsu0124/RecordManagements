@@ -27,7 +27,7 @@ import {
 } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
-import RMFlowGuide from 'src/components/RMFlowGuide/RMFlowGuide.vue'
+import RMFloatingGuideButton from 'src/components/RMFloatingGuideButton/RMFloatingGuideButton.vue'
 import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
@@ -69,24 +69,6 @@ const currentGuildId = computed(() =>
 )
 
 const canEditGuild = computed(() => canManageGuildMembers.value)
-const guildGuideItems = [
-  {
-    title: 'ギルド概要を把握する',
-    description: 'まず基本情報とメンバー数を見て、今の運用状態を確認します。',
-    targetId: 'guild-overview',
-  },
-  {
-    title: 'スキルを横断検索する',
-    description:
-      'メンバー別の所持状況を見ながら、欲しいスキルを条件で絞り込みます。',
-    targetId: 'guild-skill-search',
-  },
-  {
-    title: 'メンバー運用を進める',
-    description: '承認待ち確認、権限更新、必要なら個別のスキル編集へ進みます。',
-    targetId: 'guild-member-management',
-  },
-]
 
 const guildScopedUsers = computed(() =>
   guildUsers.value.filter((user) => user.guildId === currentGuildId.value)
@@ -711,6 +693,39 @@ const attrSeverity = (attr: string) => {
   if (attr === '土') return 'warn'
   return 'secondary'
 }
+
+const scrollToSection = (targetId: string) => {
+  const element = document.getElementById(targetId)
+  if (!element) return
+
+  element.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
+
+const runAfterGuideClose = (closeDrawer: () => void, callback: () => void) => {
+  closeDrawer()
+  requestAnimationFrame(callback)
+}
+
+const openOverviewFromGuide = (closeDrawer: () => void) => {
+  runAfterGuideClose(closeDrawer, () => {
+    isOverviewDrawerVisible.value = true
+  })
+}
+
+const focusSkillSearchFromGuide = (closeDrawer: () => void) => {
+  runAfterGuideClose(closeDrawer, () => {
+    scrollToSection('guild-skill-search')
+  })
+}
+
+const openMembersFromGuide = (closeDrawer: () => void) => {
+  runAfterGuideClose(closeDrawer, () => {
+    isMembersDrawerVisible.value = true
+  })
+}
 </script>
 
 <template>
@@ -765,31 +780,6 @@ const attrSeverity = (attr: string) => {
             </template>
           </RMPageHeader>
 
-          <div class="guild-detail-shortcuts">
-            <button
-              type="button"
-              class="guild-detail-shortcut"
-              @click="isOverviewDrawerVisible = true"
-            >
-              <div class="guild-detail-shortcut__title">ギルド概要を見る</div>
-              <div class="guild-detail-shortcut__text">
-                基本情報・運用メモ・全体サマリーは Drawer
-                でまとめて確認できます。
-              </div>
-            </button>
-            <button
-              type="button"
-              class="guild-detail-shortcut"
-              @click="isMembersDrawerVisible = true"
-            >
-              <div class="guild-detail-shortcut__title">メンバー運用を開く</div>
-              <div class="guild-detail-shortcut__text">
-                承認待ち確認、権限変更、個別のスキル編集導線を Drawer
-                に集約しています。
-              </div>
-            </button>
-          </div>
-
           <div id="guild-skill-search" class="guild-detail-anchor">
             <RMGuildDetailSkillsSection
               :approvedMembers="approvedMembers"
@@ -826,6 +816,56 @@ const attrSeverity = (attr: string) => {
       </template>
     </Card>
 
+    <RMFloatingGuideButton
+      v-if="guildDetail"
+      buttonAriaLabel="ギルド画面のガイドを開く"
+      drawerHeader="この画面の使い方"
+      :drawerStyle="{ width: 'min(96vw, 26rem)' }"
+    >
+      <template #default="{ closeDrawer }">
+        <div class="guild-detail-guide-drawer">
+          <div class="guild-detail-guide-drawer__intro">
+            必要な情報や運用導線はこのガイドから開けます。本文はスキル検索に集中できる構成にしています。
+          </div>
+
+          <div class="guild-detail-shortcuts">
+            <button
+              type="button"
+              class="guild-detail-shortcut"
+              @click="openOverviewFromGuide(closeDrawer)"
+            >
+              <div class="guild-detail-shortcut__title">ギルド概要を見る</div>
+              <div class="guild-detail-shortcut__text">
+                基本情報・運用メモ・全体サマリーを右側 Drawer でまとめて確認できます。
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="guild-detail-shortcut"
+              @click="focusSkillSearchFromGuide(closeDrawer)"
+            >
+              <div class="guild-detail-shortcut__title">スキル検索へ移動</div>
+              <div class="guild-detail-shortcut__text">
+                メンバー別の所持状況を見ながら、欲しいスキルを条件で絞り込みます。
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="guild-detail-shortcut"
+              @click="openMembersFromGuide(closeDrawer)"
+            >
+              <div class="guild-detail-shortcut__title">メンバー運用を開く</div>
+              <div class="guild-detail-shortcut__text">
+                承認待ち確認、権限変更、個別のスキル編集導線を Drawer に集約しています。
+              </div>
+            </button>
+          </div>
+        </div>
+      </template>
+    </RMFloatingGuideButton>
+
     <Drawer
       v-if="guildDetail"
       v-model:visible="isOverviewDrawerVisible"
@@ -835,12 +875,6 @@ const attrSeverity = (attr: string) => {
       class="guild-detail-drawer"
     >
       <div id="guild-overview" class="guild-detail-drawer__content">
-        <RMFlowGuide
-          title="このギルドで最初に見る場所"
-          description="概要を把握してからスキル検索やメンバー運用へ進めるよう、補助情報を Drawer にまとめています。"
-          :items="guildGuideItems"
-        />
-
         <RMGuildDetailOverviewSection
           :guildDetail="guildDetail"
           :canManageGuildMembers="canManageGuildMembers"
@@ -931,6 +965,21 @@ const attrSeverity = (attr: string) => {
 
 .guild-detail-shortcut__text {
   color: var(--rm-text-soft);
+  line-height: 1.7;
+}
+
+.guild-detail-guide-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guild-detail-guide-drawer__intro {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(239, 246, 255, 0.92);
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  color: #1d4ed8;
   line-height: 1.7;
 }
 

@@ -14,12 +14,12 @@ import {
 import { useDialog } from 'primevue/usedialog'
 import { Guild, GuildCalendarEvent } from '@rm/types'
 import Card from 'primevue/card'
-import Drawer from 'primevue/drawer'
 import ProgressSpinner from 'primevue/progressspinner'
 import { globalLoginUserData } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMFlowGuide from 'src/components/RMFlowGuide/RMFlowGuide.vue'
+import RMFloatingGuideButton from 'src/components/RMFloatingGuideButton/RMFloatingGuideButton.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import RMCalendarEventDialogContent from 'src/pages/RMCalendarPage/components/RMCalendarEventDialogContent.vue'
 import {
@@ -53,29 +53,7 @@ const isLoadingEvents = ref(false)
 const isSaving = ref(false)
 const isMobile = ref(false)
 const isTablet = ref(false)
-const isSettingsDrawerVisible = ref(false)
 const currentRange = ref<{ start: Date; end: Date } | null>(null)
-
-const calendarGuideItems = [
-  {
-    title: '表示期間を切り替える',
-    description:
-      '月表示と週リストを切り替えながら、ギルドの共有予定を見たい粒度で確認できます。',
-    targetId: 'calendar-board',
-  },
-  {
-    title: '予定を追加する',
-    description:
-      'Guild Admin / Admin は右上の「予定を追加」から新しい共有予定を登録できます。',
-    targetId: 'calendar-actions',
-  },
-  {
-    title: '予定を開いて更新する',
-    description:
-      '予定を押すと詳細が開き、権限があればそのまま更新・削除できます。',
-    targetId: 'calendar-board',
-  },
-]
 
 const updateViewportState = () => {
   const width = window.innerWidth
@@ -204,6 +182,33 @@ const canEditCalendar = computed(
     globalLoginUserData.value.role === 'admin' ||
     globalLoginUserData.value.role === 'guild_admin'
 )
+const calendarGuideItems = computed(() => {
+  const items = [
+    {
+      title: '表示期間を切り替える',
+      description:
+        '月表示と週リストを切り替えながら、ギルドの共有予定を見たい粒度で確認できます。',
+      targetId: 'calendar-board',
+    },
+    {
+      title: '予定を開いて更新する',
+      description:
+        '予定を押すと詳細が開き、権限があればそのまま更新・削除できます。',
+      targetId: 'calendar-board',
+    },
+  ]
+
+  if (canEditCalendar.value) {
+    items.splice(1, 0, {
+      title: '予定を追加する',
+      description:
+        'Guild Admin / Admin は右上の「予定を追加」から新しい共有予定を登録できます。',
+      targetId: 'calendar-actions',
+    })
+  }
+
+  return items
+})
 
 const calendarBlocker = computed(() => {
   if (!guildId.value) {
@@ -645,12 +650,6 @@ const calendarOptions = computed<CalendarOptions>(() => ({
       >
         <template #actions>
           <RMButton
-            label="表示ガイド"
-            width="150px"
-            outline
-            @click="isSettingsDrawerVisible = true"
-          />
-          <RMButton
             label="再読み込み"
             width="170px"
             outline
@@ -740,59 +739,61 @@ const calendarOptions = computed<CalendarOptions>(() => ({
       </Card>
     </div>
 
-    <Drawer
-      v-model:visible="isSettingsDrawerVisible"
-      position="right"
-      header="表示ガイドと現在の状態"
-      :style="{ width: 'min(96vw, 34rem)' }"
-      class="calendar-settings-drawer"
+    <RMFloatingGuideButton
+      v-if="guildDetail && !calendarBlocker"
+      buttonAriaLabel="カレンダーの表示ガイドを開く"
+      drawerHeader="表示ガイドと現在の状態"
+      :drawerStyle="{ width: 'min(96vw, 34rem)' }"
     >
-      <div class="calendar-settings-drawer__content">
-        <RMFlowGuide
-          title="この画面で触る場所"
-          description="月/週を切り替えながら共有予定を確認し、必要に応じて作成や更新へ進めます。"
-          :items="calendarGuideItems"
-        />
+      <template #default="{ closeDrawer }">
+        <div class="calendar-settings-drawer__content">
+          <RMFlowGuide
+            title="この画面で触る場所"
+            description="月/週を切り替えながら共有予定を確認し、必要に応じて作成や更新へ進めます。"
+            :items="calendarGuideItems"
+            @select="closeDrawer"
+          />
 
-        <Card class="calendar-panel-card calendar-anchor">
-          <template #content>
-            <div class="calendar-panel-card__content">
-              <div class="calendar-panel-card__title">現在の状態</div>
+          <Card class="calendar-panel-card calendar-anchor">
+            <template #content>
+              <div class="calendar-panel-card__content">
+                <div class="calendar-panel-card__title">現在の状態</div>
 
-              <div class="calendar-status-pill-list">
-                <span
-                  v-for="pill in statusPills"
-                  :key="pill.label"
-                  class="calendar-status-pill"
-                  :class="`calendar-status-pill--${pill.tone}`"
-                >
-                  {{ pill.label }}
-                </span>
+                <div class="calendar-status-pill-list">
+                  <span
+                    v-for="pill in statusPills"
+                    :key="pill.label"
+                    class="calendar-status-pill"
+                    :class="`calendar-status-pill--${pill.tone}`"
+                  >
+                    {{ pill.label }}
+                  </span>
+                </div>
+
+                <dl class="calendar-status-list">
+                  <div class="calendar-status-list__row">
+                    <dt>所属ギルド</dt>
+                    <dd>{{ guildName }}</dd>
+                  </div>
+                  <div class="calendar-status-list__row">
+                    <dt>現在の権限</dt>
+                    <dd>{{ calendarRoleLabel }}</dd>
+                  </div>
+                  <div class="calendar-status-list__row">
+                    <dt>表示中の期間</dt>
+                    <dd>{{ currentRangeText }}</dd>
+                  </div>
+                  <div class="calendar-status-list__row">
+                    <dt>登録済み予定</dt>
+                    <dd>{{ eventEntries.length }} 件</dd>
+                  </div>
+                </dl>
               </div>
-
-              <dl class="calendar-status-list">
-                <div class="calendar-status-list__row">
-                  <dt>所属ギルド</dt>
-                  <dd>{{ guildName }}</dd>
-                </div>
-                <div class="calendar-status-list__row">
-                  <dt>現在の権限</dt>
-                  <dd>{{ calendarRoleLabel }}</dd>
-                </div>
-                <div class="calendar-status-list__row">
-                  <dt>表示中の期間</dt>
-                  <dd>{{ currentRangeText }}</dd>
-                </div>
-                <div class="calendar-status-list__row">
-                  <dt>登録済み予定</dt>
-                  <dd>{{ eventEntries.length }} 件</dd>
-                </div>
-              </dl>
-            </div>
-          </template>
-        </Card>
-      </div>
-    </Drawer>
+            </template>
+          </Card>
+        </div>
+      </template>
+    </RMFloatingGuideButton>
   </div>
 </template>
 

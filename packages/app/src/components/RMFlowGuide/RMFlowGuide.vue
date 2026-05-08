@@ -5,6 +5,10 @@ type FlowGuideItem = {
   targetId: string
 }
 
+const emit = defineEmits<{
+  (e: 'select', item: FlowGuideItem): void
+}>()
+
 const props = defineProps<{
   title: string
   description: string
@@ -19,6 +23,11 @@ const scrollToSection = (targetId: string) => {
     behavior: 'smooth',
     block: 'start',
   })
+}
+
+const onSelectItem = (item: FlowGuideItem) => {
+  scrollToSection(item.targetId)
+  emit('select', item)
 }
 </script>
 
@@ -36,7 +45,7 @@ const scrollToSection = (targetId: string) => {
         :key="`${item.targetId}-${index}`"
         type="button"
         class="rm-flow-guide__item"
-        @click="scrollToSection(item.targetId)"
+        @click="onSelectItem(item)"
       >
         <span class="rm-flow-guide__index">{{ index + 1 }}</span>
         <div class="rm-flow-guide__body">
