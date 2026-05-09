@@ -30,6 +30,7 @@ export type GuildSkillRow = {
   ownedCount: number
   image: string
   masterMissing: boolean
+  normalizedSearchText: string
 }
 
 export type GuildMemberSkillSummary = {

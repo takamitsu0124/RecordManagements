@@ -1,6 +1,5 @@
 import { CollectionInstance, DocInstance } from '@magnetarjs/core'
 import { Timestamp, DocumentData } from 'firebase/firestore'
-import { copy } from 'copy-anything'
 import { genFirebaseRandomId } from '@codelic/datagen'
 
 export const formatDataTimestampToDate = (
@@ -8,7 +7,6 @@ export const formatDataTimestampToDate = (
   payload: { [key: string]: any },
   docMetadata: DocumentData
 ) => {
-  const _payload = copy(payload)
   if (docMetadata.exists) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const convertTimestampToDate = (p: any): any => {
@@ -19,23 +17,38 @@ export const formatDataTimestampToDate = (
       } else if (p === null) {
         return null
       } else if (Array.isArray(p)) {
+        let hasChanged = false
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return p.map((item: any) => convertTimestampToDate(item))
+        const nextArray = p.map((item: any) => {
+          const nextItem = convertTimestampToDate(item)
+          if (nextItem !== item) {
+            hasChanged = true
+          }
+          return nextItem
+        })
+        return hasChanged ? nextArray : p
       } else if (typeof p === 'object') {
-        return Object.fromEntries(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          Object.entries(p).map(([key, value]: any) => [
-            key,
-            convertTimestampToDate(value)
-          ])
-        )
+        let hasChanged = false
+        const nextPayload: Record<string, unknown> = {}
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const [key, value] of Object.entries(p) as [string, any][]) {
+          const nextValue = convertTimestampToDate(value)
+          if (nextValue !== value) {
+            hasChanged = true
+          }
+          nextPayload[key] = nextValue
+        }
+
+        return hasChanged ? nextPayload : p
       } else {
         return p
       }
     }
+
     return {
-      ...convertTimestampToDate(_payload),
-      id: docMetadata.id
+      ...convertTimestampToDate(payload),
+      id: docMetadata.id,
     }
   }
   return payload

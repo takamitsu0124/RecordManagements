@@ -97,6 +97,7 @@ const errorMessage = ref('')
 const draftStatus = ref<GuildScheduleStatus | null>(null)
 const draftNote = ref('')
 const isSelectedDayDialogVisible = ref(false)
+let viewportFrameId: number | null = null
 
 const roleLabels: Record<AppRole, string> = {
   admin: 'Admin',
@@ -145,6 +146,15 @@ const updateViewportState = () => {
   isMobile.value = width < 768
   isTablet.value = width >= 768 && width < 1120
   isCompactMobile.value = width < 380
+}
+
+const scheduleViewportStateUpdate = () => {
+  if (viewportFrameId !== null) return
+
+  viewportFrameId = requestAnimationFrame(() => {
+    viewportFrameId = null
+    updateViewportState()
+  })
 }
 
 const currentGuildId = computed(() =>
@@ -219,23 +229,33 @@ const canEditOwnResponse = computed(() => {
 const canManageSchedule = computed(() => hasAdmin.value || hasGuildAdmin.value)
 
 const monthDays = computed(() => getMonthDays(currentMonth.value))
+const approvedMembersForBreakdown = computed(() =>
+  approvedMembers.value.map((member) => ({
+    ...member,
+    isCurrentUser: member.uid === currentUserId.value,
+  }))
+)
 
 const dayBreakdowns = computed(() => {
+  const days = monthDays.value
+  const members = approvedMembersForBreakdown.value
+  const responsesByUserId = responseByUserId.value
+
   return new Map(
-    monthDays.value.map((day) => {
+    days.map((day) => {
       const available: DayMemberItem[] = []
       const maybe: DayMemberItem[] = []
       const unavailable: DayMemberItem[] = []
       const unanswered: DayMemberItem[] = []
 
-      for (const member of approvedMembers.value) {
-        const entry = responseByUserId.value.get(member.uid)?.entries?.[day.key]
+      for (const member of members) {
+        const entry = responsesByUserId.get(member.uid)?.entries?.[day.key]
         const payload: DayMemberItem = {
           uid: member.uid,
           displayName: member.displayName,
           role: member.role,
           note: entry?.note || '',
-          isCurrentUser: member.uid === currentUserId.value,
+          isCurrentUser: member.isCurrentUser,
         }
 
         if (!entry) {
@@ -268,9 +288,9 @@ const dayBreakdowns = computed(() => {
           unavailable,
           unanswered,
           respondedCount,
-          totalMembers: approvedMembers.value.length,
+          totalMembers: members.length,
         } satisfies DayBreakdown,
-      ]
+      ] as const
     })
   )
 })
@@ -530,27 +550,24 @@ const syncSelectedDateWithinMonth = () => {
     : availableDateKeys[0]
 }
 
-const loadGuildUsers = async (guildId: string) => {
-  guildUsers.value = await fetchGuildUsers(guildId)
-}
-
-const loadScheduleResponses = async (guildId: string) => {
-  scheduleResponses.value = await fetchGuildScheduleResponses(guildId)
-}
-
 const loadPageData = async (guildId: string) => {
   isLoading.value = true
   errorMessage.value = ''
 
   try {
-    const guild = await fetchGuild(guildId, { force: true })
+    const [guild, nextGuildUsers, nextScheduleResponses] = await Promise.all([
+      fetchGuild(guildId, { force: true }),
+      fetchGuildUsers(guildId),
+      fetchGuildScheduleResponses(guildId),
+    ])
 
     if (!guild) {
       throw new Error('指定されたギルドが見つかりません。')
     }
 
     guildDetail.value = guild
-    await Promise.all([loadGuildUsers(guildId), loadScheduleResponses(guildId)])
+    guildUsers.value = nextGuildUsers
+    scheduleResponses.value = nextScheduleResponses
   } catch (error) {
     guildDetail.value = null
     guildUsers.value = []
@@ -725,12 +742,15 @@ watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
 })
 
 onMounted(() => {
-  updateViewportState()
-  window.addEventListener('resize', updateViewportState)
+  scheduleViewportStateUpdate()
+  window.addEventListener('resize', scheduleViewportStateUpdate)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateViewportState)
+  window.removeEventListener('resize', scheduleViewportStateUpdate)
+  if (viewportFrameId !== null) {
+    cancelAnimationFrame(viewportFrameId)
+  }
 })
 </script>
 

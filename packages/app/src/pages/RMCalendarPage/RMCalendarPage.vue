@@ -54,11 +54,21 @@ const isSaving = ref(false)
 const isMobile = ref(false)
 const isTablet = ref(false)
 const currentRange = ref<{ start: Date; end: Date } | null>(null)
+let viewportFrameId: number | null = null
 
 const updateViewportState = () => {
   const width = window.innerWidth
   isMobile.value = width < 768
   isTablet.value = width >= 768 && width < 1120
+}
+
+const scheduleViewportStateUpdate = () => {
+  if (viewportFrameId !== null) return
+
+  viewportFrameId = requestAnimationFrame(() => {
+    viewportFrameId = null
+    updateViewportState()
+  })
 }
 
 const parseLocalDate = (value: string) => {
@@ -598,13 +608,16 @@ const loadCalendarPage = async () => {
 }
 
 onMounted(async () => {
-  updateViewportState()
-  window.addEventListener('resize', updateViewportState)
+  scheduleViewportStateUpdate()
+  window.addEventListener('resize', scheduleViewportStateUpdate)
   await loadCalendarPage()
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateViewportState)
+  window.removeEventListener('resize', scheduleViewportStateUpdate)
+  if (viewportFrameId !== null) {
+    cancelAnimationFrame(viewportFrameId)
+  }
 })
 
 const calendarOptions = computed<CalendarOptions>(() => ({

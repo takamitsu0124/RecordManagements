@@ -214,6 +214,10 @@ const averageWeaponProficiencyProgressRate = computed(() => {
     ) / memberSkillSummaries.value.length
   )
 })
+const memberSkillSummaryByUid = computed(
+  () =>
+    new Map(memberSkillSummaries.value.map((summary) => [summary.uid, summary]))
+)
 
 const guildSkillRows = computed<GuildSkillRow[]>(() => {
   const memberMap = new Map(
@@ -224,24 +228,31 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
     .filter((detail) => memberMap.has(detail.userId))
     .map((detail) => {
       const member = memberMap.get(detail.userId)!
-      const memberSummary = memberSkillSummaries.value.find(
-        (summary) => summary.uid === detail.userId
-      )
+      const memberSummary = memberSkillSummaryByUid.value.get(detail.userId)
+      const userName = member.displayName
+      const name = detail.name || detail.skillId
+      const characterName = detail.characterName || ''
+      const skillName = detail.skillName || '未設定'
+      const effect = detail.effect || ''
+      const element = detail.element || '未設定'
+      const equipmentType = detail.equipmentType || '未設定'
+      const skillType = detail.skillType || '通常'
+      const attackType = detail.attackType || '未設定'
 
       return {
         rowId: `${detail.userId}:${detail.skillId}`,
         userId: detail.userId,
-        userName: member.displayName,
+        userName,
         role: member.role,
         skillId: detail.skillId,
-        name: detail.name || detail.skillId,
-        characterName: detail.characterName || '',
-        skillName: detail.skillName || '未設定',
-        effect: detail.effect || '',
-        element: detail.element || '未設定',
-        equipmentType: detail.equipmentType || '未設定',
-        skillType: detail.skillType || '通常',
-        attackType: detail.attackType || '未設定',
+        name,
+        characterName,
+        skillName,
+        effect,
+        element,
+        equipmentType,
+        skillType,
+        attackType,
         breakGauge: detail.breakGauge,
         switchGauge: detail.switchGauge,
         cooldown: detail.cooldown,
@@ -251,6 +262,20 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
         ownedCount: memberSummary?.ownedCount ?? 0,
         image: detail.image,
         masterMissing: detail.masterMissing,
+        normalizedSearchText: [
+          userName,
+          detail.skillId,
+          name,
+          characterName,
+          skillName,
+          effect,
+          element,
+          equipmentType,
+          skillType,
+          attackType,
+        ]
+          .join(' ')
+          .toLowerCase(),
       }
     })
     .sort(
@@ -287,21 +312,7 @@ const filteredGuildSkillRows = computed(() => {
   return guildSkillRows.value.filter((row) => {
     const matchesSkillName =
       normalizedSkillNameFilter.value === '' ||
-      [
-        row.userName,
-        row.skillId,
-        row.name,
-        row.characterName,
-        row.skillName,
-        row.effect,
-        row.element,
-        row.equipmentType,
-        row.skillType,
-        row.attackType,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedSkillNameFilter.value)
+      row.normalizedSearchText.includes(normalizedSkillNameFilter.value)
 
     const matchesElement =
       selectedElementFilter.value === '' ||

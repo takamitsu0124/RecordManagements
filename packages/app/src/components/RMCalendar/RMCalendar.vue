@@ -33,6 +33,11 @@ const model = computed({
   },
 })
 
+const createWeekLabels = () =>
+  Array.from({ length: 7 }, (_, weekNumber) =>
+    createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, weekNumber, true)
+  )
+
 // 現在の日時
 const isNewDate = computed(() =>
   model.value ? new Date(model.value) : new Date()
@@ -86,6 +91,7 @@ const isPagenaviMonthYear = ref<string>('')
 
 // 略語の曜日
 const byLangDayOfTheWeek = ref<string>('')
+const weekLabels = ref<string[]>(createWeekLabels())
 
 // 今月のカレンダー情報を設定する
 thisMonthCalenderDays.value = createCalendar(isYear.value, isMonth.value)
@@ -113,6 +119,23 @@ watch(
         isNewDate.value.getDay()
       )
     }
+  }
+)
+
+watch(
+  () => props.lang,
+  () => {
+    weekLabels.value = createWeekLabels()
+    byLangDayOfTheWeek.value = createDayOfTheWeek.createDayOfTheWeekChoose(
+      props.lang,
+      isNewDate.value.getDay()
+    )
+    isPagenaviMonthYear.value =
+      createPagenaviMonthYear.createPagenaviMonthYearChoose(
+        props.lang,
+        isYear.value,
+        isMonth.value
+      )
   }
 )
 
@@ -233,6 +256,18 @@ const selectDay = (dayObject: DateType) => {
     // elementHeaderDateContainer.style.opacity = '1'
   }, 300)
 }
+
+const getCalendarDayKey = (dayObject: DateType, index: number) => {
+  if (
+    dayObject.year === ' ' &&
+    dayObject.month === ' ' &&
+    dayObject.day === ' '
+  ) {
+    return `blank-${index}`
+  }
+
+  return `${dayObject.year}-${dayObject.month}-${dayObject.day}`
+}
 </script>
 
 <template>
@@ -273,40 +308,12 @@ const selectDay = (dayObject: DateType) => {
         </div>
 
         <div class="_week_items_container">
-          <div class="_day_of_the_week_items">
-            {{
-              createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, 0, true)
-            }}
-          </div>
-          <div class="_day_of_the_week_items">
-            {{
-              createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, 1, true)
-            }}
-          </div>
-          <div class="_day_of_the_week_items">
-            {{
-              createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, 2, true)
-            }}
-          </div>
-          <div class="_day_of_the_week_items">
-            {{
-              createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, 3, true)
-            }}
-          </div>
-          <div class="_day_of_the_week_items">
-            {{
-              createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, 4, true)
-            }}
-          </div>
-          <div class="_day_of_the_week_items">
-            {{
-              createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, 5, true)
-            }}
-          </div>
-          <div class="_day_of_the_week_items">
-            {{
-              createDayOfTheWeek.createDayOfTheWeekChoose(props.lang, 6, true)
-            }}
+          <div
+            v-for="(weekLabel, index) in weekLabels"
+            :key="`weekday-${index}`"
+            class="_day_of_the_week_items"
+          >
+            {{ weekLabel }}
           </div>
         </div>
 
@@ -314,7 +321,7 @@ const selectDay = (dayObject: DateType) => {
           <div
             ref="refThisMonthCalenderDays"
             v-for="(dayObject, index) in thisMonthCalenderDays"
-            :key="index"
+            :key="getCalendarDayKey(dayObject, index)"
             :class="{
               _this_month_day:
                 dayObject.year !== ' ' &&

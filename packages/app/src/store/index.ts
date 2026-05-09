@@ -25,6 +25,9 @@ type SkillStoreState = {
 	isLoading: boolean
 }
 
+const defaultSkillMasterBase = defaultSkillMaster()
+const defaultUserSkillBase = defaultUserSkill()
+
 const state = reactive<SkillStoreState>({
 	masterData: [],
 	currentUserSkills: [],
@@ -60,30 +63,32 @@ const normalizeOwnedSkills = (ownedSkills: unknown): OwnedSkill[] => {
 		return []
 	}
 
-	return ownedSkills
-		.map((ownedSkill) => {
-			if (
-				typeof ownedSkill !== 'object' ||
-				ownedSkill === null ||
-				typeof ownedSkill.skillId !== 'string'
-			) {
-				return null
-			}
+	const normalizedOwnedSkills: OwnedSkill[] = []
 
-			return {
-				skillId: ownedSkill.skillId,
-				level:
-					typeof ownedSkill.level === 'number' && Number.isFinite(ownedSkill.level)
-						? ownedSkill.level
-						: 0,
-			}
+	for (const ownedSkill of ownedSkills) {
+		if (
+			typeof ownedSkill !== 'object' ||
+			ownedSkill === null ||
+			typeof ownedSkill.skillId !== 'string'
+		) {
+			continue
+		}
+
+		normalizedOwnedSkills.push({
+			skillId: ownedSkill.skillId,
+			level:
+				typeof ownedSkill.level === 'number' && Number.isFinite(ownedSkill.level)
+					? ownedSkill.level
+					: 0,
 		})
-		.filter((ownedSkill): ownedSkill is OwnedSkill => ownedSkill !== null)
+	}
+
+	return normalizedOwnedSkills
 }
 
 const normalizeUserSkill = (userId: string, payload: UserSkill | null | undefined): UserSkill => {
 	return {
-		...defaultUserSkill(),
+		...defaultUserSkillBase,
 		...payload,
 		id: payload?.id || userId,
 		userId: payload?.userId || userId,
@@ -92,7 +97,15 @@ const normalizeUserSkill = (userId: string, payload: UserSkill | null | undefine
 }
 
 const createUserSkillCacheKey = (userIds: string[]) => {
-	return [...new Set(userIds.filter(Boolean))].sort().join('|')
+	const normalizedUserIds = userIds.filter(Boolean)
+	if (normalizedUserIds.length === 0) {
+		return ''
+	}
+	if (normalizedUserIds.length === 1) {
+		return normalizedUserIds[0]
+	}
+
+	return [...new Set(normalizedUserIds)].sort().join('|')
 }
 
 const masterDataById = computed(() => {
@@ -100,16 +113,28 @@ const masterDataById = computed(() => {
 })
 
 const currentOwnedSkills = computed(() => {
-	return state.currentUserSkills.flatMap((userSkill) => userSkill.ownedSkills)
+	const ownedSkills: OwnedSkill[] = []
+
+	for (const userSkill of state.currentUserSkills) {
+		ownedSkills.push(...userSkill.ownedSkills)
+	}
+
+	return ownedSkills
 })
 
 const userOwnedSkills = computed(() => {
-	return state.currentUserSkills.flatMap((userSkill) =>
-		userSkill.ownedSkills.map((ownedSkill) => ({
-			userId: userSkill.userId,
-			...ownedSkill,
-		}))
-	)
+	const ownedSkills: Array<OwnedSkill & { userId: string }> = []
+
+	for (const userSkill of state.currentUserSkills) {
+		for (const ownedSkill of userSkill.ownedSkills) {
+			ownedSkills.push({
+				userId: userSkill.userId,
+				...ownedSkill,
+			})
+		}
+	}
+
+	return ownedSkills
 })
 
 const skillDetails = computed<SkillDetail[]>(() => {
@@ -118,7 +143,7 @@ const skillDetails = computed<SkillDetail[]>(() => {
 		const normalizedMaster = master
 			? master
 			: {
-					...defaultSkillMaster(),
+					...defaultSkillMasterBase,
 					id: ownedSkill.skillId,
 				}
 
@@ -137,7 +162,7 @@ const userSkillDetails = computed<UserSkillDetail[]>(() => {
 		const normalizedMaster = master
 			? master
 			: {
-					...defaultSkillMaster(),
+					...defaultSkillMasterBase,
 					id: ownedSkill.skillId,
 				}
 
@@ -161,18 +186,14 @@ const fetchMasterData = async (): Promise<SkillMaster[]> => {
 	}
 
 	masterDataPromise = withLoading(async () => {
-		const previousMasterData = [...state.masterData]
-
 		try {
 			await dbSkillMasterModule.fetch()
-			state.masterData = Array.from(dbSkillMasterModule.data.values())
+			const nextMasterData = Array.from(dbSkillMasterModule.data.values())
 				.map((skill) => normalizeSkillMasterRecord(skill))
 				.sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+			state.masterData = nextMasterData
 			masterDataLoaded = true
 			return state.masterData
-		} catch (error) {
-			state.masterData = previousMasterData
-			throw error
 		} finally {
 			masterDataPromise = null
 		}
@@ -207,18 +228,17 @@ const fetchUserSkills = async (userId: string): Promise<UserSkill[]> => {
 	currentUserSkillOwnerKey = cacheKey
 
 	currentUserSkillsPromise = withLoading(async () => {
-		const previousUserSkills = [...state.currentUserSkills]
 		const previousLoadedState = currentUserSkillsLoaded
 
 		try {
 			const payload = await dbUserSkillsModule.doc(userId).fetch({ force: true })
-			state.currentUserSkills = payload?.id
+			const nextUserSkills = payload?.id
 				? [normalizeUserSkill(userId, payload)]
 				: []
+			state.currentUserSkills = nextUserSkills
 			currentUserSkillsLoaded = true
 			return state.currentUserSkills
 		} catch (error) {
-			state.currentUserSkills = previousUserSkills
 			currentUserSkillOwnerKey = previousOwnerKey
 			currentUserSkillsLoaded = previousLoadedState
 			throw error
@@ -257,7 +277,6 @@ const fetchUsersSkills = async (userIds: string[]): Promise<UserSkill[]> => {
 	currentUserSkillOwnerKey = cacheKey
 
 	currentUserSkillsPromise = withLoading(async () => {
-		const previousUserSkills = [...state.currentUserSkills]
 		const previousLoadedState = currentUserSkillsLoaded
 
 		try {
@@ -267,17 +286,17 @@ const fetchUsersSkills = async (userIds: string[]): Promise<UserSkill[]> => {
 				)
 			)
 
-			state.currentUserSkills = payloads
+			const nextUserSkills = payloads
 				.map((payload, index) =>
 					payload?.id
 						? normalizeUserSkill(normalizedUserIds[index], payload)
 						: null
 				)
 				.filter((userSkill): userSkill is UserSkill => userSkill !== null)
+			state.currentUserSkills = nextUserSkills
 			currentUserSkillsLoaded = true
 			return state.currentUserSkills
 		} catch (error) {
-			state.currentUserSkills = previousUserSkills
 			currentUserSkillOwnerKey = previousOwnerKey
 			currentUserSkillsLoaded = previousLoadedState
 			throw error

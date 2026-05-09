@@ -57,7 +57,7 @@ const setSkillCatalogStatus = (value: SkillCatalogStatus) =>
 const setSkillCatalogPage = (event: { page: number }) =>
   emit('update:skillCatalogPage', event.page)
 const skillCatalogGridRef = ref<HTMLElement | null>(null)
-const shouldScrollOnMobilePageChange = ref(false)
+let shouldScrollOnMobilePageChange = false
 
 const isMobilePagerViewport = () =>
   typeof window !== 'undefined' &&
@@ -82,7 +82,7 @@ const updateSkillCatalogPage = (page: number) => {
   const nextPage = Math.min(Math.max(page, 0), skillCatalogTotalPages.value - 1)
   if (nextPage === props.skillCatalogPage) return
 
-  shouldScrollOnMobilePageChange.value = isMobilePagerViewport()
+  shouldScrollOnMobilePageChange = isMobilePagerViewport()
   emit('update:skillCatalogPage', nextPage)
 }
 
@@ -140,10 +140,9 @@ const skillCatalogTotalPages = computed(() =>
 watch(
   () => props.skillCatalogPage,
   async (nextPage, previousPage) => {
-    if (!shouldScrollOnMobilePageChange.value || nextPage === previousPage)
-      return
+    if (!shouldScrollOnMobilePageChange || nextPage === previousPage) return
 
-    shouldScrollOnMobilePageChange.value = false
+    shouldScrollOnMobilePageChange = false
     await nextTick()
     scrollSkillCatalogGridIntoView()
   }

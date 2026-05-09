@@ -14,6 +14,12 @@ const props = defineProps({
 const route = useRoute()
 const hamOpen = defineModel<boolean>('hamOpen', { default: false })
 const emit = defineEmits(['menuClick', 'logout'])
+const pageDescriptionMap: Record<string, string> = {
+  RMSkillPost: 'メンバーの所持スキルと画像順を更新',
+  RMGuildDetail: '承認状況とメンバー運用を確認',
+  RMSkillMasterAdmin: '検索・登録・更新をまとめて管理',
+  RMUserEdit: 'プロフィール・所持スキル・画像をまとめて確認',
+}
 
 const currentPageTitle = computed(() => {
   const metaTitle = route.meta.pageTitle
@@ -23,13 +29,9 @@ const currentPageTitle = computed(() => {
 })
 
 const currentPageDescription = computed(() => {
-  if (route.name === 'RMSkillPost') return 'メンバーの所持スキルと画像順を更新'
-  if (route.name === 'RMGuildDetail') return '承認状況とメンバー運用を確認'
-  if (route.name === 'RMSkillMasterAdmin')
-    return '検索・登録・更新をまとめて管理'
-  if (route.name === 'RMUserEdit')
-    return 'プロフィール・所持スキル・画像をまとめて確認'
-  return 'ギルド運営に必要な操作へすばやく移動'
+  return route.name && pageDescriptionMap[String(route.name)]
+    ? pageDescriptionMap[String(route.name)]
+    : 'ギルド運営に必要な操作へすばやく移動'
 })
 
 const menuClick = (menu: { name: string; url: string }) => {

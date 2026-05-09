@@ -1,45 +1,19 @@
 class CreateDayOfTheWeek {
+  private readonly englishDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  private readonly japaneseDays = ['日', '月', '火', '水', '木', '金', '土']
+
   /**
    * 英語の曜日を生成する
    */
   createEnglishDayOfTheWeek = (weekNumber: number) => {
-    if (weekNumber === 0) {
-      return 'Sun'
-    } else if (weekNumber === 1) {
-      return 'Mon'
-    } else if (weekNumber === 2) {
-      return 'Tue'
-    } else if (weekNumber === 3) {
-      return 'Wed'
-    } else if (weekNumber === 4) {
-      return 'Thu'
-    } else if (weekNumber === 5) {
-      return 'Fri'
-    } else if (weekNumber === 6) {
-      return 'Sat'
-    }
-    return ''
+    return this.englishDays[weekNumber] ?? ''
   }
   /**
    * 日本語の曜日を生成する
    */
   createJapaneseDayOfTheWeek = (weekNumber: number) => {
-    if (weekNumber === 0) {
-      return '日'
-    } else if (weekNumber === 1) {
-      return '月'
-    } else if (weekNumber === 2) {
-      return '火'
-    } else if (weekNumber === 3) {
-      return '水'
-    } else if (weekNumber === 4) {
-      return '木'
-    } else if (weekNumber === 5) {
-      return '金'
-    } else if (weekNumber === 6) {
-      return '土'
-    }
-    return ''
+    return this.japaneseDays[weekNumber] ?? ''
   }
   /**
    * どちらの関数を使うかを判定して発火させる関数

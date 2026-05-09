@@ -136,6 +136,16 @@ const skillCountLabel = computed(
   () =>
     `${filteredSkillMasterList.value.length} / ${skillMasterList.value.length} 件`
 )
+const normalizedSearchText = computed(() => searchText.value.trim().toLowerCase())
+const skillMasterSearchTextById = computed(
+  () =>
+    new Map(
+      skillMasterList.value.map((skill) => [
+        skill.id,
+        buildSkillMasterSearchText(skill),
+      ])
+    )
+)
 const activeFilterCount = computed(
   () =>
     [
@@ -152,20 +162,25 @@ const hasActiveFilters = computed(() => activeFilterCount.value > 0)
 const existingSkillMap = computed(
   () => new Map(skillMasterList.value.map((skill) => [skill.id, skill]))
 )
-const skillCsvInsertCount = computed(
-  () =>
-    skillCsvPreviewRows.value.filter((row) => row.changeType === 'insert')
-      .length
-)
-const skillCsvUpdateCount = computed(
-  () =>
-    skillCsvPreviewRows.value.filter((row) => row.changeType === 'update')
-      .length
-)
+const skillCsvPreviewCounts = computed(() => {
+  const counts = {
+    insert: 0,
+    update: 0,
+    unchanged: 0,
+  }
+
+  for (const row of skillCsvPreviewRows.value) {
+    if (row.changeType === 'insert') counts.insert += 1
+    else if (row.changeType === 'update') counts.update += 1
+    else if (row.changeType === 'unchanged') counts.unchanged += 1
+  }
+
+  return counts
+})
+const skillCsvInsertCount = computed(() => skillCsvPreviewCounts.value.insert)
+const skillCsvUpdateCount = computed(() => skillCsvPreviewCounts.value.update)
 const skillCsvUnchangedCount = computed(
-  () =>
-    skillCsvPreviewRows.value.filter((row) => row.changeType === 'unchanged')
-      .length
+  () => skillCsvPreviewCounts.value.unchanged
 )
 const canImportSkillCsv = computed(
   () =>
@@ -182,11 +197,12 @@ const skillCsvStatusLabel = computed(() => {
 })
 
 const filteredSkillMasterList = computed(() => {
-  const query = searchText.value.trim().toLowerCase()
+  const query = normalizedSearchText.value
+  const searchTextById = skillMasterSearchTextById.value
 
   return skillMasterList.value.filter((skill) => {
     const matchesText =
-      query === '' || buildSkillMasterSearchText(skill).includes(query)
+      query === '' || Boolean(searchTextById.get(skill.id)?.includes(query))
 
     const matchesElement =
       selectedElement.value === '' || skill.element === selectedElement.value

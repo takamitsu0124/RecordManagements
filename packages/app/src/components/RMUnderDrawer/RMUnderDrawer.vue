@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useAttrs, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useAttrs, watch } from 'vue'
 import RMIcon from '../RMIcon/RMIcon.vue'
+import { lockBodyScroll, unlockBodyScroll } from 'src/helpers/bodyScrollLock'
 
 defineOptions({
   inheritAttrs: false,
@@ -38,6 +39,7 @@ const value = computed({
 })
 
 const area = ref<HTMLDivElement | null>(null)
+let isBodyScrollLocked = false
 
 watch(
   () => props.toTopKey,
@@ -54,7 +56,16 @@ watch(
 watch(
   value,
   (opened) => {
-    document.body.style.overflow = opened ? 'hidden' : ''
+    if (opened && !isBodyScrollLocked) {
+      lockBodyScroll()
+      isBodyScrollLocked = true
+      return
+    }
+
+    if (!opened && isBodyScrollLocked) {
+      unlockBodyScroll()
+      isBodyScrollLocked = false
+    }
   },
   { immediate: true }
 )
@@ -68,6 +79,13 @@ const panelClass = computed(() => ({
 const drawerClose = () => {
   value.value = false
 }
+
+onBeforeUnmount(() => {
+  if (!isBodyScrollLocked) return
+
+  unlockBodyScroll()
+  isBodyScrollLocked = false
+})
 </script>
 
 <template>

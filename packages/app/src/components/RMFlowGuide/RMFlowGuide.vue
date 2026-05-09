@@ -42,7 +42,7 @@ const onSelectItem = (item: FlowGuideItem) => {
     <div class="rm-flow-guide__grid">
       <button
         v-for="(item, index) in props.items"
-        :key="`${item.targetId}-${index}`"
+        :key="`${item.targetId}:${item.title}`"
         type="button"
         class="rm-flow-guide__item"
         @click="onSelectItem(item)"

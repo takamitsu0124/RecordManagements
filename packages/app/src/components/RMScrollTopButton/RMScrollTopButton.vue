@@ -8,6 +8,7 @@ const route = useRoute()
 const isVisible = ref(false)
 
 let pageResizeObserver: ResizeObserver | null = null
+let visibilityFrameId: number | null = null
 
 const updateVisibility = () => {
 	const scrollRoot = document.documentElement
@@ -16,7 +17,10 @@ const updateVisibility = () => {
 }
 
 const scheduleVisibilityUpdate = () => {
-	requestAnimationFrame(() => {
+	if (visibilityFrameId !== null) return
+
+	visibilityFrameId = requestAnimationFrame(() => {
+		visibilityFrameId = null
 		updateVisibility()
 	})
 }
@@ -35,17 +39,18 @@ watch(
 
 onMounted(() => {
 	scheduleVisibilityUpdate()
-	window.addEventListener('resize', updateVisibility)
+	window.addEventListener('resize', scheduleVisibilityUpdate)
 
-	pageResizeObserver = new ResizeObserver(() => {
-		updateVisibility()
-	})
+	pageResizeObserver = new ResizeObserver(scheduleVisibilityUpdate)
 	pageResizeObserver.observe(document.body)
 	pageResizeObserver.observe(document.documentElement)
 })
 
 onUnmounted(() => {
-	window.removeEventListener('resize', updateVisibility)
+	window.removeEventListener('resize', scheduleVisibilityUpdate)
+	if (visibilityFrameId !== null) {
+		cancelAnimationFrame(visibilityFrameId)
+	}
 	pageResizeObserver?.disconnect()
 })
 </script>

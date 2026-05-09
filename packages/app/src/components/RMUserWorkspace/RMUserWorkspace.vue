@@ -195,6 +195,18 @@ const ownedSkillIdSet = computed(
 const ownedSkillLevelById = computed(
   () => new Map(ownedSkills.value.map((skill) => [skill.skillId, skill.level]))
 )
+const normalizedSkillCatalogQuery = computed(() =>
+  skillCatalogQuery.value.trim().toLowerCase()
+)
+const skillMasterSearchTextById = computed(
+  () =>
+    new Map(
+      skillStore.state.masterData.map((skill) => [
+        skill.id,
+        buildSkillMasterSearchText(skill),
+      ])
+    )
+)
 const imageCountLabel = computed(() => `${imageItems.value.length}件`)
 const modeLabel = computed(() =>
   isEditMode.value ? '編集モード' : '閲覧モード'
@@ -219,35 +231,37 @@ const skillCatalogEquipmentTypeOptions = computed(() =>
 )
 
 const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
-  const query = skillCatalogQuery.value.trim().toLowerCase()
+  const rows: SkillCatalogRow[] = []
+  const query = normalizedSkillCatalogQuery.value
+  const selectedStatus = skillCatalogStatus.value
+  const selectedElement = skillCatalogElement.value
+  const selectedEquipmentType = skillCatalogEquipmentType.value
+  const ownedSkillIds = ownedSkillIdSet.value
+  const ownedSkillLevels = ownedSkillLevelById.value
+  const searchTextById = skillMasterSearchTextById.value
 
-  return skillStore.state.masterData
-    .map((skill) => {
-      const isOwned = ownedSkillIdSet.value.has(skill.id)
+  for (const skill of skillStore.state.masterData) {
+    const isOwned = ownedSkillIds.has(skill.id)
 
-      return {
-        ...skill,
-        isOwned,
-        ownedLevel: ownedSkillLevelById.value.get(skill.id) ?? 0,
-      }
+    if (selectedStatus === 'owned' && !isOwned) continue
+    if (selectedStatus === 'unowned' && isOwned) continue
+    if (selectedElement !== 'all' && skill.element !== selectedElement) continue
+    if (
+      selectedEquipmentType !== 'all' &&
+      skill.equipmentType !== selectedEquipmentType
+    ) {
+      continue
+    }
+    if (query && !searchTextById.get(skill.id)?.includes(query)) continue
+
+    rows.push({
+      ...skill,
+      isOwned,
+      ownedLevel: ownedSkillLevels.get(skill.id) ?? 0,
     })
-    .filter((skill) => {
-      if (skillCatalogStatus.value === 'owned' && !skill.isOwned) return false
-      if (skillCatalogStatus.value === 'unowned' && skill.isOwned) return false
-      if (
-        skillCatalogElement.value !== 'all' &&
-        skill.element !== skillCatalogElement.value
-      )
-        return false
-      if (
-        skillCatalogEquipmentType.value !== 'all' &&
-        skill.equipmentType !== skillCatalogEquipmentType.value
-      )
-        return false
-      if (!query) return true
+  }
 
-      return buildSkillMasterSearchText(skill).includes(query)
-    })
+  return rows
 })
 
 const visibleSkillCatalogRows = computed(() => {
@@ -667,15 +681,6 @@ const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === 'ArrowRight') nextImage()
 }
 
-watch(isCarouselVisible, (visible) => {
-  if (visible) {
-    window.addEventListener('keydown', handleKeydown)
-    return
-  }
-
-  window.removeEventListener('keydown', handleKeydown)
-})
-
 watch(
   [
     skillCatalogQuery,
@@ -715,6 +720,7 @@ watch(
 )
 
 onMounted(async () => {
+  window.addEventListener('keydown', handleKeydown)
   await loadWorkspace()
 })
 
