@@ -769,8 +769,12 @@ onMounted(async () => {
       'change',
       handleOwnedSkillQuickAccessViewportChange
     )
-  } else if (typeof ownedSkillQuickAccessMediaQuery.addListener === 'function') {
-    ownedSkillQuickAccessMediaQuery.addListener(syncOwnedSkillQuickAccessViewport)
+  } else if (
+    typeof ownedSkillQuickAccessMediaQuery.addListener === 'function'
+  ) {
+    ownedSkillQuickAccessMediaQuery.addListener(
+      syncOwnedSkillQuickAccessViewport
+    )
   }
 
   await loadWorkspace()
@@ -790,7 +794,9 @@ onBeforeUnmount(() => {
     ownedSkillQuickAccessMediaQuery &&
     typeof ownedSkillQuickAccessMediaQuery.removeListener === 'function'
   ) {
-    ownedSkillQuickAccessMediaQuery.removeListener(syncOwnedSkillQuickAccessViewport)
+    ownedSkillQuickAccessMediaQuery.removeListener(
+      syncOwnedSkillQuickAccessViewport
+    )
   }
   cleanupObjectUrls(imageItems.value)
   cleanupObjectUrls(originalImageItems.value)
@@ -811,8 +817,9 @@ const createUploadFileName = (file: File) => {
 const syncOwnedSkillQuickAccessViewport = () => {
   if (typeof window === 'undefined') return
 
-  isOwnedSkillQuickAccessCompactViewport.value =
-    window.matchMedia('(max-width: 1023px)').matches
+  isOwnedSkillQuickAccessCompactViewport.value = window.matchMedia(
+    '(max-width: 1023px)'
+  ).matches
 }
 
 const handleOwnedSkillQuickAccessViewportChange = (
@@ -1034,7 +1041,19 @@ const emitBack = () => {
               :icon="props.pageIcon"
             >
               <template #actions>
-                <RMModeToggle v-model="isEditMode" />
+                <div class="user-workspace-header-actions">
+                  <RMButton
+                    v-if="!isEditMode"
+                    :label="props.backLabel"
+                    color="grey-7"
+                    outline
+                    width="162px"
+                    buttonHeight="44px"
+                    letterSize="14px"
+                    @click="emitBack"
+                  />
+                  <RMModeToggle v-model="isEditMode" />
+                </div>
               </template>
             </RMPageHeader>
 
@@ -1187,8 +1206,8 @@ const emitBack = () => {
               }}
             </div>
             <div v-else class="user-workspace-edit-guide">
-              保存と編集中止は、右下の「確認して保存」ボタンから開く
-              Drawer で行えます。
+              保存と編集中止は、右下の「確認して保存」ボタンから開く Drawer
+              で行えます。
             </div>
           </div>
         </template>
@@ -1251,16 +1270,6 @@ const emitBack = () => {
           @open-carousel-by-id="openImageCarouselById"
         />
       </div>
-
-      <div v-if="!isEditMode" class="rm-actions user-workspace-actions">
-        <RMButton
-          :label="props.backLabel"
-          color="grey-7"
-          outline
-          @click="emitBack"
-          width="160px"
-        />
-      </div>
     </form>
 
     <div
@@ -1311,10 +1320,7 @@ const emitBack = () => {
           @remove-skill="removeOwnedSkill"
         />
 
-        <div
-          v-if="isEditMode"
-          class="owned-skill-quick-access-drawer__footer"
-        >
+        <div v-if="isEditMode" class="owned-skill-quick-access-drawer__footer">
           <Button
             type="button"
             label="編集をやめる"
@@ -2044,8 +2050,13 @@ const emitBack = () => {
   font-weight: 700;
 }
 
-.user-workspace-actions {
-  margin-top: 4px;
+.user-workspace-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
 }
 
 .user-workspace-edit-guide {
@@ -2207,6 +2218,20 @@ const emitBack = () => {
   .user-workspace-quick-access__button {
     width: 100%;
     justify-content: center;
+  }
+
+  .user-workspace-header-actions {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-workspace-header-actions > * {
+    flex: 0 0 auto;
+  }
+
+  .user-workspace-header-actions :deep(.rm-mode-toggle-shell) {
+    align-items: center;
   }
 
   .owned-skill-quick-access-drawer__footer {
