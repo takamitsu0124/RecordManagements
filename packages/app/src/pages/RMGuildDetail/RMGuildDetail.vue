@@ -59,9 +59,6 @@ const skillTableFilters = ref({
   skillName: { value: '', matchMode: 'contains' },
   element: { value: null as string | null, matchMode: 'equals' },
   equipmentType: { value: null as string | null, matchMode: 'equals' },
-  breakGauge: { value: null as number | null, matchMode: 'gte' },
-  switchGauge: { value: null as number | null, matchMode: 'gte' },
-  level: { value: null as number | null, matchMode: 'gte' },
 })
 
 const currentGuildId = computed(() =>
@@ -214,11 +211,6 @@ const averageWeaponProficiencyProgressRate = computed(() => {
     ) / memberSkillSummaries.value.length
   )
 })
-const memberSkillSummaryByUid = computed(
-  () =>
-    new Map(memberSkillSummaries.value.map((summary) => [summary.uid, summary]))
-)
-
 const guildSkillRows = computed<GuildSkillRow[]>(() => {
   const memberMap = new Map(
     approvedMembers.value.map((member) => [member.uid, member])
@@ -228,7 +220,6 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
     .filter((detail) => memberMap.has(detail.userId))
     .map((detail) => {
       const member = memberMap.get(detail.userId)!
-      const memberSummary = memberSkillSummaryByUid.value.get(detail.userId)
       const userName = member.displayName
       const name = detail.name || detail.skillId
       const characterName = detail.characterName || ''
@@ -257,9 +248,9 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
         switchGauge: detail.switchGauge,
         cooldown: detail.cooldown,
         level: detail.level,
-        unlockRate: memberSummary?.unlockRate ?? 0,
-        unlockRateText: memberSummary?.unlockRateText ?? '0.0%',
-        ownedCount: memberSummary?.ownedCount ?? 0,
+        unlockRate: 0,
+        unlockRateText: '0.0%',
+        ownedCount: 0,
         image: detail.image,
         masterMissing: detail.masterMissing,
         normalizedSearchText: [
@@ -280,7 +271,6 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
     })
     .sort(
       (a, b) =>
-        b.level - a.level ||
         a.userName.localeCompare(b.userName, 'ja') ||
         a.name.localeCompare(b.name, 'ja')
     )
@@ -298,15 +288,6 @@ const selectedElementFilter = computed(
 const selectedEquipmentTypeFilter = computed(
   () => skillTableFilters.value.equipmentType.value || ''
 )
-const selectedBreakGaugeFilter = computed(() =>
-  Number(skillTableFilters.value.breakGauge.value || 0)
-)
-const selectedSwitchGaugeFilter = computed(() =>
-  Number(skillTableFilters.value.switchGauge.value || 0)
-)
-const selectedLevelFilter = computed(() =>
-  Number(skillTableFilters.value.level.value || 0)
-)
 
 const filteredGuildSkillRows = computed(() => {
   return guildSkillRows.value.filter((row) => {
@@ -320,25 +301,8 @@ const filteredGuildSkillRows = computed(() => {
     const matchesEquipmentType =
       selectedEquipmentTypeFilter.value === '' ||
       row.equipmentType === selectedEquipmentTypeFilter.value
-    const matchesBreakGauge =
-      selectedBreakGaugeFilter.value <= 0 ||
-      (row.breakGauge ?? Number.NEGATIVE_INFINITY) >=
-        selectedBreakGaugeFilter.value
-    const matchesSwitchGauge =
-      selectedSwitchGaugeFilter.value <= 0 ||
-      (row.switchGauge ?? Number.NEGATIVE_INFINITY) >=
-        selectedSwitchGaugeFilter.value
-    const matchesLevel =
-      selectedLevelFilter.value <= 0 || row.level >= selectedLevelFilter.value
 
-    return (
-      matchesSkillName &&
-      matchesElement &&
-      matchesEquipmentType &&
-      matchesBreakGauge &&
-      matchesSwitchGauge &&
-      matchesLevel
-    )
+    return matchesSkillName && matchesElement && matchesEquipmentType
   })
 })
 
@@ -369,9 +333,6 @@ const activeFilterCount = computed(() => {
     normalizedSkillNameFilter.value !== '',
     selectedElementFilter.value !== '',
     selectedEquipmentTypeFilter.value !== '',
-    selectedBreakGaugeFilter.value > 0,
-    selectedSwitchGaugeFilter.value > 0,
-    selectedLevelFilter.value > 0,
   ].filter(Boolean).length
 })
 
@@ -434,7 +395,7 @@ const searchGuide = computed(() => {
     return '検索条件が空の間は、ギルド内メンバーの全スキル一覧をそのまま確認できます。'
   }
 
-  return `${activeFilterCount.value} 件の条件で ${filteredGuildSkillRows.value.length} 件を表示しています。自然属性、装備種別、Break/Switch、熟練度を組み合わせて絞り込めます。`
+  return `${activeFilterCount.value} 件の条件で ${filteredGuildSkillRows.value.length} 件を表示しています。自然属性と装備種別で絞り込みながら、攻撃属性とスキル種別も一覧で確認できます。`
 })
 
 const syncRoleDrafts = () => {
@@ -534,9 +495,6 @@ const clearSkillFilters = () => {
     skillName: { value: '', matchMode: 'contains' },
     element: { value: null, matchMode: 'equals' },
     equipmentType: { value: null, matchMode: 'equals' },
-    breakGauge: { value: null, matchMode: 'gte' },
-    switchGauge: { value: null, matchMode: 'gte' },
-    level: { value: null, matchMode: 'gte' },
   }
 }
 

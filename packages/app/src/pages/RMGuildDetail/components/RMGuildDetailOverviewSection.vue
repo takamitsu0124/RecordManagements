@@ -113,13 +113,13 @@ defineProps<{
           <div class="guild-operations__title">リアクティブ検索</div>
           <p class="guild-operations__text">
             スキル名は 1
-            文字入力するごとに即時反映されます。属性・種別・熟練度も同時に絞り込めます。
+            文字入力するごとに即時反映されます。自然属性と装備種別で絞り込みながら、攻撃属性とスキル種別も一覧で確認できます。
           </p>
         </div>
         <div class="guild-operations__item">
           <div class="guild-operations__title">メンバー概要</div>
           <p class="guild-operations__text">
-            左側のメンバーカードで所持数、解放率、武器熟練度の入力進捗率を確認し、右側の結果表で該当スキルを探せます。
+            「メンバー別スキル状況を確認」ボタンから、所持数、解放率、武器熟練度の入力進捗率をポップアップでまとめて確認できます。
           </p>
         </div>
         <div class="guild-operations__item">

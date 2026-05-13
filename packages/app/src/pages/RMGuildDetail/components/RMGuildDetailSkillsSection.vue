@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
+import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
-import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -35,9 +36,6 @@ const props = defineProps<{
     skillName: { value: string; matchMode: string }
     element: { value: string | null; matchMode: string }
     equipmentType: { value: string | null; matchMode: string }
-    breakGauge: { value: number | null; matchMode: string }
-    switchGauge: { value: number | null; matchMode: string }
-    level: { value: number | null; matchMode: string }
   }
   elementOptions: Array<{ label: string; value: string }>
   equipmentTypeOptions: Array<{ label: string; value: string }>
@@ -53,9 +51,6 @@ const emit = defineEmits<{
       skillName: { value: string; matchMode: string }
       element: { value: string | null; matchMode: string }
       equipmentType: { value: string | null; matchMode: string }
-      breakGauge: { value: number | null; matchMode: string }
-      switchGauge: { value: number | null; matchMode: string }
-      level: { value: number | null; matchMode: string }
     }
   ): void
   (e: 'clear-filters'): void
@@ -95,40 +90,254 @@ const updateEquipmentTypeFilter = (value: string | null) =>
     },
   })
 
-const updateBreakGaugeFilter = (value: number | null) =>
-  updateSkillTableFilters({
-    breakGauge: {
-      ...props.skillTableFilters.breakGauge,
-      value,
-    },
-  })
-
-const updateSwitchGaugeFilter = (value: number | null) =>
-  updateSkillTableFilters({
-    switchGauge: {
-      ...props.skillTableFilters.switchGauge,
-      value,
-    },
-  })
-
-const updateLevelFilter = (value: number | null) =>
-  updateSkillTableFilters({
-    level: {
-      ...props.skillTableFilters.level,
-      value,
-    },
-  })
+const isMemberSkillDialogVisible = ref(false)
 </script>
 
 <template>
   <div class="guild-search-grid">
-    <Panel class="guild-skill-overview-panel">
+    <Panel class="guild-search-panel">
       <template #header>
         <div class="guild-panel-header">
           <div>
+            <div class="guild-panel-header__title">スキル検索</div>
+            <div class="guild-panel-header__subtitle">
+              名称、技名、自然属性、装備種別で絞り込みながら、攻撃属性とスキル種別も確認できます。
+            </div>
+          </div>
+          <Tag
+            :value="`${filteredGuildSkillRows.length} / ${guildSkillRows.length}件`"
+            severity="info"
+            class="guild-panel-header__tag"
+          />
+        </div>
+      </template>
+
+      <div class="guild-search-toolbar rm-filter-toolbar">
+        <InputText
+          :modelValue="skillTableFilters.skillName.value"
+          placeholder="名称・技名・ID・メンバー名で検索"
+          @update:modelValue="updateSkillNameFilter"
+        />
+        <Dropdown
+          :modelValue="skillTableFilters.element.value"
+          :options="elementOptions"
+          optionLabel="label"
+          optionValue="value"
+          showClear
+          placeholder="自然属性"
+          @update:modelValue="updateElementFilter"
+        />
+        <Dropdown
+          :modelValue="skillTableFilters.equipmentType.value"
+          :options="equipmentTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          showClear
+          filter
+          placeholder="装備種別"
+          @update:modelValue="updateEquipmentTypeFilter"
+        />
+        <Button
+          label="条件をクリア"
+          severity="secondary"
+          outlined
+          class="guild-search-toolbar__clear"
+          @click="emit('clear-filters')"
+        />
+      </div>
+
+      <div class="guild-panel-note">
+        {{ searchGuide }}
+      </div>
+
+      <div class="guild-search-panel__actions">
+        <Button
+          label="メンバー別スキル状況を確認"
+          icon="pi pi-users"
+          severity="info"
+          class="guild-search-panel__summary-button"
+          @click="isMemberSkillDialogVisible = true"
+        />
+        <Tag
+          :value="`検索対象 ${memberSkillSummaries.length}人`"
+          severity="contrast"
+        />
+      </div>
+
+      <div v-if="isSkillLoading" class="guild-detail-card__substate">
+        <ProgressSpinner strokeWidth="5" style="width: 40px; height: 40px" />
+        <p class="rm-muted">スキル検索用データを読み込み中...</p>
+      </div>
+      <RMEmptyState
+        v-else-if="skillErrorMessage"
+        icon="pi pi-exclamation-circle"
+        title="スキル検索を表示できません"
+        :message="skillErrorMessage"
+      />
+      <RMEmptyState
+        v-else-if="approvedMembers.length === 0"
+        icon="pi pi-users"
+        title="検索対象メンバーがいません"
+        message="承認済みメンバーが追加されるとスキル検索が有効になります。"
+      />
+      <RMEmptyState
+        v-else-if="guildSkillRows.length === 0"
+        icon="pi pi-star"
+        title="所持スキルがまだ登録されていません"
+        message="ギルド内メンバーのスキル登録が進むと、ここで横断検索できます。"
+      />
+      <template v-else>
+        <div class="guild-search-table-shell rm-mobile-scroll">
+          <DataTable
+            :value="filteredGuildSkillRows"
+            paginator
+            :rows="12"
+            responsiveLayout="scroll"
+            class="guild-search-table"
+          >
+            <template #empty>
+              <RMEmptyState
+                icon="pi pi-search"
+                title="条件に一致するスキルがありません"
+                message="検索語やフィルタ条件を見直すと結果がすぐに更新されます。"
+              />
+            </template>
+            <Column field="userName" header="メンバー" style="min-width: 180px">
+              <template #body="{ data }">
+                <div class="guild-search-table__member">
+                  <div class="guild-search-table__member-name">
+                    {{ data.userName }}
+                  </div>
+                  <div class="guild-search-table__member-meta">
+                    <Tag
+                      :value="roleLabels[data.role]"
+                      :severity="roleSeverity(data.role)"
+                    />
+                    <Tag
+                      v-if="data.userId === currentUserId"
+                      value="自分"
+                      severity="info"
+                    />
+                  </div>
+                </div>
+              </template>
+            </Column>
+            <Column field="skillName" header="スキル" style="min-width: 240px">
+              <template #body="{ data }">
+                <div class="guild-search-table__skill">
+                  <img
+                    v-if="data.image"
+                    :src="data.image"
+                    alt="skill"
+                    class="guild-search-table__skill-image"
+                  />
+                  <div>
+                    <div class="guild-search-table__skill-name">
+                      {{ data.name }}
+                    </div>
+                    <div class="guild-search-table__skill-meta">
+                      {{ data.effect || data.skillName || '未設定' }} / ID:
+                      {{ data.skillId }}
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </Column>
+            <Column field="element" header="自然属性" style="width: 110px">
+              <template #body="{ data }">
+                <Tag
+                  :value="data.element"
+                  :severity="attrSeverity(data.element)"
+                />
+              </template>
+            </Column>
+            <Column
+              field="equipmentType"
+              header="装備種別"
+              style="min-width: 180px"
+            />
+            <Column
+              field="skillType"
+              header="スキル種別"
+              style="width: 120px"
+            />
+            <Column
+              field="attackType"
+              header="攻撃属性"
+              style="width: 110px"
+            />
+          </DataTable>
+        </div>
+
+        <div class="guild-skill-mobile-list">
+          <div
+            v-for="row in filteredGuildSkillRows"
+            :key="row.rowId"
+            class="guild-skill-mobile-item"
+          >
+            <div class="guild-skill-mobile-item__head">
+              <div class="guild-skill-mobile-item__summary">
+                <div class="guild-skill-mobile-item__skill-row">
+                  <img
+                    v-if="row.image"
+                    :src="row.image"
+                    alt="skill"
+                    class="guild-skill-mobile-item__image"
+                  />
+                  <div>
+                    <div class="guild-skill-mobile-item__skill">{{ row.name }}</div>
+                    <div class="guild-skill-mobile-item__meta">
+                      {{ row.userName }} / {{ row.skillName || '技名未設定' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="guild-skill-mobile-item__meta">
+                  {{ row.effect || `ID: ${row.skillId}` }}
+                </div>
+              </div>
+            </div>
+            <div class="guild-skill-mobile-item__tags">
+              <Tag :value="row.element" :severity="attrSeverity(row.element)" />
+              <Tag :value="row.equipmentType" severity="secondary" />
+              <Tag :value="row.skillType" severity="contrast" />
+              <Tag :value="row.attackType" severity="warn" />
+              <Tag
+                :value="roleLabels[row.role]"
+                :severity="roleSeverity(row.role)"
+              />
+              <Tag
+                v-if="row.userId === currentUserId"
+                value="自分"
+                severity="info"
+              />
+            </div>
+            <div class="guild-skill-mobile-item__details">
+              <span v-if="row.characterName">対象: {{ row.characterName }}</span>
+              <span>ID: {{ row.skillId }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </Panel>
+
+    <Dialog
+      v-model:visible="isMemberSkillDialogVisible"
+      modal
+      dismissableMask
+      :draggable="false"
+      :style="{ width: 'min(96vw, 980px)' }"
+      :breakpoints="{
+        '1200px': '96vw',
+        '768px': 'calc(100vw - 1rem)',
+      }"
+      class="guild-skill-overview-dialog"
+    >
+      <template #header>
+        <div class="guild-panel-header guild-skill-overview-dialog__header">
+          <div>
             <div class="guild-panel-header__title">メンバー別スキル状況</div>
             <div class="guild-panel-header__subtitle">
-              所持数、解放率、熟練度進捗率を見ながら、誰を深掘りするか判断できます。
+              PC/TAB はポップアップ、SP は全画面表示で、メンバーごとの所持状況を確認できます。
             </div>
           </div>
           <Tag
@@ -245,242 +454,14 @@ const updateLevelFilter = (value: number | null) =>
           </div>
         </div>
       </div>
-    </Panel>
-
-    <Panel class="guild-search-panel">
-      <template #header>
-        <div class="guild-panel-header">
-          <div>
-            <div class="guild-panel-header__title">スキル検索</div>
-            <div class="guild-panel-header__subtitle">
-              名称、技名、自然属性、装備種別、Break/Switch、熟練度を組み合わせて絞り込めます。
-            </div>
-          </div>
-          <Tag
-            :value="`${filteredGuildSkillRows.length} / ${guildSkillRows.length}件`"
-            severity="info"
-            class="guild-panel-header__tag"
-          />
-        </div>
-      </template>
-
-      <div class="guild-search-toolbar rm-filter-toolbar">
-        <InputText
-          :modelValue="skillTableFilters.skillName.value"
-          placeholder="名称・技名・ID・メンバー名で検索"
-          @update:modelValue="updateSkillNameFilter"
-        />
-        <Dropdown
-          :modelValue="skillTableFilters.element.value"
-          :options="elementOptions"
-          optionLabel="label"
-          optionValue="value"
-          showClear
-          placeholder="自然属性"
-          @update:modelValue="updateElementFilter"
-        />
-        <Dropdown
-          :modelValue="skillTableFilters.equipmentType.value"
-          :options="equipmentTypeOptions"
-          optionLabel="label"
-          optionValue="value"
-          showClear
-          filter
-          placeholder="装備種別"
-          @update:modelValue="updateEquipmentTypeFilter"
-        />
-        <InputNumber
-          :modelValue="skillTableFilters.switchGauge.value"
-          :min="0"
-          :useGrouping="false"
-          placeholder="Switch 以上"
-          @update:modelValue="updateSwitchGaugeFilter"
-        />
-        <InputNumber
-          :modelValue="skillTableFilters.breakGauge.value"
-          :min="0"
-          :useGrouping="false"
-          placeholder="Break 以上"
-          @update:modelValue="updateBreakGaugeFilter"
-        />
-        <InputNumber
-          :modelValue="skillTableFilters.level.value"
-          :min="0"
-          :useGrouping="false"
-          placeholder="熟練度以上"
-          @update:modelValue="updateLevelFilter"
-        />
-        <Button
-          label="条件をクリア"
-          severity="secondary"
-          outlined
-          class="guild-search-toolbar__clear"
-          @click="emit('clear-filters')"
-        />
-      </div>
-
-      <div class="guild-panel-note">
-        {{ searchGuide }}
-      </div>
-
-      <div v-if="isSkillLoading" class="guild-detail-card__substate">
-        <ProgressSpinner strokeWidth="5" style="width: 40px; height: 40px" />
-        <p class="rm-muted">スキル検索用データを読み込み中...</p>
-      </div>
-      <RMEmptyState
-        v-else-if="skillErrorMessage"
-        icon="pi pi-exclamation-circle"
-        title="スキル検索を表示できません"
-        :message="skillErrorMessage"
-      />
-      <RMEmptyState
-        v-else-if="approvedMembers.length === 0"
-        icon="pi pi-users"
-        title="検索対象メンバーがいません"
-        message="承認済みメンバーが追加されるとスキル検索が有効になります。"
-      />
-      <RMEmptyState
-        v-else-if="guildSkillRows.length === 0"
-        icon="pi pi-star"
-        title="所持スキルがまだ登録されていません"
-        message="ギルド内メンバーのスキル登録が進むと、ここで横断検索できます。"
-      />
-      <template v-else>
-        <div class="guild-search-table-shell rm-mobile-scroll">
-          <DataTable
-            :value="filteredGuildSkillRows"
-            paginator
-            :rows="12"
-            responsiveLayout="scroll"
-            :sortField="'level'"
-            :sortOrder="-1"
-            class="guild-search-table"
-          >
-            <template #empty>
-              <RMEmptyState
-                icon="pi pi-search"
-                title="条件に一致するスキルがありません"
-                message="検索語やフィルタ条件を見直すと結果がすぐに更新されます。"
-              />
-            </template>
-            <Column field="userName" header="メンバー" style="min-width: 180px">
-              <template #body="{ data }">
-                <div class="guild-search-table__member">
-                  <div class="guild-search-table__member-name">
-                    {{ data.userName }}
-                  </div>
-                  <div class="guild-search-table__member-meta">
-                    <Tag
-                      :value="roleLabels[data.role]"
-                      :severity="roleSeverity(data.role)"
-                    />
-                    <Tag
-                      v-if="data.userId === currentUserId"
-                      value="自分"
-                      severity="info"
-                    />
-                  </div>
-                </div>
-              </template>
-            </Column>
-            <Column field="skillName" header="スキル" style="min-width: 240px">
-              <template #body="{ data }">
-                <div class="guild-search-table__skill">
-                  <img
-                    v-if="data.image"
-                    :src="data.image"
-                    alt="skill"
-                    class="guild-search-table__skill-image"
-                  />
-                  <div>
-                    <div class="guild-search-table__skill-name">
-                      {{ data.name }}
-                    </div>
-                    <div class="guild-search-table__skill-meta">
-                      {{ data.effect || data.skillName || '未設定' }} / ID:
-                      {{ data.skillId }}
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </Column>
-            <Column field="element" header="自然属性" style="width: 110px">
-              <template #body="{ data }">
-                <Tag
-                  :value="data.element"
-                  :severity="attrSeverity(data.element)"
-                />
-              </template>
-            </Column>
-            <Column
-              field="equipmentType"
-              header="装備種別"
-              style="min-width: 180px"
-            />
-            <Column
-              field="skillType"
-              header="スキル種別"
-              style="width: 120px"
-            />
-            <Column field="attackType" header="攻撃属性" style="width: 110px" />
-            <Column field="switchGauge" header="Switch" style="width: 100px" />
-            <Column field="breakGauge" header="Break" style="width: 100px" />
-            <Column field="level" header="熟練度" style="width: 120px">
-              <template #body="{ data }">
-                <Tag :value="`Lv.${data.level}`" severity="contrast" />
-              </template>
-            </Column>
-            <Column
-              field="unlockRateText"
-              header="解放率"
-              style="width: 120px"
-            />
-            <Column field="ownedCount" header="所持数" style="width: 100px" />
-          </DataTable>
-        </div>
-
-        <div class="guild-skill-mobile-list">
-          <div
-            v-for="row in filteredGuildSkillRows"
-            :key="row.rowId"
-            class="guild-skill-mobile-item"
-          >
-            <div class="guild-skill-mobile-item__head">
-              <div>
-                <div class="guild-skill-mobile-item__skill">{{ row.name }}</div>
-                <div class="guild-skill-mobile-item__meta">
-                  {{ row.userName }} / {{ row.skillName }}
-                </div>
-              </div>
-              <Tag :value="`Lv.${row.level}`" severity="contrast" />
-            </div>
-            <div class="guild-skill-mobile-item__tags">
-              <Tag :value="row.element" :severity="attrSeverity(row.element)" />
-              <Tag :value="row.equipmentType" severity="secondary" />
-              <Tag
-                :value="roleLabels[row.role]"
-                :severity="roleSeverity(row.role)"
-              />
-              <Tag :value="`解放率 ${row.unlockRateText}`" severity="info" />
-            </div>
-          </div>
-        </div>
-      </template>
-    </Panel>
+    </Dialog>
   </div>
 </template>
 
 <style lang="scss" scoped>
 .guild-search-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 14px;
-  align-items: start;
-}
-
-.guild-skill-overview-panel,
-.guild-search-panel {
-  height: 100%;
 }
 
 .guild-panel-header {
@@ -511,6 +492,69 @@ const updateLevelFilter = (value: number | null) =>
   border: 1px solid #e2e8f0;
   color: #475569;
   line-height: 1.7;
+}
+
+.guild-search-panel__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.guild-search-panel__summary-button {
+  min-height: 48px;
+  padding-inline: 18px;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(191, 219, 254, 0.92);
+  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: guild-summary-button-pulse 2s ease-in-out infinite,
+    guild-summary-button-float 2s ease-in-out infinite;
+}
+
+.guild-search-panel__summary-button :deep(.p-button-label) {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.guild-search-panel__summary-button :deep(.p-button-icon) {
+  animation: guild-summary-button-icon-nudge 1.2s ease-in-out infinite;
+}
+
+.guild-search-panel__summary-button::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.38) 48%,
+    rgba(255, 255, 255, 0) 66%
+  );
+  transform: translateX(-180%) skewX(-18deg);
+  animation: guild-summary-button-shine 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.guild-search-panel__summary-button :deep(.p-button-label),
+.guild-search-panel__summary-button :deep(.p-button-icon) {
+  position: relative;
+  z-index: 1;
+}
+
+.guild-search-panel__summary-button:hover,
+.guild-search-panel__summary-button:focus-visible {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 18px 36px rgba(59, 130, 246, 0.26);
+}
+
+.guild-search-panel__summary-button:active {
+  transform: scale(0.98);
 }
 
 .guild-detail-card__substate {
@@ -690,6 +734,10 @@ const updateLevelFilter = (value: number | null) =>
 .guild-search-table__skill-meta {
   font-size: 0.82rem;
   color: #64748b;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .guild-skill-mobile-list {
@@ -712,6 +760,27 @@ const updateLevelFilter = (value: number | null) =>
   gap: 12px;
 }
 
+.guild-skill-mobile-item__summary {
+  display: grid;
+  gap: 8px;
+}
+
+.guild-skill-mobile-item__skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.guild-skill-mobile-item__image {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #dbe4f0;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
 .guild-skill-mobile-item__skill {
   font-weight: 700;
   color: #1f2937;
@@ -729,13 +798,101 @@ const updateLevelFilter = (value: number | null) =>
   gap: 8px;
 }
 
+.guild-skill-mobile-item__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.guild-skill-mobile-item__details span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #e2e8f0;
+}
+
+@keyframes guild-summary-button-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0),
+      0 12px 26px rgba(15, 23, 42, 0.14);
+  }
+
+  50% {
+    box-shadow: 0 0 0 10px rgba(96, 165, 250, 0.24),
+      0 18px 34px rgba(59, 130, 246, 0.24);
+  }
+}
+
+@keyframes guild-summary-button-icon-nudge {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+
+  50% {
+    transform: translateX(4px) scale(1.08);
+  }
+}
+
+@keyframes guild-summary-button-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes guild-summary-button-shine {
+  0%,
+  100% {
+    transform: translateX(-180%) skewX(-18deg);
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 0;
+  }
+
+  42% {
+    opacity: 1;
+  }
+
+  60% {
+    transform: translateX(180%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
 @media (max-width: 1023px) {
+  .guild-search-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .guild-skill-overview-item__head {
     flex-direction: column;
   }
 }
 
 @media (max-width: 767px) {
+  .guild-search-panel__actions {
+    align-items: stretch;
+  }
+
+  .guild-search-panel__summary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .guild-search-toolbar {
+    grid-template-columns: 1fr;
+  }
+
   .guild-search-table-shell {
     display: none;
   }
@@ -743,6 +900,36 @@ const updateLevelFilter = (value: number | null) =>
   .guild-skill-mobile-list {
     display: grid;
     gap: 12px;
+  }
+
+  :deep(.guild-skill-overview-dialog) {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  :deep(.guild-skill-overview-dialog .p-dialog-header) {
+    padding: 16px 16px 12px;
+    align-items: flex-start;
+  }
+
+  :deep(.guild-skill-overview-dialog .p-dialog-content) {
+    padding: 0 16px max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guild-search-panel__summary-button,
+  .guild-search-panel__summary-button :deep(.p-button-icon),
+  .guild-search-panel__summary-button::after {
+    animation: none;
+  }
+
+  .guild-search-panel__summary-button {
+    transition: none;
   }
 }
 </style>
