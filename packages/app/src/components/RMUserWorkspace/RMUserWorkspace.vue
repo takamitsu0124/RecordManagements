@@ -29,6 +29,7 @@ import {
   weaponProficiencyMinLevel,
 } from '@rm/types'
 import RMUserWorkspaceImagesSection from './RMUserWorkspaceImagesSection.vue'
+import RMUserWorkspaceOwnedSkillList from './RMUserWorkspaceOwnedSkillList.vue'
 import RMUserWorkspaceProfileSection from './RMUserWorkspaceProfileSection.vue'
 import RMUserWorkspaceSkillsSection from './RMUserWorkspaceSkillsSection.vue'
 import type {
@@ -121,8 +122,11 @@ const imageUploadKey = ref(0)
 const isCarouselVisible = ref(false)
 const isProfileDrawerVisible = ref(false)
 const isImagesDrawerVisible = ref(false)
+const isOwnedSkillQuickAccessVisible = ref(false)
+const isOwnedSkillQuickAccessCompactViewport = ref(false)
 const carouselSlide = ref(0)
 const touchStartX = ref<number | null>(null)
+let ownedSkillQuickAccessMediaQuery: MediaQueryList | null = null
 const activeCarouselImages = computed(() =>
   imageItems.value.map((item) => item.previewUrl)
 )
@@ -210,6 +214,34 @@ const skillMasterSearchTextById = computed(
 const imageCountLabel = computed(() => `${imageItems.value.length}件`)
 const modeLabel = computed(() =>
   isEditMode.value ? '編集モード' : '閲覧モード'
+)
+const shouldShowOwnedSkillQuickAccessButton = computed(
+  () => isEditMode.value && !isOwnedSkillQuickAccessVisible.value
+)
+const ownedSkillQuickAccessButtonLabel = computed(() => {
+  if (isEditMode.value) {
+    return ownedSkillRows.value.length > 0
+      ? `確認して保存 ${ownedSkillRows.value.length}件`
+      : '確認して保存'
+  }
+
+  return `チェック済みを確認 ${ownedSkillRows.value.length}件`
+})
+const ownedSkillQuickAccessTitle = computed(() =>
+  isEditMode.value ? '変更内容を確認して保存' : 'いつでもチェック済み一覧を確認'
+)
+const ownedSkillQuickAccessDescription = computed(() =>
+  isEditMode.value
+    ? 'この Drawer からチェック解除、変更を保存、編集中止ができます。'
+    : '画面の下まで移動しなくても、現在登録されているチェック済みスキルをすぐ確認できます。'
+)
+const ownedSkillQuickAccessPosition = computed(() =>
+  isOwnedSkillQuickAccessCompactViewport.value ? 'bottom' : 'right'
+)
+const ownedSkillQuickAccessStyle = computed(() =>
+  isOwnedSkillQuickAccessCompactViewport.value
+    ? { height: 'min(80vh, 46rem)' }
+    : { width: 'min(96vw, 42rem)' }
 )
 const weaponProficiencyLevelRangeLabel = `${weaponProficiencyMinLevel}〜${weaponProficiencyMaxLevel}`
 const skillCatalogPageSize = 25
@@ -707,6 +739,13 @@ watch(isEditMode, (nextIsEditMode) => {
   if (!nextIsEditMode && activeCompactSection.value === 'level') {
     activeCompactSection.value = 'skills'
   }
+
+  if (!nextIsEditMode) {
+    isOwnedSkillQuickAccessVisible.value = false
+    return
+  }
+
+  notifyInfo('右下の「確認して保存」ボタンから保存と編集中止ができます。')
 })
 
 watch(
@@ -721,11 +760,38 @@ watch(
 
 onMounted(async () => {
   window.addEventListener('keydown', handleKeydown)
+  ownedSkillQuickAccessMediaQuery = window.matchMedia('(max-width: 1023px)')
+  isOwnedSkillQuickAccessCompactViewport.value =
+    ownedSkillQuickAccessMediaQuery.matches
+
+  if (typeof ownedSkillQuickAccessMediaQuery.addEventListener === 'function') {
+    ownedSkillQuickAccessMediaQuery.addEventListener(
+      'change',
+      handleOwnedSkillQuickAccessViewportChange
+    )
+  } else if (typeof ownedSkillQuickAccessMediaQuery.addListener === 'function') {
+    ownedSkillQuickAccessMediaQuery.addListener(syncOwnedSkillQuickAccessViewport)
+  }
+
   await loadWorkspace()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  if (
+    ownedSkillQuickAccessMediaQuery &&
+    typeof ownedSkillQuickAccessMediaQuery.removeEventListener === 'function'
+  ) {
+    ownedSkillQuickAccessMediaQuery.removeEventListener(
+      'change',
+      handleOwnedSkillQuickAccessViewportChange
+    )
+  } else if (
+    ownedSkillQuickAccessMediaQuery &&
+    typeof ownedSkillQuickAccessMediaQuery.removeListener === 'function'
+  ) {
+    ownedSkillQuickAccessMediaQuery.removeListener(syncOwnedSkillQuickAccessViewport)
+  }
   cleanupObjectUrls(imageItems.value)
   cleanupObjectUrls(originalImageItems.value)
 })
@@ -740,6 +806,19 @@ const createUploadFileName = (file: File) => {
     ? file.name.slice(file.name.lastIndexOf('.'))
     : ''
   return `${createImageId()}${extension}`
+}
+
+const syncOwnedSkillQuickAccessViewport = () => {
+  if (typeof window === 'undefined') return
+
+  isOwnedSkillQuickAccessCompactViewport.value =
+    window.matchMedia('(max-width: 1023px)').matches
+}
+
+const handleOwnedSkillQuickAccessViewportChange = (
+  event: MediaQueryListEvent
+) => {
+  isOwnedSkillQuickAccessCompactViewport.value = event.matches
 }
 
 const onSubmit = async () => {
@@ -955,13 +1034,6 @@ const emitBack = () => {
               :icon="props.pageIcon"
             >
               <template #actions>
-                <RMButton
-                  v-if="isEditMode"
-                  label="変更を保存"
-                  type="submit"
-                  color="primary"
-                  width="175px"
-                />
                 <RMModeToggle v-model="isEditMode" />
               </template>
             </RMPageHeader>
@@ -1114,6 +1186,10 @@ const emitBack = () => {
                   : 'プロフィールと画像は必要なときだけ Drawer で開き、メイン画面では所持スキルに集中できます。変更が必要な場合だけ編集モードへ切り替えてください。'
               }}
             </div>
+            <div v-else class="user-workspace-edit-guide">
+              保存と編集中止は、右下の「確認して保存」ボタンから開く
+              Drawer で行えます。
+            </div>
           </div>
         </template>
       </Card>
@@ -1141,7 +1217,6 @@ const emitBack = () => {
       >
         <RMUserWorkspaceSkillsSection
           :isEditMode="isEditMode"
-          v-model:ownedSkills="ownedSkills"
           :ownedSkillRows="ownedSkillRows"
           :filteredSkillCatalogRows="filteredSkillCatalogRows"
           :visibleSkillCatalogRows="visibleSkillCatalogRows"
@@ -1177,32 +1252,86 @@ const emitBack = () => {
         />
       </div>
 
-      <div class="rm-actions user-workspace-actions">
+      <div v-if="!isEditMode" class="rm-actions user-workspace-actions">
         <RMButton
-          v-if="isEditMode"
-          label="編集をやめる"
-          color="grey-7"
-          outline
-          @click="onCancelEdit"
-          width="160px"
-        />
-        <RMButton
-          v-else
           :label="props.backLabel"
           color="grey-7"
           outline
           @click="emitBack"
           width="160px"
         />
-        <RMButton
-          v-if="isEditMode"
-          label="変更を保存"
-          type="submit"
-          color="primary"
-          width="160px"
-        />
       </div>
     </form>
+
+    <div
+      v-if="shouldShowOwnedSkillQuickAccessButton"
+      class="user-workspace-quick-access"
+    >
+      <Button
+        type="button"
+        icon="pi pi-list-check"
+        :label="ownedSkillQuickAccessButtonLabel"
+        severity="contrast"
+        rounded
+        class="user-workspace-quick-access__button"
+        @click="isOwnedSkillQuickAccessVisible = true"
+      />
+    </div>
+
+    <Drawer
+      v-model:visible="isOwnedSkillQuickAccessVisible"
+      :position="ownedSkillQuickAccessPosition"
+      :header="ownedSkillQuickAccessTitle"
+      :style="ownedSkillQuickAccessStyle"
+      class="owned-skill-quick-access-drawer"
+    >
+      <div class="owned-skill-quick-access-drawer__content">
+        <div class="owned-skill-quick-access-drawer__summary">
+          <div>
+            <div class="owned-skill-quick-access-drawer__title">
+              {{ ownedSkillQuickAccessTitle }}
+            </div>
+            <div class="owned-skill-quick-access-drawer__description">
+              {{ ownedSkillQuickAccessDescription }}
+            </div>
+          </div>
+          <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
+        </div>
+
+        <div v-if="ownedSkillRows.length === 0" class="user-workspace-empty">
+          現在チェック済みのスキルはありません。
+        </div>
+
+        <RMUserWorkspaceOwnedSkillList
+          v-else
+          :isEditMode="isEditMode"
+          :ownedSkillRows="ownedSkillRows"
+          :show-skill-actions="isEditMode"
+          :show-action-hint="isEditMode"
+          @remove-skill="removeOwnedSkill"
+        />
+
+        <div
+          v-if="isEditMode"
+          class="owned-skill-quick-access-drawer__footer"
+        >
+          <Button
+            type="button"
+            label="編集をやめる"
+            severity="secondary"
+            outlined
+            class="owned-skill-quick-access-drawer__footer-button"
+            @click="onCancelEdit"
+          />
+          <Button
+            type="button"
+            label="変更を保存"
+            class="owned-skill-quick-access-drawer__footer-button"
+            @click="onSubmit"
+          />
+        </div>
+      </div>
+    </Drawer>
 
     <Drawer
       v-if="showProfile && useDrawerLayout"
@@ -1919,6 +2048,74 @@ const emitBack = () => {
   margin-top: 4px;
 }
 
+.user-workspace-edit-guide {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  background: rgba(239, 246, 255, 0.9);
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.user-workspace-quick-access {
+  position: fixed;
+  right: max(20px, calc(env(safe-area-inset-right) + 20px));
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px));
+  z-index: 950;
+  pointer-events: none;
+}
+
+.user-workspace-quick-access__button {
+  pointer-events: auto;
+  min-height: 48px;
+  padding-inline: 18px;
+  border-radius: 999px;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+}
+
+.owned-skill-quick-access-drawer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.owned-skill-quick-access-drawer__summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.owned-skill-quick-access-drawer__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+.owned-skill-quick-access-drawer__description {
+  margin-top: 6px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.owned-skill-quick-access-drawer__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.owned-skill-quick-access-drawer__footer-button {
+  min-width: 160px;
+}
+
+.owned-skill-quick-access-drawer :deep(.p-drawer-content) {
+  padding-top: 0;
+}
+
 .image-preview-dialog__shell {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -1999,6 +2196,25 @@ const emitBack = () => {
 
   .image-preview-dialog__nav {
     justify-self: center;
+  }
+
+  .user-workspace-quick-access {
+    left: max(12px, calc(env(safe-area-inset-left) + 12px));
+    right: max(12px, calc(env(safe-area-inset-right) + 12px));
+    bottom: max(12px, calc(env(safe-area-inset-bottom) + 12px));
+  }
+
+  .user-workspace-quick-access__button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .owned-skill-quick-access-drawer__footer {
+    flex-direction: column-reverse;
+  }
+
+  .owned-skill-quick-access-drawer__footer-button {
+    width: 100%;
   }
 }
 </style>

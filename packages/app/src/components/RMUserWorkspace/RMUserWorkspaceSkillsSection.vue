@@ -3,12 +3,12 @@ import { computed, nextTick, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Divider from 'primevue/divider'
-import InputNumber from 'primevue/inputnumber'
 import Paginator from 'primevue/paginator'
 import Tag from 'primevue/tag'
 import Tooltip from 'primevue/tooltip'
-import type { OwnedSkill, SkillMaster } from '@rm/types'
+import type { SkillMaster } from '@rm/types'
 import RMInput from 'src/components/RMInput/RMInput.vue'
+import RMUserWorkspaceOwnedSkillList from './RMUserWorkspaceOwnedSkillList.vue'
 import type {
   OwnedSkillRow,
   SkillCatalogRow,
@@ -17,7 +17,6 @@ import type {
 
 const props = defineProps<{
   isEditMode: boolean
-  ownedSkills: OwnedSkill[]
   ownedSkillRows: OwnedSkillRow[]
   filteredSkillCatalogRows: SkillCatalogRow[]
   visibleSkillCatalogRows: SkillCatalogRow[]
@@ -32,7 +31,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:ownedSkills', value: OwnedSkill[]): void
   (e: 'update:skillCatalogPage', value: number): void
   (e: 'update:skillCatalogQuery', value: string): void
   (e: 'update:skillCatalogElement', value: string): void
@@ -84,14 +82,6 @@ const updateSkillCatalogPage = (page: number) => {
 
   shouldScrollOnMobilePageChange = isMobilePagerViewport()
   emit('update:skillCatalogPage', nextPage)
-}
-
-const setOwnedSkillLevel = (index: number, value: number | null) => {
-  const nextOwnedSkills = props.ownedSkills.map((skill, skillIndex) =>
-    skillIndex === index ? { ...skill, level: value ?? 0 } : skill
-  )
-
-  emit('update:ownedSkills', nextOwnedSkills)
 }
 
 const vTooltip = Tooltip
@@ -157,7 +147,7 @@ watch(
           <div>
             <div class="rm-section-title">所持スキル</div>
             <div class="user-workspace-section__description">
-              編集モードでは一覧を見ながら所持スキルをチェックでき、同じ画面で熟練度も更新できます。
+              編集モードでは一覧を見ながら所持スキルをチェックし、不要なスキルもすぐ解除できます。
             </div>
           </div>
           <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
@@ -169,7 +159,7 @@ watch(
           <div class="skill-checker__intro">
             <div class="skill-checker__title">一覧からチェック</div>
             <p class="skill-checker__description">
-              持っているスキルをタップすると追加、もう一度タップすると解除できます。細かい熟練度は下の一覧でまとめて調整してください。
+              持っているスキルをタップすると追加、もう一度タップすると解除できます。追加済みの内容は下の一覧やチェック済み Drawer からいつでも確認できます。
             </p>
             <div class="skill-checker__tap-guide">
               <i class="pi pi-chevron-right" aria-hidden="true" />
@@ -450,70 +440,12 @@ watch(
         </div>
 
         <div v-else class="owned-skill-list">
-          <div v-if="isEditMode" class="owned-skill-list__header">
-            <div class="owned-skill-list__title">チェック済み一覧</div>
-            <div class="owned-skill-list__subtitle">
-              ここでは熟練度の調整と不要なスキルの削除ができます。
-            </div>
-          </div>
-          <article
-            v-for="skill in ownedSkillRows"
-            :key="skill.skillId"
-            class="owned-skill-item"
-          >
-            <div class="owned-skill-item__media">
-              <img
-                v-if="skill.image"
-                :src="skill.image"
-                alt=""
-                class="owned-skill-item__image"
-              />
-              <div v-else class="owned-skill-item__placeholder">No image</div>
-            </div>
-            <div class="owned-skill-item__body">
-              <div class="owned-skill-item__head">
-                <div>
-                  <div class="owned-skill-item__name">{{ skill.name }}</div>
-                  <div class="owned-skill-item__meta">
-                    {{ skill.skillId }}
-                  </div>
-                </div>
-                <Button
-                  v-if="isEditMode"
-                  type="button"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
-                  @click="emit('remove-skill', skill.skillId)"
-                />
-              </div>
-              <div class="owned-skill-item__tags">
-                <Tag :value="skill.element" severity="secondary" />
-                <Tag :value="skill.equipmentType" severity="secondary" />
-                <Tag :value="skill.skillType" severity="secondary" />
-                <Tag
-                  v-if="skill.masterMissing"
-                  value="master未登録"
-                  severity="danger"
-                />
-              </div>
-              <div class="owned-skill-item__meta">
-                {{ skill.effect || skill.skillName || '未設定' }}
-              </div>
-              <div class="owned-skill-item__level">
-                <div class="user-workspace-field__label">熟練度</div>
-                <InputNumber
-                  :modelValue="ownedSkills[skill.index].level"
-                  :min="0"
-                  showButtons
-                  :disabled="!isEditMode"
-                  class="owned-skill-item__input"
-                  @update:modelValue="setOwnedSkillLevel(skill.index, $event)"
-                />
-              </div>
-            </div>
-          </article>
+          <RMUserWorkspaceOwnedSkillList
+            :isEditMode="isEditMode"
+            :ownedSkillRows="ownedSkillRows"
+            :show-header="isEditMode"
+            @remove-skill="emit('remove-skill', $event)"
+          />
         </div>
       </div>
     </template>
@@ -553,8 +485,7 @@ watch(
   color: #475569;
 }
 
-.skill-checker__search,
-.owned-skill-item__input {
+.skill-checker__search {
   width: 100%;
 }
 
@@ -977,101 +908,6 @@ watch(
   background: #fff;
 }
 
-.owned-skill-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.owned-skill-list__header {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.owned-skill-list__title {
-  font-weight: 800;
-  color: #334155;
-}
-
-.owned-skill-list__subtitle {
-  color: #64748b;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.owned-skill-item {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  background: rgba(248, 250, 252, 0.88);
-}
-
-.owned-skill-item__media {
-  display: flex;
-  align-items: flex-start;
-}
-
-.owned-skill-item__image,
-.owned-skill-item__placeholder {
-  width: 84px;
-  height: 84px;
-  border-radius: 18px;
-}
-
-.owned-skill-item__image {
-  object-fit: cover;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-}
-
-.owned-skill-item__placeholder {
-  display: grid;
-  place-items: center;
-  background: #e2e8f0;
-  color: #64748b;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.owned-skill-item__body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-.owned-skill-item__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.owned-skill-item__name {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #1f2937;
-  word-break: break-word;
-}
-
-.owned-skill-item__meta {
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 0.82rem;
-  word-break: break-all;
-}
-
-.owned-skill-item__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 @media (max-width: 767px) {
   .user-workspace-section {
     padding: 16px;
@@ -1127,10 +963,6 @@ watch(
     top: 10px;
     right: 10px;
     padding: 6px 10px;
-  }
-
-  .owned-skill-item {
-    grid-template-columns: 1fr;
   }
 }
 </style>
