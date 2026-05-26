@@ -138,7 +138,9 @@ const skillCountLabel = computed(
   () =>
     `${filteredSkillMasterList.value.length} / ${skillMasterList.value.length} 件`
 )
-const normalizedSearchText = computed(() => searchText.value.trim().toLowerCase())
+const normalizedSearchText = computed(() =>
+  searchText.value.trim().toLowerCase()
+)
 const skillMasterSearchTextById = computed(
   () =>
     new Map(
@@ -403,7 +405,7 @@ const saveSkillMaster = async () => {
         : '通常'),
     attackType: form.value.attackType.trim(),
     skillName: form.value.skillName.trim(),
-    effect: form.value.effect.trim(),
+    effect: form.value.effect.replace(/\r\n/g, '\n'),
     image: form.value.image.trim(),
   }
 
@@ -418,12 +420,13 @@ const saveSkillMaster = async () => {
       }
 
       await loadSkillMaster()
-      
+
       // Restore pagination state
       if (skillMasterTableRef.value) {
-        skillMasterTableRef.value.d_first = skillMasterPaginationState.value.first
+        skillMasterTableRef.value.d_first =
+          skillMasterPaginationState.value.first
       }
-      
+
       closeEditor()
     } catch (error) {
       notifyError('スキルマスターの保存に失敗しました。')
@@ -563,12 +566,12 @@ const importSkillMasterCsv = async () => {
 
   if (successCount > 0) {
     await loadSkillMaster()
-    
+
     // Restore pagination state
     if (skillMasterTableRef.value) {
       skillMasterTableRef.value.d_first = skillMasterPaginationState.value.first
     }
-    
+
     notifySuccess(`${successCount} 件のスキルを反映しました。`)
   }
   if (errorCount > 0) {
@@ -724,7 +727,13 @@ const importSkillMasterCsv = async () => {
                 <Column field="name" header="名称" />
                 <Column field="characterName" header="キャラ名" />
                 <Column field="skillName" header="技名" />
-                <Column field="effect" header="効果" />
+                <Column header="効果">
+                  <template #body="{ data }">
+                    <div class="skill-master-admin-effect-text">
+                      {{ data.effect || '効果未設定' }}
+                    </div>
+                  </template>
+                </Column>
                 <Column
                   field="element"
                   header="自然属性"
@@ -1461,6 +1470,13 @@ const importSkillMasterCsv = async () => {
   color: #64748b;
   font-size: 0.88rem;
   line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.skill-master-admin-effect-text {
+  white-space: pre-wrap;
+  line-height: 1.5;
   word-break: break-word;
 }
 

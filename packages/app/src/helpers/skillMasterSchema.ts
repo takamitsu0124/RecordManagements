@@ -166,6 +166,14 @@ export function normalizeSkillMasterWhitespace(value: unknown) {
     .trim()
 }
 
+export function normalizeSkillMasterEffect(value: unknown) {
+  return String(value ?? '')
+    .replace(/\u3000/g, ' ') // 全角スペース → 半角スペース
+    .split('\n')
+    .map(line => line.replace(/\s+/g, ' ').trim())
+    .join('\n')
+}
+
 function normalizeLookupKey(value: unknown) {
   return normalizeSkillMasterWhitespace(value)
     .toLowerCase()
@@ -340,7 +348,7 @@ export function normalizeSkillMasterRecord(
     ),
     cooldown: normalizeSkillMasterNumber(record.cooldown ?? record.cool),
     skillName: normalizeSkillMasterWhitespace(record.skillName),
-    effect: normalizeSkillMasterWhitespace(record.effect),
+    effect: normalizeSkillMasterEffect(record.effect),
     image: normalizeSkillMasterWhitespace(record.image ?? fallback.image),
   } satisfies SkillMaster
 }
