@@ -130,6 +130,8 @@ const skillCsvParseErrors = ref<string[]>([])
 const skillCsvPreviewRows = ref<SkillMasterImportPreviewRow[]>([])
 const skillCsvImportResults = ref<SkillMasterImportResultRow[]>([])
 const skillCsvStats = ref<SkillMasterImportStats | null>(null)
+const skillMasterTableRef = ref<InstanceType<typeof DataTable>>()
+const skillMasterPaginationState = ref({ first: 0, rows: 12 })
 
 const isEditingExisting = computed(() => isEditMode.value)
 const skillCountLabel = computed(
@@ -331,6 +333,14 @@ const startCreate = () => {
 }
 
 const startEdit = (skill: SkillMaster) => {
+  // Save pagination state before opening editor
+  if (skillMasterTableRef.value) {
+    skillMasterPaginationState.value = {
+      first: skillMasterTableRef.value.d_first,
+      rows: skillMasterTableRef.value.d_rows,
+    }
+  }
+
   form.value = {
     ...defaultSkillMaster(),
     ...skill,
@@ -408,6 +418,12 @@ const saveSkillMaster = async () => {
       }
 
       await loadSkillMaster()
+      
+      // Restore pagination state
+      if (skillMasterTableRef.value) {
+        skillMasterTableRef.value.d_first = skillMasterPaginationState.value.first
+      }
+      
       closeEditor()
     } catch (error) {
       notifyError('スキルマスターの保存に失敗しました。')
@@ -547,6 +563,12 @@ const importSkillMasterCsv = async () => {
 
   if (successCount > 0) {
     await loadSkillMaster()
+    
+    // Restore pagination state
+    if (skillMasterTableRef.value) {
+      skillMasterTableRef.value.d_first = skillMasterPaginationState.value.first
+    }
+    
     notifySuccess(`${successCount} 件のスキルを反映しました。`)
   }
   if (errorCount > 0) {
@@ -857,6 +879,7 @@ const importSkillMasterCsv = async () => {
             </div>
 
             <DataTable
+              ref="skillMasterTableRef"
               v-else
               :value="filteredSkillMasterList"
               paginator
