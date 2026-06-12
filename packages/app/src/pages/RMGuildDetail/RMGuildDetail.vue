@@ -38,6 +38,7 @@ import {
 } from 'src/composables/useAppNotifications'
 import { fetchGuild, fetchGuildUsers } from 'src/services/guildData'
 import { useSkillStore } from 'src/store'
+import RMGuildBannerDialog from './components/RMGuildBannerDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,6 +55,7 @@ const skillErrorMessage = ref<string | null>(null)
 const isEditMode = ref(false)
 const isOverviewDrawerVisible = ref(false)
 const isMembersDrawerVisible = ref(false)
+const isBannerDialogVisible = ref(false)
 const roleDrafts = ref<Record<string, AppRole>>({})
 const skillTableFilters = ref({
   skillName: { value: '', matchMode: 'contains' },
@@ -695,6 +697,12 @@ const openMembersFromGuide = (closeDrawer: () => void) => {
     isMembersDrawerVisible.value = true
   })
 }
+
+const openBannersFromGuide = (closeDrawer: () => void) => {
+  runAfterGuideClose(closeDrawer, () => {
+    isBannerDialogVisible.value = true
+  })
+}
 </script>
 
 <template>
@@ -805,7 +813,8 @@ const openMembersFromGuide = (closeDrawer: () => void) => {
             >
               <div class="guild-detail-shortcut__title">ギルド概要を見る</div>
               <div class="guild-detail-shortcut__text">
-                基本情報・運用メモ・全体サマリーを右側 Drawer でまとめて確認できます。
+                基本情報・運用メモ・全体サマリーを右側 Drawer
+                でまとめて確認できます。
               </div>
             </button>
 
@@ -827,13 +836,30 @@ const openMembersFromGuide = (closeDrawer: () => void) => {
             >
               <div class="guild-detail-shortcut__title">メンバー運用を開く</div>
               <div class="guild-detail-shortcut__text">
-                承認待ち確認、権限変更、個別のスキル編集導線を Drawer に集約しています。
+                承認待ち確認、権限変更、個別のスキル編集導線を Drawer
+                に集約しています。
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="guild-detail-shortcut"
+              @click="openBannersFromGuide(closeDrawer)"
+            >
+              <div class="guild-detail-shortcut__title">バナーを見る</div>
+              <div class="guild-detail-shortcut__text">
+                表示期間に一致するバナーをダイアログで確認できます。
               </div>
             </button>
           </div>
         </div>
       </template>
     </RMFloatingGuideButton>
+
+    <RMGuildBannerDialog
+      v-if="guildDetail"
+      v-model:visible="isBannerDialogVisible"
+    />
 
     <Drawer
       v-if="guildDetail"

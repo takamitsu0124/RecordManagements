@@ -25,6 +25,13 @@ const routes = [
           import('src/pages/RMSkillMasterAdmin/RMSkillMasterAdmin.vue'),
         meta: { roles: ['admin'], pageTitle: 'スキルマスター管理' },
       },
+      {
+        name: 'RMBannerMasterAdmin',
+        path: '/RMBannerMasterAdmin',
+        component: () =>
+          import('src/pages/RMBannerMasterAdmin/RMBannerMasterAdmin.vue'),
+        meta: { roles: ['admin'], pageTitle: 'バナーマスター管理' },
+      },
       // ギルド登録
       {
         name: 'RMGuildRegister',
