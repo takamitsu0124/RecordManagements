@@ -1,5 +1,9 @@
 import { DefaultType } from "./default";
 import { AppRole } from "./AppRole";
+import {
+  WeaponProficiencySkillProgress,
+  defaultWeaponProficiencySkillProgress,
+} from "./WeaponProficiencySkill";
 
 export const weaponProficiencyDefinitions = [
   { key: "oneHandSword", label: "片手直剣" },
@@ -131,6 +135,8 @@ export type AppUser = {
   imageUrls: string[];
   /** Weapon proficiency skill levels */
   weaponProficiencyLevels: WeaponProficiencyLevels;
+  /** Weapon proficiency skill unlock progress */
+  weaponProficiencySkillProgress: WeaponProficiencySkillProgress;
   /** Access role */
   role: AppRole;
 } & DefaultType;
@@ -155,6 +161,7 @@ export function defaultAppUser(): AppUser {
     phone: "",
     imageUrls: [],
     weaponProficiencyLevels: defaultWeaponProficiencyLevels(),
+    weaponProficiencySkillProgress: defaultWeaponProficiencySkillProgress(),
     role: "member",
   };
 }

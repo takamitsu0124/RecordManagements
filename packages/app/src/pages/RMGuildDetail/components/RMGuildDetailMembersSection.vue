@@ -61,7 +61,7 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
         </div>
       </template>
       <div class="guild-panel-note">
-        管理モード中は、各メンバーの所持スキル・画像管理だけを開けます。
+        管理モード中は、各メンバーのスキル・熟練度管理画面を開けます。
       </div>
       <div v-if="approvedMembers.length > 0" class="guild-member-list">
         <div
@@ -96,7 +96,7 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
                 <div class="guild-member-item__subtext">
                   {{
                     isEditMode && canManageGuildMembers
-                      ? '管理モード中は、このメンバーの所持スキル・画像管理画面へ進めます。'
+                      ? '管理モード中は、このメンバーのスキル・熟練度管理画面へ進めます。'
                       : '承認済みメンバーとして運用対象に含まれています。'
                   }}
                 </div>
@@ -104,7 +104,7 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
             </div>
             <Button
               v-if="isEditMode && canManageGuildMembers"
-              label="スキル・画像を編集"
+              label="スキル・熟練度を編集"
               outlined
               severity="contrast"
               class="guild-member-item__link"

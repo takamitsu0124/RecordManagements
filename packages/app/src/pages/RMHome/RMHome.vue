@@ -72,7 +72,7 @@ const homeActions = computed(() => {
     {
       key: 'mypage',
       title: 'マイページ',
-      description: 'プロフィール確認や、所持スキル・画像管理へ進みます。',
+      description: 'プロフィール確認や、スキル・熟練度管理へ進みます。',
       icon: 'edit',
       label: '開く',
       onClick: goToUserEdit,

@@ -152,6 +152,8 @@ service cloud.firestore {
 				hasValidOptionalTimestamp(data.birthDateAt) &&
 				data.phone is string &&
 				data.imageUrls is list &&
+				(data.weaponProficiencyLevels == null || data.weaponProficiencyLevels is map) &&
+				(data.weaponProficiencySkillProgress == null || data.weaponProficiencySkillProgress is map) &&
 				isValidAppRole(data.role);
 		}
 
@@ -236,6 +238,8 @@ service cloud.firestore {
 						'phone',
 						'birthDateAt',
 						'imageUrls',
+						'weaponProficiencyLevels',
+						'weaponProficiencySkillProgress',
 						'updatedAt',
 						'updatedBy'
 					])
@@ -259,7 +263,13 @@ service cloud.firestore {
 					preservesUserIdentity(uid) &&
 					request.resource.data.guildId == resource.data.guildId &&
 					request.resource.data.role == resource.data.role &&
-					request.resource.data.diff(resource.data).affectedKeys().hasOnly(['imageUrls', 'updatedAt', 'updatedBy'])
+					request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+						'imageUrls',
+						'weaponProficiencyLevels',
+						'weaponProficiencySkillProgress',
+						'updatedAt',
+						'updatedBy'
+					])
 				)
 			);
 

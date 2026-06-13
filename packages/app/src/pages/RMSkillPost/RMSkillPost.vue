@@ -46,10 +46,10 @@ const onBack = () => {
     :include-profile="false"
     :compact-mode="true"
     :fallback-app-user="fallbackAppUser"
-    page-title="所持スキル・画像管理"
+    page-title="スキル・熟練度管理"
     page-icon="pi pi-star"
-    view-description="ギルド運用で必要な所持スキルと画像だけを確認できます。変更が必要なときだけ編集モードに切り替えてください。"
-    edit-description="所持スキルと画像管理を切り替えながら、必要な内容だけ集中して更新できます。"
+    view-description="ギルド運用で必要な所持スキル、武器熟練度Lv、武器熟練度スキルを確認できます。変更が必要なときだけ編集モードに切り替えてください。"
+    edit-description="所持スキル、武器熟練度Lv、武器熟練度スキルを切り替えながら、必要な内容だけ集中して更新できます。"
     back-label="ギルド詳細へ"
     @back="onBack"
   />

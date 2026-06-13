@@ -2,7 +2,10 @@ import {
   AppUser,
   OwnedSkill,
   SkillMaster,
+  WeaponProficiencySkillProgress,
   WeaponProficiencyLevels,
+  defaultWeaponProficiencyLevels,
+  defaultWeaponProficiencySkillProgress,
 } from '@rm/types'
 
 export type ImageItem = {
@@ -48,6 +51,7 @@ export type WorkspaceProfile = {
   birthDateAt: Date | null
   imageUrls: string[]
   weaponProficiencyLevels: WeaponProficiencyLevels
+  weaponProficiencySkillProgress: WeaponProficiencySkillProgress
 }
 
 export const defaultWorkspaceProfile = (): WorkspaceProfile => ({
@@ -62,14 +66,6 @@ export const defaultWorkspaceProfile = (): WorkspaceProfile => ({
   phone: '',
   birthDateAt: null,
   imageUrls: [],
-  weaponProficiencyLevels: {
-    oneHandSword: null,
-    rapier: null,
-    club: null,
-    dagger: null,
-    axe: null,
-    spear: null,
-    bow: null,
-    shield: null,
-  },
+  weaponProficiencyLevels: defaultWeaponProficiencyLevels(),
+  weaponProficiencySkillProgress: defaultWeaponProficiencySkillProgress(),
 })

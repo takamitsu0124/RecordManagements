@@ -7,3 +7,4 @@ export * from "./GuildScheduleResponse";
 export * from "./BannerMaster";
 export * from "./SkillMaster";
 export * from "./UserSkill";
+export * from "./WeaponProficiencySkill";

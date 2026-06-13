@@ -8,6 +8,7 @@ import {
   defaultAppUser,
   defaultGuildCalendarEvent,
   normalizeWeaponProficiencyLevels,
+  normalizeWeaponProficiencySkillProgress,
 } from '@rm/types'
 
 const normalizeAppUser = (docId: string, data: AppUser): AppUser => ({
@@ -17,6 +18,9 @@ const normalizeAppUser = (docId: string, data: AppUser): AppUser => ({
   uid: data.uid || docId,
   weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
     data.weaponProficiencyLevels
+  ),
+  weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
+    data.weaponProficiencySkillProgress
   ),
 })
 

@@ -43,7 +43,7 @@ const routes = [
         name: 'RMSkillPost',
         path: '/guild/:guildId/user/:userId/post-skill',
         component: () => import('src/pages/RMSkillPost/RMSkillPost.vue'),
-        meta: { pageTitle: '所持スキル・画像管理' },
+        meta: { pageTitle: 'スキル・熟練度管理' },
       },
     ],
   },

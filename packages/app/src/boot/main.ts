@@ -4,6 +4,7 @@ import {
 	AppUser,
 	defaultAppUser,
 	normalizeWeaponProficiencyLevels,
+	normalizeWeaponProficiencySkillProgress,
 } from '@rm/types'
 import { auth, dbUsersModule } from '@rm/db'
 import { Router } from 'vue-router'
@@ -84,6 +85,9 @@ const ensureAppUserDocument = async (authUser: FirebaseAuthUser): Promise<AppUse
 				weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
 					existingAppUser.weaponProficiencyLevels
 				),
+				weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
+					existingAppUser.weaponProficiencySkillProgress
+				),
 				displayName:
 					existingAppUser.displayName ||
 					authUser.displayName ||
@@ -108,6 +112,9 @@ const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
 			email: appUser.email || authUser.email || '',
 			weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
 				appUser.weaponProficiencyLevels
+			),
+			weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
+				appUser.weaponProficiencySkillProgress
 			),
 			displayName:
 				appUser.displayName || authUser.displayName || authUser.email || '',

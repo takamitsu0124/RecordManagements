@@ -119,13 +119,13 @@ defineProps<{
         <div class="guild-operations__item">
           <div class="guild-operations__title">メンバー概要</div>
           <p class="guild-operations__text">
-            「メンバー別スキル状況を確認」ボタンから、所持数、解放率、武器熟練度の入力進捗率をポップアップでまとめて確認できます。
+            「メンバー別スキル状況を確認」ボタンから、所持数、解放率、武器熟練度の入力進捗率、大瓶解放率をポップアップでまとめて確認できます。
           </p>
         </div>
         <div class="guild-operations__item">
           <div class="guild-operations__title">管理モード</div>
           <p class="guild-operations__text">
-            承認済みメンバーごとに、所持スキルと画像管理だけへ絞った画面を開けます。
+            承認済みメンバーごとに、所持スキルと武器熟練度の管理画面を開けます。
           </p>
         </div>
       </div>

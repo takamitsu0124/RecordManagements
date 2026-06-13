@@ -23,6 +23,7 @@ import {
   defaultSkillMaster,
   defaultUserSkill,
   normalizeWeaponProficiencyLevels,
+  normalizeWeaponProficiencySkillProgress,
   weaponProficiencyDefinitions,
   weaponProficiencyLevelOptions,
   weaponProficiencyMaxLevel,
@@ -30,6 +31,7 @@ import {
 } from '@rm/types'
 import RMUserWorkspaceImagesSection from './RMUserWorkspaceImagesSection.vue'
 import RMUserWorkspaceOwnedSkillList from './RMUserWorkspaceOwnedSkillList.vue'
+import RMUserWorkspaceProficiencySkillSection from './RMUserWorkspaceProficiencySkillSection.vue'
 import RMUserWorkspaceProfileSection from './RMUserWorkspaceProfileSection.vue'
 import RMUserWorkspaceSkillsSection from './RMUserWorkspaceSkillsSection.vue'
 import type {
@@ -329,6 +331,9 @@ const cloneUser = (
     weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
       payload?.weaponProficiencyLevels
     ),
+    weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
+      payload?.weaponProficiencySkillProgress
+    ),
   }
 }
 
@@ -337,6 +342,9 @@ const cloneAppUser = (payload?: Partial<AppUser> | null): AppUser => ({
   ...(payload || {}),
   weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
     payload?.weaponProficiencyLevels
+  ),
+  weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
+    payload?.weaponProficiencySkillProgress
   ),
   role: payload?.role || 'member',
 })
@@ -357,6 +365,7 @@ const createUserProfileFromAppUser = (
     birthDateAt: payload?.birthDateAt || null,
     imageUrls: payload?.imageUrls || [],
     weaponProficiencyLevels: payload?.weaponProficiencyLevels,
+    weaponProficiencySkillProgress: payload?.weaponProficiencySkillProgress,
   })
 }
 
@@ -867,6 +876,7 @@ const onSubmit = async () => {
         email: user.value.email.trim(),
         phone: user.value.phone.trim(),
         birthDateAt: modelToDate(birthDateAtStr.value),
+        weaponProficiencySkillProgress: user.value.weaponProficiencySkillProgress,
       })
       const nextAppUser = cloneAppUser({
         ...appUser.value,
@@ -886,6 +896,7 @@ const onSubmit = async () => {
         phone: nextUser.phone,
         imageUrls: resolvedImageUrls,
         weaponProficiencyLevels: nextUser.weaponProficiencyLevels,
+        weaponProficiencySkillProgress: nextUser.weaponProficiencySkillProgress,
       })
       const nextUsersPayload = props.includeProfile
         ? {
@@ -899,11 +910,15 @@ const onSubmit = async () => {
             phone: nextAppUser.phone,
             imageUrls: nextAppUser.imageUrls,
             weaponProficiencyLevels: nextAppUser.weaponProficiencyLevels,
+            weaponProficiencySkillProgress:
+              nextAppUser.weaponProficiencySkillProgress,
             ...(canEditGuildId.value ? { guildId: nextAppUser.guildId } : {}),
           }
         : {
             imageUrls: nextAppUser.imageUrls,
             weaponProficiencyLevels: nextAppUser.weaponProficiencyLevels,
+            weaponProficiencySkillProgress:
+              nextAppUser.weaponProficiencySkillProgress,
           }
       const nextUserSkill: UserSkill = {
         ...defaultUserSkill(),
@@ -1119,6 +1134,7 @@ const emitBack = () => {
                   :outlined="activeCompactSection !== 'skills'"
                   @click="activeCompactSection = 'skills'"
                 />
+                <!--
                 <Button
                   type="button"
                   :label="`画像管理 ${imageItems.length}件`"
@@ -1128,6 +1144,7 @@ const emitBack = () => {
                   :outlined="activeCompactSection !== 'images'"
                   @click="activeCompactSection = 'images'"
                 />
+                -->
                 <Button
                   type="button"
                   label="熟練度Lv"
@@ -1139,7 +1156,7 @@ const emitBack = () => {
                 />
                 <Button
                   type="button"
-                  label="熟練度スキル"
+                  label="武器熟練度スキル"
                   :severity="
                     activeCompactSection === 'proficiency-skill'
                       ? 'contrast'
@@ -1188,12 +1205,12 @@ const emitBack = () => {
               </div>
               <div
                 v-if="showProficiencySkillInline"
-                class="user-workspace-focus-switch__placeholder"
+                class="user-workspace-anchor"
+                id="workspace-proficiency-skill"
               >
-                <RMEmptyState
-                  icon="pi pi-clock"
-                  title="熟練度スキル"
-                  message="近日反映予定です。"
+                <RMUserWorkspaceProficiencySkillSection
+                  v-model:progress="user.weaponProficiencySkillProgress"
+                  :isEditMode="isEditMode"
                 />
               </div>
             </div>

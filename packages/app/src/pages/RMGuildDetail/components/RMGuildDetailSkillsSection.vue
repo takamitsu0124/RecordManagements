@@ -383,7 +383,7 @@ const isMemberSkillDialogVisible = ref(false)
             </div>
             <Button
               v-if="isEditMode && canManageGuildMembers"
-              label="スキル・画像を編集"
+              label="スキル・熟練度を編集"
               outlined
               severity="contrast"
               size="small"
@@ -434,6 +434,36 @@ const isMemberSkillDialogVisible = ref(false)
                 "
               >
                 未入力のメンバーは 0% として表示します
+              </span>
+            </div>
+          </div>
+          <div class="guild-skill-overview-item__progress">
+            <div class="guild-skill-overview-item__progress-head">
+              <span>武器熟練度スキル（大瓶解放率）</span>
+              <strong>{{ member.weaponProficiencySkillUnlockRateText }}</strong>
+            </div>
+            <div
+              class="guild-skill-overview-item__progress-track"
+              aria-hidden="true"
+            >
+              <div
+                class="guild-skill-overview-item__progress-bar"
+                :style="{ width: `${member.weaponProficiencySkillUnlockRate}%` }"
+              />
+            </div>
+            <div class="guild-skill-overview-item__progress-note">
+              <span>
+                解放済み {{ member.weaponProficiencySkillUnlockedCount }} /
+                {{ member.weaponProficiencySkillTotalCount }}
+              </span>
+              <span v-if="member.weaponProficiencySkillTotalCount > 0">
+                残り大瓶
+                {{
+                  member.weaponProficiencySkillRemainingBottleCount.toLocaleString()
+                }}個
+              </span>
+              <span v-else>
+                熟練度スキル定義が未設定です
               </span>
             </div>
           </div>

@@ -11,6 +11,7 @@ import {
   AppUser,
   Guild,
   summarizeWeaponProficiencyProgress,
+  summarizeWeaponProficiencySkillUnlockRate,
 } from '@rm/types'
 import RMGuildDetailMembersSection from './components/RMGuildDetailMembersSection.vue'
 import RMGuildDetailOverviewSection from './components/RMGuildDetailOverviewSection.vue'
@@ -164,6 +165,10 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
     const weaponProficiencySummary = summarizeWeaponProficiencyProgress(
       appUser?.weaponProficiencyLevels
     )
+    const weaponProficiencySkillSummary =
+      summarizeWeaponProficiencySkillUnlockRate(
+        appUser?.weaponProficiencySkillProgress
+      )
     const topSkills = ownedSkills
       .map((ownedSkill) => {
         const master = skillStore.masterDataById.value.get(ownedSkill.skillId)
@@ -189,6 +194,16 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
       weaponProficiencyProgressRateText: `${weaponProficiencySummary.progressRate.toFixed(
         1
       )}%`,
+      weaponProficiencySkillUnlockedCount:
+        weaponProficiencySkillSummary.unlockedCount,
+      weaponProficiencySkillTotalCount: weaponProficiencySkillSummary.totalCount,
+      weaponProficiencySkillUnlockRate:
+        weaponProficiencySkillSummary.unlockRate,
+      weaponProficiencySkillUnlockRateText: `${weaponProficiencySkillSummary.unlockRate.toFixed(
+        1
+      )}%`,
+      weaponProficiencySkillRemainingBottleCount:
+        weaponProficiencySkillSummary.remainingBottleCount,
       topSkills,
     }
   })
