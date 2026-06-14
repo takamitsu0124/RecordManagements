@@ -1,3 +1,13 @@
+import {
+  rawAxeRows,
+  rawBowRows,
+  rawClubRows,
+  rawDaggerRows,
+  rawRapierRows,
+  rawSpearRows,
+  rawSwordRows
+} from './WeaponProficiencySkillMasterRows'
+
 export const weaponProficiencySkillWeaponDefinitions = [
   { key: 'sword', label: '片手直剣' },
   { key: 'rapier', label: '片手細剣' },
@@ -42,180 +52,34 @@ export type WeaponProficiencySkillUnlockRateSummary = {
   >
 }
 
-const rawSwordRows = [
-  // {
-  //   required_level: 25,
-  //   skill_name: "武器の知識",
-  //   weapon_type: "片手直剣",
-  //   values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-  // },
-  // {
-  //   required_level: 30,
-  //   skill_name: "スイッチチャージ",
-  //   weapon_type: "片手直剣",
-  //   values: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-  // },
-  {
-    required_level: 30,
-    skill_name: '発展の構え',
-    weapon_type: '片手直剣',
-    values: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-  },
-  // {
-  //   required_level: 35,
-  //   skill_name: '剣の極意',
-  //   weapon_type: '片手直剣',
-  //   values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  // },
-  // {
-  //   required_level: 40,
-  //   skill_name: '剣技熟達',
-  //   weapon_type: '片手直剣',
-  //   values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  // },
-  // {
-  //   required_level: 45,
-  //   skill_name: 'オーバーチャージ Ⅰ',
-  //   weapon_type: '片手直剣',
-  //   values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  // },
-  {
-    required_level: 50,
-    skill_name: 'フレイムグロー',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 50,
-    skill_name: 'アクアグロー',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 50,
-    skill_name: 'ウィンドグロー',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 50,
-    skill_name: 'アースグロー',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 50,
-    skill_name: 'シャイングロー',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 50,
-    skill_name: 'ダークグロー',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 50,
-    skill_name: '躍進の剣技',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 50,
-    skill_name: '崩しの基礎',
-    weapon_type: '片手直剣',
-    values: [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-  },
-  {
-    required_level: 55,
-    skill_name: '生存の心得',
-    weapon_type: '片手直剣',
-    values: [12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
-  },
-  {
-    required_level: 60,
-    skill_name: '剣撃熟達',
-    weapon_type: '片手直剣',
-    values: [12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
-  },
-  {
-    required_level: 65,
-    skill_name: '堅守の心得',
-    weapon_type: '片手直剣',
-    values: [14, 18, 22, 26, 30, 34, 38, 42, 46, 50]
-  },
-  {
-    required_level: 70,
-    skill_name: '火傷ガード',
-    weapon_type: '片手直剣',
-    values: [14, 18, 22, 26, 30, 34, 38, 42, 46, 50]
-  },
-  {
-    required_level: 75,
-    skill_name: '猛攻の心得',
-    weapon_type: '片手直剣',
-    values: [16, 21, 26, 31, 36, 41, 46, 51, 56, 61]
-  },
-  {
-    required_level: 75,
-    skill_name: '斬撃上達',
-    weapon_type: '片手直剣',
-    values: [16, 21, 26, 31, 36, 41, 46, 51, 56, 61]
-  },
-  {
-    required_level: 80,
-    skill_name: 'ハートブレイク',
-    weapon_type: '片手直剣',
-    values: [16, 21, 26, 31, 36, 41, 46, 51, 56, 61]
-  },
-  {
-    required_level: 85,
-    skill_name: '単体剣撃熟達',
-    weapon_type: '片手直剣',
-    values: [18, 24, 30, 36, 42, 48, 54, 60, 66, 72]
-  },
-  {
-    required_level: 90,
-    skill_name: 'フレイムライズ',
-    weapon_type: '片手直剣',
-    values: [18, 24, 30, 36, 42, 48, 54, 60, 66, 72]
-  },
-  {
-    required_level: 95,
-    skill_name: '剣技熟練',
-    weapon_type: '片手直剣',
-    values: [20, 27, 34, 41, 48, 55, 62, 69, 76, 83]
-  },
-  {
-    required_level: 100,
-    skill_name: 'フレイムチャージ',
-    weapon_type: '片手直剣',
-    values: [20, 27, 34, 41, 48, 55, 62, 69, 76, 83]
-  },
-  {
-    required_level: 105,
-    skill_name: '逆境堅守',
-    weapon_type: '片手直剣',
-    values: [20, 27, 34, 41, 48, 55, 62, 69, 76, 83]
-  },
-  {
-    required_level: 110,
-    skill_name: '絆の連技',
-    weapon_type: '片手直剣',
-    values: [20, 27, 34, 41, 48, 55, 62, 69, 76, 83]
-  }
-] as const
-
-export const weaponProficiencySkillMasterRows: WeaponProficiencySkillMasterRow[] =
-  rawSwordRows.map((row, index) => ({
-    id: `sword-${row.required_level}-${row.skill_name ?? 'none'}-${index}`,
+const createWeaponMasterRows = (
+  weaponKey: WeaponProficiencySkillWeaponKey,
+  weaponType: string,
+  rawRows: readonly {
+    required_level: number
+    skill_name: string | null
+    weapon_type: string
+    values: readonly number[]
+  }[]
+): WeaponProficiencySkillMasterRow[] =>
+  rawRows.map((row, index) => ({
+    id: `${weaponKey}-${row.required_level}-${row.skill_name ?? 'none'}-${index}`,
     requiredLevel: row.required_level,
     skillName: row.skill_name,
-    weaponKey: 'sword',
-    weaponType: row.weapon_type,
+    weaponKey,
+    weaponType,
     values: [...row.values]
   }))
+
+export const weaponProficiencySkillMasterRows: WeaponProficiencySkillMasterRow[] = [
+  ...createWeaponMasterRows('sword', '片手直剣', rawSwordRows),
+  ...createWeaponMasterRows('rapier', '片手細剣', rawRapierRows),
+  ...createWeaponMasterRows('club', '片手棍', rawClubRows),
+  ...createWeaponMasterRows('dagger', '短剣', rawDaggerRows),
+  ...createWeaponMasterRows('axe', '両手斧', rawAxeRows),
+  ...createWeaponMasterRows('spear', '両手槍', rawSpearRows),
+  ...createWeaponMasterRows('bow', '弓', rawBowRows)
+]
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
