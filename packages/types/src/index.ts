@@ -5,6 +5,8 @@ export * from "./Guild";
 export * from "./GuildCalendarEvent";
 export * from "./GuildScheduleResponse";
 export * from "./BannerMaster";
+export * from "./AttendanceEvent";
+export * from "./AttendanceResponse";
 export * from "./SkillMaster";
 export * from "./UserSkill";
 export * from "./WeaponProficiencySkill";

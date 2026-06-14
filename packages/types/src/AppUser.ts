@@ -24,6 +24,8 @@ export type WeaponProficiencyLevels = Record<
   number | null
 >;
 
+export type AttendanceFeatureVisibilityStatus = "visible" | "hidden";
+
 export const weaponProficiencyMinLevel = 1;
 export const weaponProficiencyMaxLevel = 105;
 export const weaponProficiencyMaxTotalLevel =
@@ -108,6 +110,12 @@ export function summarizeWeaponProficiencyProgress(
   };
 }
 
+export function normalizeAttendanceFeatureVisibilityStatus(
+  value: unknown
+): AttendanceFeatureVisibilityStatus {
+  return value === "visible" ? "visible" : "hidden";
+}
+
 export type AppUser = {
   /** Auth UID */
   uid: string;
@@ -137,6 +145,8 @@ export type AppUser = {
   weaponProficiencyLevels: WeaponProficiencyLevels;
   /** Weapon proficiency skill unlock progress */
   weaponProficiencySkillProgress: WeaponProficiencySkillProgress;
+  /** Attendance feature visibility */
+  attendanceFeatureVisibilityStatus: AttendanceFeatureVisibilityStatus;
   /** Access role */
   role: AppRole;
 } & DefaultType;
@@ -162,6 +172,7 @@ export function defaultAppUser(): AppUser {
     imageUrls: [],
     weaponProficiencyLevels: defaultWeaponProficiencyLevels(),
     weaponProficiencySkillProgress: defaultWeaponProficiencySkillProgress(),
+    attendanceFeatureVisibilityStatus: "hidden",
     role: "member",
   };
 }

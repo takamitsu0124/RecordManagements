@@ -7,6 +7,7 @@ import {
   GuildScheduleResponse,
   defaultAppUser,
   defaultGuildCalendarEvent,
+  normalizeAttendanceFeatureVisibilityStatus,
   normalizeWeaponProficiencyLevels,
   normalizeWeaponProficiencySkillProgress,
 } from '@rm/types'
@@ -22,6 +23,10 @@ const normalizeAppUser = (docId: string, data: AppUser): AppUser => ({
   weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
     data.weaponProficiencySkillProgress
   ),
+  attendanceFeatureVisibilityStatus:
+    normalizeAttendanceFeatureVisibilityStatus(
+      data.attendanceFeatureVisibilityStatus
+    ),
 })
 
 const normalizeGuildScheduleResponse = (

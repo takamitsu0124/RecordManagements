@@ -5,6 +5,7 @@ import guild from './guild'
 import calendar from './calendar'
 import register from './register'
 import user from './user'
+import attendance from './attendance'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -29,6 +30,7 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  ...attendance,
 
   // Always leave this as last one,
   // but you can also remove it

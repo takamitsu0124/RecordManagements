@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import {
+  canUseAttendance,
   globalLoginUserData,
   hasAdmin,
   hasGuildId,
@@ -29,6 +30,11 @@ export const menu = computed<{ name: string; url: string; isShow?: boolean }[]>(
         ? `/guild/${globalLoginUserData.value.guildId}/schedule`
         : '',
       isShow: hasGuildId.value,
+    },
+    {
+      name: '出欠確認',
+      url: '/RMAttendance',
+      isShow: globalLoginUserData.value.id !== '' && canUseAttendance.value,
     },
     {
       name: 'イベントカレンダー',

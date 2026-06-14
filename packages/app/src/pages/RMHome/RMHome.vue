@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import {
+  canUseAttendance,
   hasAdmin,
   hasGuildId,
   globalLoginUserData,
@@ -67,6 +68,10 @@ const goToGuildSchedule = () => {
   })
 }
 
+const goToAttendance = () => {
+  router.push({ name: 'RMAttendance' })
+}
+
 const homeActions = computed(() => {
   const actions = [
     {
@@ -78,6 +83,18 @@ const homeActions = computed(() => {
       onClick: goToUserEdit,
     },
   ]
+
+  if (canUseAttendance.value) {
+    actions.push({
+      key: 'attendance',
+      title: '出欠確認',
+      description:
+        '個人で公開URL付きの出欠確認を作成し、回答と候補ごとの集計を確認できます。',
+      icon: 'groups',
+      label: '開く',
+      onClick: goToAttendance,
+    })
+  }
 
   if (hasGuildId.value) {
     actions.push({

@@ -3,6 +3,7 @@ import {
   AppRole,
   AppUser,
   defaultAppUser,
+  normalizeAttendanceFeatureVisibilityStatus,
   normalizeWeaponProficiencyLevels,
   normalizeWeaponProficiencySkillProgress,
 } from '@rm/types'
@@ -43,19 +44,44 @@ export const canManageGuildMembers = computed(() => {
   return hasAdmin.value || hasGuildAdmin.value
 })
 
-const publicRouteNames = new Set([
+export const canUseAttendance = computed(() => {
+  return globalLoginUserData.value.attendanceFeatureVisibilityStatus !== 'hidden'
+})
+
+const guestOnlyRouteNames = new Set([
   'RMPreLogin',
   'RMMailLogin',
   'RMPhoneLogin',
   'RMLoginSmsCode',
 ])
 
+const sharedPublicRouteNames = new Set(['RMAttendancePublic'])
+
+const isGuestOnlyRoute = (routeName: unknown) => {
+  return typeof routeName === 'string' && guestOnlyRouteNames.has(routeName)
+}
+
 const isPublicRoute = (routeName: unknown) => {
-  return typeof routeName === 'string' && publicRouteNames.has(routeName)
+  return (
+    typeof routeName === 'string' &&
+    (guestOnlyRouteNames.has(routeName) || sharedPublicRouteNames.has(routeName))
+  )
 }
 
 const getLandingRoute = (user: FirebaseAuthUser | null) => {
   return user ? { name: 'RMHome' } : { name: 'RMPreLogin' }
+}
+
+const attendancePrivateRouteNames = new Set([
+  'RMAttendance',
+  'RMAttendanceNew',
+  'RMAttendanceManage',
+])
+
+const isAttendancePrivateRoute = (routeName: unknown) => {
+  return (
+    typeof routeName === 'string' && attendancePrivateRouteNames.has(routeName)
+  )
 }
 
 const createFallbackAppUser = (authUser: FirebaseAuthUser | null): AppUser => {
@@ -93,6 +119,10 @@ const ensureAppUserDocument = async (
         weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
           existingAppUser.weaponProficiencySkillProgress
         ),
+        attendanceFeatureVisibilityStatus:
+          normalizeAttendanceFeatureVisibilityStatus(
+          	existingAppUser.attendanceFeatureVisibilityStatus
+          ),
         displayName:
           existingAppUser.displayName ||
           authUser.displayName ||
@@ -121,6 +151,10 @@ const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
       weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
         appUser.weaponProficiencySkillProgress
       ),
+      attendanceFeatureVisibilityStatus:
+        normalizeAttendanceFeatureVisibilityStatus(
+        	appUser.attendanceFeatureVisibilityStatus
+        ),
       displayName:
         appUser.displayName || authUser.displayName || authUser.email || '',
     }
@@ -143,7 +177,7 @@ const shouldRedirectForAuthState = (
   }
 
   if (user) {
-    return isPublicRoute(routeName)
+    return isGuestOnlyRoute(routeName)
   }
 
   return !isPublicRoute(routeName)
@@ -285,12 +319,22 @@ export default boot(async ({ app, router }) => {
       return
     }
 
-    if (authUser && isPublicRoute(to.name)) {
+    if (authUser && isGuestOnlyRoute(to.name)) {
       next({ name: 'RMHome', replace: true })
       return
     }
 
     const allowedRoles = to.meta?.roles as AppRole[] | undefined
+
+    if (
+      authUser &&
+      isAttendancePrivateRoute(to.name) &&
+      !canUseAttendance.value
+    ) {
+      notifyError('このアカウントでは出欠確認を利用できません。')
+      next({ name: 'RMHome', replace: true })
+      return
+    }
 
     if (
       authUser &&
