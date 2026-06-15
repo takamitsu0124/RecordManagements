@@ -192,9 +192,54 @@ bowSkillNames[20] = '逆転の強襲'
 const shieldRowTemplates: Omit<
   RawWeaponProficiencySkillRow,
   'skill_name' | 'weapon_type'
->[] = []
+>[] = [
+  {
+    required_level: 55,
+    values: [12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
+  },
+  {
+    required_level: 60,
+    values: [12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
+  },
+  {
+    required_level: 65,
+    values: [14, 17, 20, 23, 26, 29, 32, 35, 38, 41]
+  },
+  {
+    required_level: 70,
+    values: [14, 17, 20, 23, 26, 29, 32, 35, 38, 41]
+  },
+  {
+    required_level: 75,
+    values: [16, 21, 26, 31, 36, 41, 46, 51, 56, 61]
+  },
+  {
+    required_level: 80,
+    values: [16, 21, 26, 31, 36, 41, 46, 51, 56, 61]
+  },
+  {
+    required_level: 85,
+    values: [18, 24, 30, 36, 42, 48, 54, 60, 66, 72]
+  },
+  {
+    required_level: 90,
+    values: [18, 24, 30, 36, 42, 48, 54, 60, 66, 72]
+  }
+]
 
-const shieldSkillNames: (string | null)[] = []
+const shieldSkillNames: (string | null)[] = [
+  // '盾の知識', //Lv25 1~
+  // 'トランセンデント', //Lv30 3~
+  // '剣技熟達', //Lv40 10~
+  'シールドヒーリング', //Lv55 12~
+  '回復の心得', //Lv60 12~
+  '身体強化', //Lv65 14~
+  'フィールドヒール', //Lv70 14~
+  'パワフルブロー', //Lv75 16~
+  '身体鼓舞', //Lv80 16~
+  'パワフルスラッシュ', //Lv85 18~
+  'パワフルスラスト' //Lv90 18~
+]
 
 const createRawWeaponRows = (
   weaponType: string,
