@@ -189,17 +189,28 @@ bowSkillNames[18] = '単体剣技熟達'
 bowSkillNames[19] = 'シャインチャージ'
 bowSkillNames[20] = '逆転の強襲'
 
+const shieldRowTemplates: Omit<
+  RawWeaponProficiencySkillRow,
+  'skill_name' | 'weapon_type'
+>[] = []
+
+const shieldSkillNames: (string | null)[] = []
+
 const createRawWeaponRows = (
   weaponType: string,
-  skillNames: readonly (string | null)[]
+  skillNames: readonly (string | null)[],
+  rowTemplates: readonly Omit<
+    RawWeaponProficiencySkillRow,
+    'skill_name' | 'weapon_type'
+  >[] = weaponRowTemplates
 ): RawWeaponProficiencySkillRow[] => {
-  if (skillNames.length !== weaponRowTemplates.length) {
+  if (skillNames.length !== rowTemplates.length) {
     throw new Error(
-      `weapon proficiency skill names mismatch for ${weaponType}: expected ${weaponRowTemplates.length}, got ${skillNames.length}`
+      `weapon proficiency skill names mismatch for ${weaponType}: expected ${rowTemplates.length}, got ${skillNames.length}`
     )
   }
 
-  return weaponRowTemplates.map((template, index) => ({
+  return rowTemplates.map((template, index) => ({
     required_level: template.required_level,
     skill_name: skillNames[index] ?? null,
     weapon_type: weaponType,
@@ -214,3 +225,8 @@ export const rawDaggerRows = createRawWeaponRows('短剣', daggerSkillNames)
 export const rawAxeRows = createRawWeaponRows('両手斧', axeSkillNames)
 export const rawSpearRows = createRawWeaponRows('両手槍', spearSkillNames)
 export const rawBowRows = createRawWeaponRows('弓', bowSkillNames)
+export const rawShieldRows = createRawWeaponRows(
+  '盾',
+  shieldSkillNames,
+  shieldRowTemplates
+)

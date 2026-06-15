@@ -4,6 +4,7 @@ import {
   rawClubRows,
   rawDaggerRows,
   rawRapierRows,
+  rawShieldRows,
   rawSpearRows,
   rawSwordRows
 } from './WeaponProficiencySkillMasterRows'
@@ -78,7 +79,8 @@ export const weaponProficiencySkillMasterRows: WeaponProficiencySkillMasterRow[]
   ...createWeaponMasterRows('dagger', '短剣', rawDaggerRows),
   ...createWeaponMasterRows('axe', '両手斧', rawAxeRows),
   ...createWeaponMasterRows('spear', '両手槍', rawSpearRows),
-  ...createWeaponMasterRows('bow', '弓', rawBowRows)
+  ...createWeaponMasterRows('bow', '弓', rawBowRows),
+  ...createWeaponMasterRows('shield', '盾', rawShieldRows)
 ]
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
