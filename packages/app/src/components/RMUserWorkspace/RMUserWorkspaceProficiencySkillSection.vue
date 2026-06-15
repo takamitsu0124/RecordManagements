@@ -86,7 +86,10 @@ const cloneProgress = (
     weaponProficiencySkillWeaponDefinitions.map(({ key }) => [
       key,
       Object.fromEntries(
-        Object.entries(normalized[key]).map(([rowId, values]) => [rowId, [...values]])
+        Object.entries(normalized[key]).map(([rowId, values]) => [
+          rowId,
+          [...values],
+        ])
       ),
     ])
   ) as WeaponProficiencySkillProgress
@@ -94,7 +97,10 @@ const cloneProgress = (
 
 const getRowProgress = (row: WeaponProficiencySkillMasterRow) => {
   const stored = normalizedProgress.value[row.weaponKey][row.id] ?? []
-  return Array.from({ length: row.values.length }, (_, index) => stored[index] === true)
+  return Array.from(
+    { length: row.values.length },
+    (_, index) => stored[index] === true
+  )
 }
 
 const ensureRowProgress = (
@@ -149,7 +155,10 @@ const lockStep = (row: WeaponProficiencySkillMasterRow, index: number) => {
   openConfirmDialog(row, index, 'lock')
 }
 
-const requestStepToggle = (row: WeaponProficiencySkillMasterRow, index: number) => {
+const requestStepToggle = (
+  row: WeaponProficiencySkillMasterRow,
+  index: number
+) => {
   if (getRowProgress(row)[index]) {
     lockStep(row, index)
     return
@@ -192,7 +201,11 @@ const applyLock = (row: WeaponProficiencySkillMasterRow, index: number) => {
     row.values.length
   )
 
-  for (let currentIndex = index; currentIndex < rowProgress.length; currentIndex += 1) {
+  for (
+    let currentIndex = index;
+    currentIndex < rowProgress.length;
+    currentIndex += 1
+  ) {
     rowProgress[currentIndex] = false
   }
 
@@ -216,7 +229,9 @@ const pendingActionMessage = computed(() => {
   const label = `${row.weaponType} / ${formatSkillRowTitle(row)}`
 
   if (type === 'unlock') {
-    return `「${label}」の ${index + 1}段階目（大瓶 ${row.values[index]}個）を登録しますか？`
+    return `「${label}」の ${index + 1}段階目（大瓶 ${
+      row.values[index]
+    }個）は解放済みですか？ 解放済みであれば登録します。`
   }
 
   return `「${label}」の ${index + 1}段階目以降を解除しますか？`
@@ -274,14 +289,18 @@ const pendingActionMessage = computed(() => {
 
             <div class="proficiency-skill__summary-card">
               <span>{{ selectedWeaponDefinition.label }}</span>
-              <strong>{{ selectedWeaponSummary.unlockRate.toFixed(1) }}%</strong>
+              <strong
+                >{{ selectedWeaponSummary.unlockRate.toFixed(1) }}%</strong
+              >
               <div class="proficiency-skill__summary-note">
                 登録済み {{ selectedWeaponSummary.unlockedCount }} /
                 {{ selectedWeaponSummary.totalCount }}
               </div>
               <div class="proficiency-skill__summary-note">
                 残り大瓶
-                {{ selectedWeaponSummary.remainingBottleCount.toLocaleString() }}個
+                {{
+                  selectedWeaponSummary.remainingBottleCount.toLocaleString()
+                }}個
               </div>
               <div class="proficiency-skill__progress-track" aria-hidden="true">
                 <div
@@ -336,13 +355,16 @@ const pendingActionMessage = computed(() => {
                   type="button"
                   class="proficiency-skill-step"
                   :class="{
-                    'proficiency-skill-step--active': getRowProgress(row)[index],
+                    'proficiency-skill-step--active':
+                      getRowProgress(row)[index],
                     'proficiency-skill-step--locked':
-                      !getRowProgress(row)[index] && !canToggleStep(row.id, index),
+                      !getRowProgress(row)[index] &&
+                      !canToggleStep(row.id, index),
                   }"
                   :disabled="
                     !props.isEditMode ||
-                    (!getRowProgress(row)[index] && !canToggleStep(row.id, index))
+                    (!getRowProgress(row)[index] &&
+                      !canToggleStep(row.id, index))
                   "
                   @click="requestStepToggle(row, index)"
                 >
@@ -388,7 +410,8 @@ const pendingActionMessage = computed(() => {
                       'proficiency-skill-sheet__cell--active':
                         getRowProgress(row)[index],
                       'proficiency-skill-sheet__cell--disabled':
-                        !getRowProgress(row)[index] && !canToggleStep(row.id, index),
+                        !getRowProgress(row)[index] &&
+                        !canToggleStep(row.id, index),
                     }"
                   >
                     <label class="proficiency-skill-sheet__checkbox">
@@ -400,7 +423,9 @@ const pendingActionMessage = computed(() => {
                           (!getRowProgress(row)[index] &&
                             !canToggleStep(row.id, index))
                         "
-                        @update:modelValue="requestSheetToggle(row, index, $event)"
+                        @update:modelValue="
+                          requestSheetToggle(row, index, $event)
+                        "
                       />
                       <span>大瓶 {{ value }}</span>
                     </label>
@@ -442,7 +467,9 @@ const pendingActionMessage = computed(() => {
         />
         <Button
           type="button"
-          :label="pendingAction?.type === 'lock' ? '解除する' : '登録する'"
+          :label="
+            pendingAction?.type === 'lock' ? '解除する' : '解放済みとして登録'
+          "
           @click="applyPendingAction"
         />
       </div>
