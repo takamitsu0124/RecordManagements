@@ -50,7 +50,9 @@ const removeCandidate = (candidateId: string) => {
     return
   }
 
-  candidates.value = candidates.value.filter((candidate) => candidate.id !== candidateId)
+  candidates.value = candidates.value.filter(
+    (candidate) => candidate.id !== candidateId
+  )
 }
 
 const onSubmit = async () => {
@@ -71,7 +73,10 @@ const onSubmit = async () => {
 
   const hasInvalidCandidate = candidates.value.some((candidate) => {
     if (!candidate.startAt) return true
-    if (candidate.endAt && candidate.startAt.getTime() > candidate.endAt.getTime()) {
+    if (
+      candidate.endAt &&
+      candidate.startAt.getTime() > candidate.endAt.getTime()
+    ) {
       return true
     }
     return false
@@ -120,7 +125,7 @@ const onSubmit = async () => {
         icon="pi pi-calendar-plus"
       />
 
-      <Card>
+      <Card class="attendance-create-card">
         <template #content>
           <form class="attendance-create" @submit.prevent="onSubmit">
             <div class="attendance-create__grid">
@@ -131,7 +136,10 @@ const onSubmit = async () => {
 
               <div class="attendance-create__field">
                 <label>場所</label>
-                <InputText v-model="location" placeholder="例: Discord / 都内" />
+                <InputText
+                  v-model="location"
+                  placeholder="例: Discord / 都内"
+                />
               </div>
             </div>
 
@@ -256,6 +264,10 @@ const onSubmit = async () => {
 </template>
 
 <style lang="scss" scoped>
+.attendance-create-card {
+  padding: 24px;
+}
+
 .attendance-create {
   display: grid;
   gap: 18px;
@@ -322,6 +334,7 @@ const onSubmit = async () => {
 
   .attendance-create__footer {
     display: grid;
+    place-content: center;
   }
 }
 </style>
