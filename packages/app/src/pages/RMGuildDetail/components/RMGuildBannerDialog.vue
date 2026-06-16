@@ -172,8 +172,7 @@ watch(
 
 .guild-banner-dialog__image {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   background: #f8fafc;
 }
