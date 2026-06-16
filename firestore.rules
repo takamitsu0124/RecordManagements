@@ -180,6 +180,18 @@ service cloud.firestore {
 				data.updatedBy is string;
 		}
 
+		function hasValidBannerMasterData(data, bannerId) {
+			return data.id == bannerId &&
+				data.isActive is bool &&
+				hasValidOptionalTimestamp(data.startAt) &&
+				hasValidOptionalTimestamp(data.endAt) &&
+				data.imageUrl is string &&
+				data.createdAt is timestamp &&
+				data.updatedAt is timestamp &&
+				data.createdBy is string &&
+				data.updatedBy is string;
+		}
+
 		function preservesGuildCalendarEventIdentity() {
 			return request.resource.data.id == resource.data.id &&
 				request.resource.data.guildId == resource.data.guildId &&
@@ -478,6 +490,21 @@ service cloud.firestore {
 				]);
 
 			allow delete: if isSignedIn() && canManageGuild(resource.data.guildId);
+		}
+
+		match /banner_master/{bannerId} {
+			allow read: if isSignedIn();
+
+			allow create: if isAdmin() &&
+				hasValidBannerMasterData(request.resource.data, bannerId);
+
+			allow update: if isAdmin() &&
+				hasValidBannerMasterData(request.resource.data, bannerId) &&
+				request.resource.data.id == resource.data.id &&
+				request.resource.data.createdAt == resource.data.createdAt &&
+				request.resource.data.createdBy == resource.data.createdBy;
+
+			allow delete: if isAdmin();
 		}
 
 		match /attendance_events/{eventId} {

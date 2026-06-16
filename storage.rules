@@ -130,6 +130,11 @@ service firebase.storage {
 			allow read, write: if isSignedIn() && canReadPersonalUploads(userId);
 		}
 
+		match /banner_master/{bannerId}/{allPaths=**} {
+			allow read: if isSignedIn();
+			allow write: if isSignedIn() && isAdmin();
+		}
+
 		match /{allPaths=**} {
 			allow read, write: if false;
 		}
