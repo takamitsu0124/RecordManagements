@@ -10,8 +10,10 @@ import { storage } from '../config' // Firebase Storageインスタンスをイ�
  */
 export async function uploadFile(file: File, path: string, fileName?: string): Promise<string> {
   const fileRef = ref(storage, `${path}/${fileName || file.name}`)
-  console.log('Firebase Storage Upload Path:', fileRef.fullPath); // 追加
-  const snapshot = await uploadBytes(fileRef, file)
+  const snapshot = await uploadBytes(fileRef, file, {
+    cacheControl: 'public, max-age=31536000, immutable',
+    contentType: file.type,
+  })
   const downloadURL = await getDownloadURL(snapshot.ref)
   return downloadURL
 }

@@ -1,6 +1,8 @@
 import { getApps, initializeApp } from 'firebase-admin/app'
+import { getStorage } from 'firebase-admin/storage'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
-import { error as logError } from 'firebase-functions/logger'
+import { onObjectFinalized } from 'firebase-functions/v2/storage'
+import { error as logError, info as logInfo } from 'firebase-functions/logger'
 import { defineSecret } from 'firebase-functions/params'
 
 const discordWebhookUrl = defineSecret('DISCORD_WEBHOOK_URL')
@@ -110,6 +112,40 @@ export const sendDiscordMessage = onCall<
 
     return {
       ok: true
+    }
+  }
+)
+
+// Storageの帯域コスト対策: 手動アップロード(Firebase Console/gsutil)やアプリ経由の
+// アップロードなど、経路を問わず全ての新規オブジェクトにCache-Controlを強制する。
+// 既にmax-ageが設定済みのオブジェクトはスキップし、setMetadataはfinalizeイベントを
+// 再発火させないため無限ループにはならない。
+const DEFAULT_CACHE_CONTROL = 'public, max-age=31536000, immutable'
+
+export const normalizeUploadedObjectCacheControl = onObjectFinalized(
+  { region: 'asia-northeast1' },
+  async (event) => {
+    const { bucket: bucketName, name: objectName, cacheControl } = event.data
+
+    if (!objectName || cacheControl?.includes('max-age')) {
+      return
+    }
+
+    try {
+      await getStorage().bucket(bucketName).file(objectName).setMetadata({
+        cacheControl: DEFAULT_CACHE_CONTROL
+      })
+
+      logInfo('Applied default Cache-Control to uploaded object', {
+        bucket: bucketName,
+        object: objectName
+      })
+    } catch (error) {
+      logError('Failed to set Cache-Control on uploaded object', {
+        bucket: bucketName,
+        object: objectName,
+        error: error instanceof Error ? error.message : String(error)
+      })
     }
   }
 )

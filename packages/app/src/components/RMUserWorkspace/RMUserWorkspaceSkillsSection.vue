@@ -324,6 +324,7 @@ watch(
                   v-if="skill.image"
                   :src="skill.image"
                   alt=""
+                  loading="lazy"
                   class="skill-catalog-card__image"
                 />
                 <div v-else class="skill-catalog-card__placeholder">

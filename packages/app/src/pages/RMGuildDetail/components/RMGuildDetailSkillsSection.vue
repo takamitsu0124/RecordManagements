@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
@@ -91,6 +91,55 @@ const updateEquipmentTypeFilter = (value: string | null) =>
   })
 
 const isMemberSkillDialogVisible = ref(false)
+
+// デスクトップ表(ページング済み)とモバイル一覧を同時にDOMへ置くと、CSSで隠れている側の
+// <img>もブラウザが読み込んでしまい、Storageの帯域を二重に消費するためJSで排他表示する。
+const MOBILE_SKILL_LIST_BREAKPOINT = '(max-width: 767px)'
+const MOBILE_SKILL_LIST_PAGE_SIZE = 12
+
+const isMobileSkillListViewport = ref(false)
+let mobileSkillListMediaQuery: MediaQueryList | null = null
+const handleMobileSkillListMediaChange = (event: MediaQueryListEvent) => {
+  isMobileSkillListViewport.value = event.matches
+}
+
+onMounted(() => {
+  mobileSkillListMediaQuery = window.matchMedia(MOBILE_SKILL_LIST_BREAKPOINT)
+  isMobileSkillListViewport.value = mobileSkillListMediaQuery.matches
+  mobileSkillListMediaQuery.addEventListener(
+    'change',
+    handleMobileSkillListMediaChange
+  )
+})
+
+onBeforeUnmount(() => {
+  mobileSkillListMediaQuery?.removeEventListener(
+    'change',
+    handleMobileSkillListMediaChange
+  )
+})
+
+const mobileSkillListPage = ref(0)
+const mobileSkillListTotalPages = computed(() =>
+  Math.max(
+    1,
+    Math.ceil(props.filteredGuildSkillRows.length / MOBILE_SKILL_LIST_PAGE_SIZE)
+  )
+)
+const visibleMobileGuildSkillRows = computed(() => {
+  const start = mobileSkillListPage.value * MOBILE_SKILL_LIST_PAGE_SIZE
+  return props.filteredGuildSkillRows.slice(
+    start,
+    start + MOBILE_SKILL_LIST_PAGE_SIZE
+  )
+})
+
+watch(
+  () => props.filteredGuildSkillRows,
+  () => {
+    mobileSkillListPage.value = 0
+  }
+)
 </script>
 
 <template>
@@ -187,7 +236,10 @@ const isMemberSkillDialogVisible = ref(false)
         message="ギルド内メンバーのスキル登録が進むと、ここで横断検索できます。"
       />
       <template v-else>
-        <div class="guild-search-table-shell rm-mobile-scroll">
+        <div
+          v-if="!isMobileSkillListViewport"
+          class="guild-search-table-shell rm-mobile-scroll"
+        >
           <DataTable
             :value="filteredGuildSkillRows"
             paginator
@@ -229,6 +281,7 @@ const isMemberSkillDialogVisible = ref(false)
                     v-if="data.image"
                     :src="data.image"
                     alt="skill"
+                    loading="lazy"
                     class="guild-search-table__skill-image"
                   />
                   <div>
@@ -269,9 +322,9 @@ const isMemberSkillDialogVisible = ref(false)
           </DataTable>
         </div>
 
-        <div class="guild-skill-mobile-list">
+        <div v-else class="guild-skill-mobile-list">
           <div
-            v-for="row in filteredGuildSkillRows"
+            v-for="row in visibleMobileGuildSkillRows"
             :key="row.rowId"
             class="guild-skill-mobile-item"
           >
@@ -282,6 +335,7 @@ const isMemberSkillDialogVisible = ref(false)
                     v-if="row.image"
                     :src="row.image"
                     alt="skill"
+                    loading="lazy"
                     class="guild-skill-mobile-item__image"
                   />
                   <div>
@@ -315,6 +369,32 @@ const isMemberSkillDialogVisible = ref(false)
               <span v-if="row.characterName">対象: {{ row.characterName }}</span>
               <span>ID: {{ row.skillId }}</span>
             </div>
+          </div>
+
+          <div
+            v-if="filteredGuildSkillRows.length > MOBILE_SKILL_LIST_PAGE_SIZE"
+            class="guild-skill-mobile-list__pager"
+          >
+            <Button
+              icon="pi pi-angle-left"
+              text
+              rounded
+              severity="secondary"
+              :disabled="mobileSkillListPage === 0"
+              @click="mobileSkillListPage--"
+            />
+            <Tag
+              :value="`${mobileSkillListPage + 1} / ${mobileSkillListTotalPages}`"
+              severity="secondary"
+            />
+            <Button
+              icon="pi pi-angle-right"
+              text
+              rounded
+              severity="secondary"
+              :disabled="mobileSkillListPage >= mobileSkillListTotalPages - 1"
+              @click="mobileSkillListPage++"
+            />
           </div>
         </div>
       </template>
@@ -841,6 +921,14 @@ const isMemberSkillDialogVisible = ref(false)
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid #e2e8f0;
+}
+
+.guild-skill-mobile-list__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 0 2px;
 }
 
 @keyframes guild-summary-button-pulse {
