@@ -243,9 +243,7 @@ const editorTitle = computed(() =>
   isEditingExisting.value ? 'スキルマスターを編集' : 'スキルマスターを新規登録'
 )
 const editorDescription = computed(() =>
-  isEditingExisting.value
-    ? '一覧を確認しながら必要な項目だけ Drawer で更新できます。'
-    : '新規登録に必要な項目だけ Drawer で入力して保存できます。'
+  isEditingExisting.value ? '必要な項目だけ更新できます。' : '必要な項目だけ入力して保存できます。'
 )
 
 const resetForm = () => {
@@ -591,7 +589,7 @@ const importSkillMasterCsv = async () => {
             <RMPageHeader
               title="スキルマスター CSV インポート"
               subtitle="Admin が skill_master を一括反映するページです。"
-              description="CSV を解析して正規化・差分判定したあとに、新規登録または更新だけをまとめて反映できます。"
+              description="新規登録または更新のみをまとめて反映します（削除は不可）。"
               icon="pi pi-file-import"
             >
               <template #actions>
@@ -609,12 +607,10 @@ const importSkillMasterCsv = async () => {
             </RMPageHeader>
 
             <div class="rm-inline-note">
-              ヘッダーは
+              必須ヘッダー:
               <span class="skill-master-admin-code">{{
                 skillMasterCsvHeaderText
               }}</span>
-              を使用してください。UI
-              からは削除を行わず、新規登録と更新のみを反映します。
             </div>
 
             <div class="skill-master-admin-import-toolbar">
@@ -795,7 +791,6 @@ const importSkillMasterCsv = async () => {
             <RMPageHeader
               title="スキルマスター管理"
               :subtitle="skillCountLabel"
-              description="一覧を広く見ながら絞り込み、登録や更新が必要な時だけ Drawer で入力できます。"
               icon="pi pi-database"
             >
               <template #actions>
@@ -820,11 +815,6 @@ const importSkillMasterCsv = async () => {
                 </div>
               </template>
             </RMPageHeader>
-
-            <div class="rm-inline-note">
-              一覧から編集を開くと Drawer
-              に詳細フォームを表示します。長い入力欄はポップアップ側に寄せて、検索と一覧確認を優先しています。
-            </div>
 
             <div class="skill-master-admin-filter-row rm-filter-toolbar">
               <InputText

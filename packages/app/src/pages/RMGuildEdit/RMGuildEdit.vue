@@ -156,27 +156,20 @@ const onCancel = () => {
             <RMPageHeader
               title="ギルド情報編集"
               subtitle="公開情報と運用設定を更新"
-              description="見た目に関わる項目と共有設定をまとめて編集できます。迷う項目は今の値を確認しながら一つずつ更新してください。"
               icon="pi pi-pencil"
             />
-
-            <div class="rm-inline-note">
-              ギルド名・説明・ロゴはあとから何度でも更新できます。
-            </div>
 
             <RMInput
               v-model="guildName"
               label="ギルド名 *"
-              hint="ギルドの名称を入力してください"
               autocomplete="organization"
               :outline="true"
             />
 
             <RMInput
               v-model="guildDescription"
-              label="ギルド説明"
+              label="ギルド説明 (任意)"
               type="textarea"
-              hint="ギルドの説明を入力してください (任意)"
               :outline="true"
             />
 
@@ -195,14 +188,13 @@ const onCancel = () => {
               label="創設日"
               type="date"
               :date="true"
-              hint="ギルドの創設日を選択してください"
               :outline="true"
             />
 
             <div class="guild-logo-section">
               <div class="field-label">ギルドロゴ</div>
               <p class="guild-logo-section__help">
-                ロゴを変更すると、一覧や詳細画面の見分けがつきやすくなります。
+                一覧や詳細画面で表示されます。
               </p>
               <img
                 v-if="logoPreviewUrl"

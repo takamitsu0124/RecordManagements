@@ -345,3 +345,27 @@ img {
     padding-bottom: 42px;
   }
 }
+
+// ページ遷移アニメーション。<component :is="Component"> はレイアウトとは別コンポーネントの
+// ルート要素なので、scoped styleでは届かずグローバルに定義する必要がある。
+.rm-page-enter-active,
+.rm-page-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.rm-page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.rm-page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-page-enter-active,
+  .rm-page-leave-active {
+    transition: none;
+  }
+}

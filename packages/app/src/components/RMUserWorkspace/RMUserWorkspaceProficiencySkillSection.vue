@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Checkbox from 'primevue/checkbox'
@@ -18,14 +18,19 @@ import type {
   WeaponProficiencySkillWeaponKey,
 } from '@rm/types'
 import { notifyError } from 'src/composables/useAppNotifications'
+import RMSectionEdit from 'src/components/RMSectionEdit/RMSectionEdit.vue'
+import RMConfirmDialog from 'src/components/RMConfirmDialog/RMConfirmDialog.vue'
 
 const props = defineProps<{
   progress: WeaponProficiencySkillProgress
-  isEditMode: boolean
+  editing: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:progress', value: WeaponProficiencySkillProgress): void
+  (e: 'update:editing', value: boolean): void
+  (e: 'save'): void
+  (e: 'cancel'): void
 }>()
 
 const selectedWeaponKey = ref<WeaponProficiencySkillWeaponKey>('sword')
@@ -119,7 +124,7 @@ const ensureRowProgress = (
 }
 
 const canToggleStep = (rowId: string, index: number) => {
-  if (!props.isEditMode) return false
+  if (!props.editing) return false
 
   const row = selectedWeaponRowById.value.get(rowId)
   if (!row) return false
@@ -236,25 +241,109 @@ const pendingActionMessage = computed(() => {
 
   return `「${label}」の ${index + 1}段階目以降を解除しますか？`
 })
+
+// 一括登録モード: スキルの所持チェックと同様、タップごとの確認ポップアップを出さず、
+// 選択後にまとめて1回だけ確認して登録する。
+const isBulkMode = ref(false)
+const bulkSelection = ref<Set<string>>(new Set())
+const isBulkConfirmVisible = ref(false)
+
+const bulkKey = (
+  weaponKey: WeaponProficiencySkillWeaponKey,
+  rowId: string,
+  index: number
+) => `${weaponKey}::${rowId}::${index}`
+
+const isBulkSelected = (row: WeaponProficiencySkillMasterRow, index: number) =>
+  bulkSelection.value.has(bulkKey(row.weaponKey, row.id, index))
+
+const bulkSelectionCount = computed(() => bulkSelection.value.size)
+
+const canBulkSelectStep = (
+  row: WeaponProficiencySkillMasterRow,
+  index: number
+) => {
+  const rowProgress = getRowProgress(row)
+  if (rowProgress[index]) return false
+  if (index === 0) return true
+  if (rowProgress[index - 1]) return true
+
+  return isBulkSelected(row, index - 1)
+}
+
+const toggleBulkSelection = (
+  row: WeaponProficiencySkillMasterRow,
+  index: number
+) => {
+  const next = new Set(bulkSelection.value)
+  const key = bulkKey(row.weaponKey, row.id, index)
+
+  if (next.has(key)) {
+    for (let i = index; i < row.values.length; i += 1) {
+      next.delete(bulkKey(row.weaponKey, row.id, i))
+    }
+  } else {
+    if (!canBulkSelectStep(row, index)) return
+    next.add(key)
+  }
+
+  bulkSelection.value = next
+}
+
+const enterBulkMode = () => {
+  isBulkMode.value = true
+}
+
+const exitBulkMode = () => {
+  isBulkMode.value = false
+  bulkSelection.value = new Set()
+}
+
+const openBulkConfirm = () => {
+  if (bulkSelectionCount.value === 0) return
+  isBulkConfirmVisible.value = true
+}
+
+const bulkConfirmMessage = computed(
+  () => `選択した ${bulkSelectionCount.value}件の段階を登録します。よろしいですか？`
+)
+
+const applyBulkSelection = () => {
+  const next = cloneProgress(props.progress)
+
+  for (const key of bulkSelection.value) {
+    const [weaponKey, rowId, indexText] = key.split('::') as [
+      WeaponProficiencySkillWeaponKey,
+      string,
+      string
+    ]
+    const row = weaponProficiencySkillMasterRows.find(
+      (candidate) =>
+        candidate.weaponKey === weaponKey && candidate.id === rowId
+    )
+    if (!row) continue
+
+    const rowProgress = ensureRowProgress(next, weaponKey, rowId, row.values.length)
+    rowProgress[Number(indexText)] = true
+  }
+
+  emit('update:progress', normalizeWeaponProficiencySkillProgress(next))
+  isBulkConfirmVisible.value = false
+  exitBulkMode()
+}
+
+watch(
+  () => props.editing,
+  (next) => {
+    if (!next) exitBulkMode()
+  }
+)
 </script>
 
 <template>
   <Card class="proficiency-skill-card">
     <template #content>
       <div class="proficiency-skill">
-        <div class="proficiency-skill__header">
-          <div>
-            <div class="proficiency-skill__title">武器熟練度スキル</div>
-            <div class="proficiency-skill__subtitle">
-              武器ごとの大瓶解放率を、段階順を守って登録できます。
-            </div>
-          </div>
-          <Tag
-            :value="props.isEditMode ? '編集モード' : '閲覧モード'"
-            :severity="props.isEditMode ? 'contrast' : 'secondary'"
-          />
-        </div>
-
         <div class="proficiency-skill__toolbar">
           <div class="proficiency-skill__field">
             <label class="proficiency-skill__field-label">武器種</label>
@@ -312,13 +401,6 @@ const pendingActionMessage = computed(() => {
           </div>
         </div>
 
-        <div v-if="!props.isEditMode" class="proficiency-skill__mode-note">
-          編集モードに切り替えると登録できます。
-        </div>
-        <div v-else class="proficiency-skill__mode-note">
-          未登録の次段階は、直前の段階を登録すると選べるようになります。
-        </div>
-
         <div
           v-if="selectedWeaponRows.length === 0"
           class="proficiency-skill__empty-state"
@@ -326,7 +408,85 @@ const pendingActionMessage = computed(() => {
           この武器の熟練度スキル定義は未設定です。
         </div>
 
-        <template v-else>
+        <RMSectionEdit
+          v-else
+          :editing="editing"
+          :can-edit="true"
+          title="段階登録"
+          @update:editing="(value) => emit('update:editing', value)"
+          @cancel="emit('cancel')"
+          @save="emit('save')"
+        >
+          <template #footer-extra>
+            <div v-if="isBulkMode" class="proficiency-skill-bulk-bar">
+              <span class="proficiency-skill-bulk-bar__count">
+                {{ bulkSelectionCount }}件選択中
+              </span>
+              <Button
+                type="button"
+                label="まとめて登録する"
+                size="small"
+                :disabled="bulkSelectionCount === 0"
+                @click="openBulkConfirm"
+              />
+            </div>
+          </template>
+
+          <template #view>
+            <div class="proficiency-skill-mobile">
+              <div
+                v-for="row in selectedWeaponRows"
+                :key="row.id"
+                class="proficiency-skill-mobile__card"
+              >
+                <div class="proficiency-skill-mobile__head">
+                  <div>
+                    <div class="proficiency-skill-mobile__title">
+                      {{ formatSkillRowTitle(row) }}
+                    </div>
+                    <div class="proficiency-skill-mobile__meta">
+                      {{ row.weaponType }} / 必要Lv {{ row.requiredLevel }}
+                    </div>
+                  </div>
+                  <Tag
+                    :value="`${countUnlockedSteps(row)} / ${row.values.length}`"
+                    severity="info"
+                  />
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <template #edit>
+        <div class="proficiency-skill__mode-toolbar">
+          <div class="proficiency-skill__mode-note">
+            <template v-if="isBulkMode">
+              タップして選択し、まとめて登録できます。連続する段階のみ選択できます。
+            </template>
+            <template v-else>
+              未登録の次段階は、直前の段階を登録すると選べるようになります。
+            </template>
+          </div>
+          <Button
+            v-if="!isBulkMode"
+            type="button"
+            label="一括登録モード"
+            icon="pi pi-check-square"
+            text
+            size="small"
+            @click="enterBulkMode"
+          />
+          <Button
+            v-else
+            type="button"
+            label="通常モードに戻る"
+            text
+            size="small"
+            severity="secondary"
+            @click="exitBulkMode"
+          />
+        </div>
+
           <div class="proficiency-skill-mobile">
             <div
               v-for="row in selectedWeaponRows"
@@ -357,16 +517,30 @@ const pendingActionMessage = computed(() => {
                   :class="{
                     'proficiency-skill-step--active':
                       getRowProgress(row)[index],
-                    'proficiency-skill-step--locked':
+                    'proficiency-skill-step--bulk-selected':
+                      isBulkMode &&
                       !getRowProgress(row)[index] &&
-                      !canToggleStep(row.id, index),
+                      isBulkSelected(row, index),
+                    'proficiency-skill-step--locked': isBulkMode
+                      ? !getRowProgress(row)[index] &&
+                        !isBulkSelected(row, index) &&
+                        !canBulkSelectStep(row, index)
+                      : !getRowProgress(row)[index] &&
+                        !canToggleStep(row.id, index),
                   }"
                   :disabled="
-                    !props.isEditMode ||
-                    (!getRowProgress(row)[index] &&
-                      !canToggleStep(row.id, index))
+                    isBulkMode
+                      ? getRowProgress(row)[index] ||
+                        (!isBulkSelected(row, index) &&
+                          !canBulkSelectStep(row, index))
+                      : !getRowProgress(row)[index] &&
+                        !canToggleStep(row.id, index)
                   "
-                  @click="requestStepToggle(row, index)"
+                  @click="
+                    isBulkMode
+                      ? toggleBulkSelection(row, index)
+                      : requestStepToggle(row, index)
+                  "
                 >
                   <span>{{ index + 1 }}段階目</span>
                   <strong>大瓶 {{ value }}</strong>
@@ -409,22 +583,39 @@ const pendingActionMessage = computed(() => {
                     :class="{
                       'proficiency-skill-sheet__cell--active':
                         getRowProgress(row)[index],
-                      'proficiency-skill-sheet__cell--disabled':
+                      'proficiency-skill-sheet__cell--pending':
+                        isBulkMode &&
                         !getRowProgress(row)[index] &&
-                        !canToggleStep(row.id, index),
+                        isBulkSelected(row, index),
+                      'proficiency-skill-sheet__cell--disabled': isBulkMode
+                        ? !getRowProgress(row)[index] &&
+                          !isBulkSelected(row, index) &&
+                          !canBulkSelectStep(row, index)
+                        : !getRowProgress(row)[index] &&
+                          !canToggleStep(row.id, index),
                     }"
                   >
                     <label class="proficiency-skill-sheet__checkbox">
                       <Checkbox
-                        :modelValue="getRowProgress(row)[index]"
+                        :modelValue="
+                          isBulkMode
+                            ? getRowProgress(row)[index] ||
+                              isBulkSelected(row, index)
+                            : getRowProgress(row)[index]
+                        "
                         binary
                         :disabled="
-                          !props.isEditMode ||
-                          (!getRowProgress(row)[index] &&
-                            !canToggleStep(row.id, index))
+                          isBulkMode
+                            ? getRowProgress(row)[index] ||
+                              (!isBulkSelected(row, index) &&
+                                !canBulkSelectStep(row, index))
+                            : !getRowProgress(row)[index] &&
+                              !canToggleStep(row.id, index)
                         "
                         @update:modelValue="
-                          requestSheetToggle(row, index, $event)
+                          isBulkMode
+                            ? toggleBulkSelection(row, index)
+                            : requestSheetToggle(row, index, $event)
                         "
                       />
                       <span>大瓶 {{ value }}</span>
@@ -434,7 +625,8 @@ const pendingActionMessage = computed(() => {
               </tbody>
             </table>
           </div>
-        </template>
+          </template>
+        </RMSectionEdit>
       </div>
     </template>
   </Card>
@@ -475,32 +667,22 @@ const pendingActionMessage = computed(() => {
       </div>
     </template>
   </Dialog>
+
+  <RMConfirmDialog
+    :visible="isBulkConfirmVisible"
+    title="一括登録の確認"
+    :message="bulkConfirmMessage"
+    confirm-label="登録する"
+    @update:visible="(value) => (isBulkConfirmVisible = value)"
+    @cancel="isBulkConfirmVisible = false"
+    @confirm="applyBulkSelection"
+  />
 </template>
 
 <style lang="scss" scoped>
 .proficiency-skill {
   display: grid;
   gap: 16px;
-}
-
-.proficiency-skill__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.proficiency-skill__title {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #1f2937;
-}
-
-.proficiency-skill__subtitle {
-  margin-top: 4px;
-  color: #64748b;
-  line-height: 1.6;
 }
 
 .proficiency-skill__toolbar {
@@ -567,6 +749,14 @@ const pendingActionMessage = computed(() => {
   background: linear-gradient(90deg, #38bdf8 0%, #2563eb 100%);
 }
 
+.proficiency-skill__mode-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .proficiency-skill__mode-note,
 .proficiency-skill__empty-state {
   padding: 12px 14px;
@@ -575,6 +765,8 @@ const pendingActionMessage = computed(() => {
   background: #f8fafc;
   color: #475569;
   line-height: 1.7;
+  flex: 1;
+  min-width: 220px;
 }
 
 .proficiency-skill-mobile {
@@ -653,6 +845,26 @@ const pendingActionMessage = computed(() => {
   opacity: 0.55;
 }
 
+.proficiency-skill-step--bulk-selected {
+  border-color: #f59e0b;
+  background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+  color: #92400e;
+}
+
+.proficiency-skill-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.proficiency-skill-bulk-bar__count {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #92400e;
+  white-space: nowrap;
+}
+
 .proficiency-skill-sheet {
   display: none;
 }
@@ -710,6 +922,15 @@ const pendingActionMessage = computed(() => {
 
 .proficiency-skill-sheet__cell--active {
   background: #eff6ff;
+}
+
+.proficiency-skill-sheet__cell--pending {
+  background: #fffbeb;
+}
+
+.proficiency-skill-sheet__cell--pending :deep(.p-checkbox-box) {
+  border-color: #f59e0b;
+  background: #fef3c7;
 }
 
 .proficiency-skill-sheet__checkbox {

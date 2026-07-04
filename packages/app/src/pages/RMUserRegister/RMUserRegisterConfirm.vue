@@ -64,12 +64,11 @@ const registerSave = async () => {
           <RMPageHeader
             title="登録内容の確認"
             subtitle="作成前に内容を最終確認"
-            description="メールアドレス、表示名、所属ギルド、権限を確認してから登録を実行します。"
             icon="pi pi-check-square"
           />
 
           <div class="rm-inline-note">
-            登録を実行すると新しいユーザーが作成され、完了後はホームへ戻ります。
+            登録完了後はホームへ戻ります。
           </div>
 
           <div class="user-register-confirm-list">

@@ -6,7 +6,6 @@ import type { OwnedSkillRow } from './types'
 
 const props = withDefaults(
   defineProps<{
-    isEditMode: boolean
     ownedSkillRows: OwnedSkillRow[]
     showHeader?: boolean
     showSkillActions?: boolean
@@ -23,10 +22,8 @@ const emit = defineEmits<{
   (e: 'remove-skill', skillId: string): void
 }>()
 
-const shouldShowHeader = computed(() => props.showHeader && props.isEditMode)
-const shouldShowSkillActions = computed(
-  () => props.showSkillActions && props.isEditMode
-)
+const shouldShowHeader = computed(() => props.showHeader)
+const shouldShowSkillActions = computed(() => props.showSkillActions)
 const shouldShowActionHint = computed(
   () => props.showActionHint && shouldShowSkillActions.value
 )

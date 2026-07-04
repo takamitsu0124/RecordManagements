@@ -75,7 +75,6 @@ onMounted(() => {
       <RMPageHeader
         title="出欠確認"
         subtitle="公開URL付きの調整イベントを個人で管理できます。"
-        description="作成したイベント一覧、公開URLコピー、管理画面への導線を 1 画面にまとめています。"
         icon="pi pi-users"
       >
         <template #actions>

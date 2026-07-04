@@ -129,14 +129,12 @@ const statusSeverity: Record<
 const selectedDayGuideItems = [
   {
     title: '自分の回答を更新する',
-    description:
-      '参加可否とメモを選んで、その日だけを迷わず保存できます。',
+    description: '参加可否とメモを選んで保存します。',
     targetId: 'schedule-answer',
   },
   {
     title: '集計内訳を見る',
-    description:
-      '参加可・未定・参加不可・未回答をメンバー単位でそのまま確認できます。',
+    description: 'メンバーごとの回答状況を確認します。',
     targetId: 'schedule-breakdown',
   },
 ]
@@ -502,18 +500,18 @@ const getScheduleStatusLabel = (
 
 const pageNotice = computed(() => {
   if (canEditOwnResponse.value) {
-    return '日を選ぶと自分の回答を更新できます。集計とメンバー内訳は全員分を即時に見比べられます。'
+    return ''
   }
 
-  return 'この画面は閲覧できますが、回答入力は承認済みギルドメンバー本人だけに限定されています。'
+  return '回答入力は承認済みギルドメンバー本人だけに限定されています。'
 })
 
 const managerNotice = computed(() => {
-  if (!canManageSchedule.value) {
-    return 'Guild Admin 以上は集計を見ながら日ごとの状況確認に使えます。'
+  if (canManageSchedule.value) {
+    return 'Admin / Guild Admin も他人の回答は上書きできません。'
   }
 
-  return 'Admin / Guild Admin も他人の回答は上書きせず、閲覧と運用判断に集中できる設計です。'
+  return ''
 })
 
 const upsertLocalScheduleResponse = (response: GuildScheduleResponse) => {
@@ -782,7 +780,6 @@ onBeforeUnmount(() => {
         <RMPageHeader
           :title="`${guildDetail.guildName} の日程調整`"
           :subtitle="formatMonthLabel(currentMonth)"
-          description="日単位の回答をメンバーごとに集め、参加可・未定・参加不可の集計と内訳を同じ画面で確認できます。"
           icon="pi pi-calendar-plus"
         >
           <template #actions>
@@ -802,11 +799,17 @@ onBeforeUnmount(() => {
           </template>
         </RMPageHeader>
 
-        <div class="schedule-notice-grid">
-          <div class="schedule-notice-card schedule-notice-card--primary">
+        <div
+          v-if="pageNotice || managerNotice"
+          class="schedule-notice-grid"
+        >
+          <div
+            v-if="pageNotice"
+            class="schedule-notice-card schedule-notice-card--primary"
+          >
             {{ pageNotice }}
           </div>
-          <div class="schedule-notice-card">
+          <div v-if="managerNotice" class="schedule-notice-card">
             {{ managerNotice }}
           </div>
         </div>
@@ -869,9 +872,6 @@ onBeforeUnmount(() => {
                       <div>
                         <div class="schedule-panel-header__title">
                           月間集計カレンダー
-                        </div>
-                        <div class="schedule-panel-header__subtitle">
-                          日を選ぶとポップアップで自分の回答編集とメンバー内訳を確認できます。
                         </div>
                       </div>
                       <div class="schedule-panel-header__actions">
@@ -1024,9 +1024,6 @@ onBeforeUnmount(() => {
             <div class="schedule-panel-header">
               <div>
                 <div class="schedule-panel-header__title">日別一覧</div>
-                <div class="schedule-panel-header__subtitle">
-                  表形式でも日ごとの集計を見比べられ、日付を押すと同じ詳細ポップアップを開けます。
-                </div>
               </div>
             </div>
           </template>
@@ -1165,12 +1162,6 @@ onBeforeUnmount(() => {
                 <div class="schedule-dialog-header__title">
                   {{ selectedDateLabel }} の詳細
                 </div>
-                <div
-                  v-if="!isCompactMobile"
-                  class="schedule-dialog-header__subtitle"
-                >
-                  自分の回答更新と当日の集計確認を同じポップアップで行えます。
-                </div>
               </div>
               <div class="schedule-dialog-header__meta">
                 <Tag :value="selectedResponseRateText" severity="contrast" />
@@ -1199,7 +1190,7 @@ onBeforeUnmount(() => {
             <RMFlowGuide
               v-if="!isCompactMobile"
               title="この日の確認フロー"
-              description="まず自分の参加可否を更新し、そのまま集計内訳を見ると判断しやすくなります。"
+              description="参加可否の更新と集計内訳の確認をこの画面で行えます。"
               :items="selectedDayGuideItems"
             />
 

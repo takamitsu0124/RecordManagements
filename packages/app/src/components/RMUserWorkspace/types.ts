@@ -8,16 +8,6 @@ import {
   defaultWeaponProficiencySkillProgress,
 } from '@rm/types'
 
-export type ImageItem = {
-  id: string
-  previewUrl: string
-  persistedUrl: string | null
-  file: File | null
-  objectUrl: string | null
-  isNew: boolean
-  label: string
-}
-
 export type OwnedSkillRow = OwnedSkill & {
   index: number
   name: string

@@ -121,7 +121,6 @@ const onSubmit = async () => {
       <RMPageHeader
         title="出欠確認を作成"
         subtitle="公開URLを共有して回答と集計を集められます。"
-        description="候補日時を1件以上登録し、必要なら回答締切も設定して保存してください。"
         icon="pi pi-calendar-plus"
       />
 

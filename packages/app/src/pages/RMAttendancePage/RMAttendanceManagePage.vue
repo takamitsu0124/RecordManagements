@@ -9,6 +9,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import type { AttendanceEvent, AttendanceResponse } from '@rm/types'
 import { globalLoginUserData } from 'src/boot/main'
+import RMConfirmDialog from 'src/components/RMConfirmDialog/RMConfirmDialog.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
@@ -95,7 +96,6 @@ const copyPublicUrl = async () => {
 
 const onCloseEvent = async () => {
   if (!event.value || event.value.isClosed) return
-  if (!window.confirm('この出欠確認を締め切りますか？')) return
 
   isClosing.value = true
 
@@ -113,7 +113,6 @@ const onCloseEvent = async () => {
 
 const onDeleteEvent = async () => {
   if (!event.value) return
-  if (!window.confirm('この出欠確認を削除しますか？')) return
 
   isDeleting.value = true
 
@@ -129,6 +128,51 @@ const onDeleteEvent = async () => {
   }
 }
 
+type PendingConfirmAction = 'close' | 'delete' | null
+const pendingConfirmAction = ref<PendingConfirmAction>(null)
+
+const confirmDialogConfig = computed(() => {
+  if (pendingConfirmAction.value === 'close') {
+    return {
+      title: '出欠確認を締め切る',
+      message:
+        'この出欠確認を締め切りますか？締切後は新しい回答を受け付けなくなります。',
+      confirmLabel: '締め切る',
+      severity: 'warn' as const,
+      loading: isClosing.value,
+    }
+  }
+  if (pendingConfirmAction.value === 'delete') {
+    return {
+      title: '出欠確認を削除',
+      message: 'この出欠確認を削除しますか？この操作は取り消せません。',
+      confirmLabel: '削除する',
+      severity: 'danger' as const,
+      loading: isDeleting.value,
+    }
+  }
+  return null
+})
+
+const requestCloseEvent = () => {
+  if (!event.value || event.value.isClosed) return
+  pendingConfirmAction.value = 'close'
+}
+
+const requestDeleteEvent = () => {
+  if (!event.value) return
+  pendingConfirmAction.value = 'delete'
+}
+
+const runPendingConfirmAction = async () => {
+  if (pendingConfirmAction.value === 'close') {
+    await onCloseEvent()
+  } else if (pendingConfirmAction.value === 'delete') {
+    await onDeleteEvent()
+  }
+  pendingConfirmAction.value = null
+}
+
 onMounted(() => {
   void loadPage()
 })
@@ -140,7 +184,6 @@ onMounted(() => {
       <RMPageHeader
         title="出欠確認の管理"
         subtitle="候補ごとの集計と回答一覧を確認できます。"
-        description="公開URLコピー、締切、削除までこの画面でまとめて行えます。"
         icon="pi pi-chart-bar"
       >
         <template #actions>
@@ -194,7 +237,7 @@ onMounted(() => {
                   severity="warn"
                   :disabled="event.isClosed"
                   :loading="isClosing"
-                  @click="onCloseEvent"
+                  @click="requestCloseEvent"
                 />
                 <Button
                   label="削除"
@@ -202,7 +245,7 @@ onMounted(() => {
                   severity="danger"
                   outlined
                   :loading="isDeleting"
-                  @click="onDeleteEvent"
+                  @click="requestDeleteEvent"
                 />
               </div>
             </div>
@@ -265,6 +308,18 @@ onMounted(() => {
           </template>
         </Card>
       </template>
+
+      <RMConfirmDialog
+        :visible="!!confirmDialogConfig"
+        :title="confirmDialogConfig?.title"
+        :message="confirmDialogConfig?.message ?? ''"
+        :confirm-label="confirmDialogConfig?.confirmLabel"
+        :severity="confirmDialogConfig?.severity"
+        :loading="confirmDialogConfig?.loading"
+        @update:visible="(value) => { if (!value) pendingConfirmAction = null }"
+        @cancel="pendingConfirmAction = null"
+        @confirm="runPendingConfirmAction"
+      />
     </div>
   </div>
 </template>

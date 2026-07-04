@@ -315,7 +315,7 @@ const resetRegisterForm = () => {
             <RMPageHeader
               title="ユーザー CSV インポート"
               subtitle="Admin 専用"
-              description="CSV を選択すると行ごとの検証結果を表示し、問題がない行だけをまとめて登録できます。"
+              description="問題がない行だけをまとめて登録できます。"
               icon="pi pi-file-import"
             >
               <template #actions>
@@ -450,12 +450,11 @@ const resetRegisterForm = () => {
             <RMPageHeader
               title="ユーザー登録"
               subtitle="Admin 専用"
-              description="メールアドレス、表示名、所属ギルド、権限を確認しながら登録内容を作成します。"
               icon="pi pi-user-plus"
             />
 
             <div class="rm-inline-note">
-              この画面では入力内容を整えます。実際の登録実行は次の確認画面で行います。
+              実際の登録実行は次の確認画面で行います。
             </div>
 
             <div class="rm-form-grid rm-form-grid--two">

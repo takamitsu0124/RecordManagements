@@ -166,7 +166,6 @@ onMounted(() => {
       <RMPageHeader
         title="出欠回答"
         subtitle="公開URLを知っている人なら回答と集計を確認できます。"
-        description="候補ごとの現在の件数を見ながら、そのまま回答を送信できます。"
         icon="pi pi-check-circle"
         centered
       />

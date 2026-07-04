@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import Button from 'primevue/button'
 import Dropdown from 'primevue/dropdown'
 import Panel from 'primevue/panel'
@@ -8,12 +9,12 @@ import type { AppRole } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMIcon from 'src/components/RMIcon/RMIcon.vue'
+import RMSectionEdit from 'src/components/RMSectionEdit/RMSectionEdit.vue'
 import type { GuildUserRow } from '../types'
 
 const props = defineProps<{
   approvedMembers: GuildUserRow[]
   pendingMembers: GuildUserRow[]
-  isEditMode: boolean
   canManageGuildMembers: boolean
   isMemberLoading: boolean
   currentUserId: string
@@ -39,6 +40,25 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
     ...props.roleDrafts,
     [uid]: role,
   })
+}
+
+// ロール変更フォームは一度に1人分だけインラインで開く(page-wide編集モードを廃止した代わり)
+const editingRoleUid = ref<string | null>(null)
+
+const isRoleEditing = (uid: string) => editingRoleUid.value === uid
+
+const startRoleEdit = (member: GuildUserRow) => {
+  editingRoleUid.value = member.uid
+}
+
+const cancelRoleEdit = (member: GuildUserRow) => {
+  updateRoleDraft(member.uid, member.role)
+  editingRoleUid.value = null
+}
+
+const saveRoleEdit = (member: GuildUserRow) => {
+  emit('save-role', member)
+  editingRoleUid.value = null
 }
 </script>
 
@@ -68,7 +88,7 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
           v-for="member in approvedMembers"
           :key="member.uid"
           class="guild-member-item"
-          :class="{ 'guild-member-item--editable': isEditMode }"
+          :class="{ 'guild-member-item--editable': canManageGuildMembers }"
         >
           <div class="guild-member-item__main">
             <div class="guild-member-item__identity">
@@ -93,17 +113,10 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
                     />
                   </div>
                 </div>
-                <div class="guild-member-item__subtext">
-                  {{
-                    isEditMode && canManageGuildMembers
-                      ? '管理モード中は、このメンバーのスキル・熟練度管理画面へ進めます。'
-                      : '承認済みメンバーとして運用対象に含まれています。'
-                  }}
-                </div>
               </div>
             </div>
             <Button
-              v-if="isEditMode && canManageGuildMembers"
+              v-if="canManageGuildMembers"
               label="スキル・熟練度を編集"
               outlined
               severity="contrast"
@@ -116,25 +129,28 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
             v-if="canManageGuildMembers"
             class="guild-member-item__management"
           >
-            <Dropdown
-              :modelValue="roleDrafts[member.uid]"
-              :options="roleOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="ロールを選択"
-              class="guild-member-item__dropdown"
-              :disabled="!canChangeRole(member)"
-              @update:modelValue="updateRoleDraft(member.uid, $event)"
-            />
-            <RMButton
-              label="権限を保存"
-              color="primary"
-              width="140px"
-              :isDisable="
-                !canChangeRole(member) || roleDrafts[member.uid] === member.role
-              "
-              @click="emit('save-role', member)"
-            />
+            <RMSectionEdit
+              :editing="isRoleEditing(member.uid)"
+              :can-edit="canChangeRole(member)"
+              size="row"
+              save-label="権限を保存"
+              :save-disabled="roleDrafts[member.uid] === member.role"
+              @update:editing="(value) => (value ? startRoleEdit(member) : cancelRoleEdit(member))"
+              @cancel="cancelRoleEdit(member)"
+              @save="saveRoleEdit(member)"
+            >
+              <template #edit>
+                <Dropdown
+                  :modelValue="roleDrafts[member.uid]"
+                  :options="roleOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="ロールを選択"
+                  class="guild-member-item__dropdown"
+                  @update:modelValue="updateRoleDraft(member.uid, $event)"
+                />
+              </template>
+            </RMSectionEdit>
             <RMButton
               label="承認解除"
               flat
@@ -199,33 +215,33 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
                     />
                   </div>
                 </div>
-                <div class="guild-member-item__subtext">
-                  ロールを確認してから承認すると、そのまま運用対象に追加されます。
-                </div>
               </div>
             </div>
           </div>
 
           <div class="guild-member-item__management">
-            <Dropdown
-              :modelValue="roleDrafts[member.uid]"
-              :options="roleOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="ロールを選択"
-              class="guild-member-item__dropdown"
-              :disabled="!canChangeRole(member)"
-              @update:modelValue="updateRoleDraft(member.uid, $event)"
-            />
-            <RMButton
-              label="権限を保存"
-              color="primary"
-              width="140px"
-              :isDisable="
-                !canChangeRole(member) || roleDrafts[member.uid] === member.role
-              "
-              @click="emit('save-role', member)"
-            />
+            <RMSectionEdit
+              :editing="isRoleEditing(member.uid)"
+              :can-edit="canChangeRole(member)"
+              size="row"
+              save-label="権限を保存"
+              :save-disabled="roleDrafts[member.uid] === member.role"
+              @update:editing="(value) => (value ? startRoleEdit(member) : cancelRoleEdit(member))"
+              @cancel="cancelRoleEdit(member)"
+              @save="saveRoleEdit(member)"
+            >
+              <template #edit>
+                <Dropdown
+                  :modelValue="roleDrafts[member.uid]"
+                  :options="roleOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="ロールを選択"
+                  class="guild-member-item__dropdown"
+                  @update:modelValue="updateRoleDraft(member.uid, $event)"
+                />
+              </template>
+            </RMSectionEdit>
             <RMButton
               label="承認"
               color="primary"
@@ -378,12 +394,6 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
 .guild-member-item__name {
   font-weight: 700;
   color: #1f2937;
-}
-
-.guild-member-item__subtext {
-  margin-top: 8px;
-  color: #64748b;
-  line-height: 1.6;
 }
 
 .guild-member-item__link {

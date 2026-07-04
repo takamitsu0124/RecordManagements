@@ -88,7 +88,6 @@ const onCancel = () => {
             <RMPageHeader
               title="ギルド登録"
               subtitle="最初に必要な情報だけ入力"
-              description="まずはギルド名があれば作成できます。説明はあとから編集できるので、迷う項目は空欄のままでも問題ありません。"
               icon="pi pi-building"
             />
 
@@ -99,16 +98,14 @@ const onCancel = () => {
             <RMInput
               v-model="guildName"
               label="ギルド名 *"
-              hint="ギルドの名称を入力してください"
               autocomplete="organization"
               shadow
             />
 
             <RMInput
               v-model="guildDescription"
-              label="ギルド説明"
+              label="ギルド説明 (任意)"
               type="textarea"
-              hint="ギルドの説明を入力してください (任意)"
               shadow
             />
 
