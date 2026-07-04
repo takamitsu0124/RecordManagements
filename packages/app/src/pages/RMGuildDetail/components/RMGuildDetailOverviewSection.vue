@@ -219,10 +219,6 @@ defineProps<{
   border-color: #c4b5fd;
 }
 
-.guild-summary-card--mode {
-  border-color: #dbeafe;
-}
-
 .guild-summary-card--progress {
   border-color: #93c5fd;
 }

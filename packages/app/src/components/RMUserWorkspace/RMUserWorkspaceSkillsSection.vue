@@ -2,12 +2,12 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import Divider from 'primevue/divider'
 import Paginator from 'primevue/paginator'
 import Tag from 'primevue/tag'
 import Tooltip from 'primevue/tooltip'
 import type { SkillMaster } from '@rm/types'
 import RMInput from 'src/components/RMInput/RMInput.vue'
+import RMSectionEdit from 'src/components/RMSectionEdit/RMSectionEdit.vue'
 import RMUserWorkspaceOwnedSkillList from './RMUserWorkspaceOwnedSkillList.vue'
 import type {
   OwnedSkillRow,
@@ -16,7 +16,7 @@ import type {
 } from './types'
 
 const props = defineProps<{
-  isEditMode: boolean
+  editing: boolean
   ownedSkillRows: OwnedSkillRow[]
   filteredSkillCatalogRows: SkillCatalogRow[]
   visibleSkillCatalogRows: SkillCatalogRow[]
@@ -39,6 +39,9 @@ const emit = defineEmits<{
   (e: 'toggle-skill', skill: SkillMaster): void
   (e: 'remove-skill', skillId: string): void
   (e: 'reset-filters'): void
+  (e: 'update:editing', value: boolean): void
+  (e: 'save'): void
+  (e: 'cancel'): void
 }>()
 
 const skillCatalogQueryModel = computed({
@@ -143,30 +146,38 @@ watch(
   <Card class="user-workspace-card">
     <template #content>
       <div class="user-workspace-section">
-        <div class="user-workspace-section__header">
-          <div>
-            <div class="rm-section-title">所持スキル</div>
-            <div class="user-workspace-section__description">
-              編集モードでは一覧を見ながら所持スキルをチェックし、不要なスキルもすぐ解除できます。
+        <RMSectionEdit
+          :editing="editing"
+          :can-edit="true"
+          @update:editing="(value) => emit('update:editing', value)"
+          @cancel="emit('cancel')"
+          @save="emit('save')"
+        >
+          <template #header>
+            <div class="workspace-section-heading">
+              <span class="rm-section-title">所持スキル</span>
+              <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
             </div>
-          </div>
-          <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
-        </div>
+          </template>
 
-        <Divider />
+          <template #view>
+            <div v-if="ownedSkillRows.length === 0" class="user-workspace-empty">
+              まだ所持スキルは登録されていません。
+            </div>
+            <div v-else class="owned-skill-list">
+              <RMUserWorkspaceOwnedSkillList
+                :ownedSkillRows="ownedSkillRows"
+                :show-skill-actions="false"
+                :show-action-hint="false"
+              />
+            </div>
+          </template>
 
-        <div v-if="isEditMode" class="skill-checker">
+          <template #edit>
+        <div class="skill-checker">
           <div class="skill-checker__intro">
-            <div class="skill-checker__title">一覧からチェック</div>
-            <p class="skill-checker__description">
-              持っているスキルをタップすると追加、もう一度タップすると解除できます。追加済みの内容は下の一覧やチェック済み Drawer からいつでも確認できます。
-            </p>
-            <div class="skill-checker__tap-guide">
-              <i class="pi pi-chevron-right" aria-hidden="true" />
-              <span
-                >スキルレコードのカードをタップしてチェック、もう一度で解除できます。</span
-              >
-            </div>
+            <i class="pi pi-chevron-right" aria-hidden="true" />
+            <span>タップしてチェック、もう一度タップで解除できます。</span>
           </div>
 
           <RMInput
@@ -433,21 +444,18 @@ watch(
         </div>
 
         <div v-if="ownedSkillRows.length === 0" class="user-workspace-empty">
-          {{
-            isEditMode
-              ? 'まだ所持スキルは選ばれていません。上の一覧から持っているスキルをチェックしてください。'
-              : 'まだ所持スキルは登録されていません。'
-          }}
+          まだ所持スキルは選ばれていません。上の一覧から持っているスキルをチェックしてください。
         </div>
 
         <div v-else class="owned-skill-list">
           <RMUserWorkspaceOwnedSkillList
-            :isEditMode="isEditMode"
             :ownedSkillRows="ownedSkillRows"
-            :show-header="isEditMode"
+            show-header
             @remove-skill="emit('remove-skill', $event)"
           />
         </div>
+          </template>
+        </RMSectionEdit>
       </div>
     </template>
   </Card>
@@ -466,17 +474,10 @@ watch(
   gap: 16px;
 }
 
-.user-workspace-section__header {
+.workspace-section-heading {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.user-workspace-section__description {
-  margin-top: 6px;
-  color: #64748b;
-  line-height: 1.7;
+  align-items: center;
+  gap: 10px;
 }
 
 .user-workspace-field__label {
@@ -500,26 +501,13 @@ watch(
   gap: 14px;
 }
 
-.skill-checker__intro {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.skill-checker__title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #334155;
-}
-
-.skill-checker__description,
 .skill-checker__help {
   margin: 0;
   color: #64748b;
   line-height: 1.6;
 }
 
-.skill-checker__tap-guide {
+.skill-checker__intro {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -534,7 +522,7 @@ watch(
   font-weight: 700;
 }
 
-.skill-checker__tap-guide .pi {
+.skill-checker__intro .pi {
   font-size: 0.9rem;
   animation: skill-checker-tap-guide-bounce 1.5s ease-in-out infinite;
 }
@@ -856,7 +844,7 @@ watch(
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skill-checker__tap-guide .pi {
+  .skill-checker__intro .pi {
     animation: none;
   }
 

@@ -1,6 +1,10 @@
 <template>
   <div class="main-layout-shell">
-    <router-view />
+    <router-view v-slot="{ Component, route }">
+      <Transition name="rm-page" mode="out-in">
+        <component :is="Component" :key="route.fullPath" />
+      </Transition>
+    </router-view>
   </div>
 </template>
 

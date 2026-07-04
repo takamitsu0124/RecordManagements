@@ -352,18 +352,6 @@ const calendarRoleLabel = computed(() => {
   return 'Member'
 })
 
-const calendarHintText = computed(() => {
-  if (calendarViewport.value === 'mobile') {
-    return 'スマホでも月表示を主役にしつつ、ツールバーだけを圧縮して PC と近い見え方を保っています。'
-  }
-
-  if (calendarViewport.value === 'tablet') {
-    return 'タブレットでは月表示を保ちつつ、ツールバーが折り返しても操作しやすい幅に調整しています。'
-  }
-
-  return 'PC では月表示と週リストを切り替えながら、広い表示領域で共有予定を確認できます。'
-})
-
 const loadGuildDetail = async () => {
   if (!guildId.value) {
     guildDetail.value = null
@@ -658,7 +646,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
       <RMPageHeader
         title="イベントカレンダー"
         subtitle="ギルドの共有予定をアプリ内で管理"
-        description="Google 連携なしで、所属ギルドの共有予定を FullCalendar 上で確認できます。Guild Admin / Admin は予定の追加・更新・削除もこの画面で行えます。"
+        description="Guild Admin / Admin は予定の追加・更新・削除もこの画面で行えます。"
         icon="pi pi-calendar"
       >
         <template #actions>
@@ -728,9 +716,6 @@ const calendarOptions = computed<CalendarOptions>(() => ({
                   class="calendar-frame"
                   :class="`calendar-frame--${calendarViewport}`"
                 >
-                  <p class="calendar-frame__hint">
-                    {{ calendarHintText }}
-                  </p>
                   <FullCalendar
                     :key="calendarLayoutKey"
                     :options="calendarOptions"
@@ -854,13 +839,6 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   gap: 12px;
   width: 100%;
   min-width: 0;
-}
-
-.calendar-frame__hint {
-  margin: 0;
-  color: var(--rm-text-soft);
-  font-size: 0.92rem;
-  line-height: 1.6;
 }
 
 .calendar-frame :deep(.fc) {
@@ -1073,10 +1051,6 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 
   .calendar-frame {
     overflow: hidden;
-  }
-
-  .calendar-frame__hint {
-    font-size: 0.86rem;
   }
 
   .calendar-frame :deep(.fc) {

@@ -345,3 +345,43 @@ img {
     padding-bottom: 42px;
   }
 }
+
+// ページ遷移アニメーション。<component :is="Component"> はレイアウトとは別コンポーネントの
+// ルート要素なので、scoped styleでは届かずグローバルに定義する必要がある。
+.rm-page-enter-active,
+.rm-page-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.rm-page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.rm-page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-page-enter-active,
+  .rm-page-leave-active {
+    transition: none;
+  }
+}
+
+// RMSectionEditの固定保存フッター(bodyへteleportされる)と、左下固定のスクロール
+// トップボタンが被らないよう、フッター表示中はスクロールトップボタンを上にずらす。
+.rm-scroll-top-button {
+  transition: transform 0.2s ease;
+}
+
+body:has(.rm-section-edit__sticky-footer) .rm-scroll-top-button {
+  transform: translateY(-76px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-scroll-top-button {
+    transition: none;
+  }
+}

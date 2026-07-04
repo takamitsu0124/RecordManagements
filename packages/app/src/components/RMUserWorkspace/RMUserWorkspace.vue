@@ -1,18 +1,9 @@
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import Button from 'primevue/button'
+import { computed, onMounted, ref, watch } from 'vue'
 import Card from 'primevue/card'
-import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
-import Drawer from 'primevue/drawer'
 import ProgressSpinner from 'primevue/progressspinner'
-import Tag from 'primevue/tag'
-import {
-  dbUsersModule,
-  dbUserSkillsModule,
-  deleteFileByUrl,
-  uploadFile,
-} from '@rm/db'
+import { dbUsersModule, dbUserSkillsModule } from '@rm/db'
 import {
   AppUser,
   OwnedSkill,
@@ -29,13 +20,10 @@ import {
   weaponProficiencyMaxLevel,
   weaponProficiencyMinLevel,
 } from '@rm/types'
-import RMUserWorkspaceImagesSection from './RMUserWorkspaceImagesSection.vue'
-import RMUserWorkspaceOwnedSkillList from './RMUserWorkspaceOwnedSkillList.vue'
 import RMUserWorkspaceProficiencySkillSection from './RMUserWorkspaceProficiencySkillSection.vue'
 import RMUserWorkspaceProfileSection from './RMUserWorkspaceProfileSection.vue'
 import RMUserWorkspaceSkillsSection from './RMUserWorkspaceSkillsSection.vue'
 import type {
-  ImageItem,
   OwnedSkillRow,
   SkillCatalogRow,
   SkillCatalogStatus,
@@ -44,8 +32,9 @@ import type {
 import { defaultWorkspaceProfile } from './types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
-import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
+import RMInlineTabs from 'src/components/RMInlineTabs/RMInlineTabs.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
+import RMSectionEdit from 'src/components/RMSectionEdit/RMSectionEdit.vue'
 import { globalLoginUserData, hasAdmin } from 'src/boot/main'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import {
@@ -64,8 +53,6 @@ const props = withDefaults(
     fallbackAppUser?: Partial<AppUser> | null
     pageTitle?: string
     pageIcon?: string
-    viewDescription?: string
-    editDescription?: string
     backLabel?: string
   }>(),
   {
@@ -74,10 +61,6 @@ const props = withDefaults(
     fallbackAppUser: null,
     pageTitle: 'マイページ',
     pageIcon: 'pi pi-user',
-    viewDescription:
-      'プロフィール、所持スキル、画像の登録内容をまとめて確認できます。変更が必要なときだけ編集モードに切り替えてください。',
-    editDescription:
-      'プロフィール、所持スキル、画像の並び順を 1 画面でまとめて更新できます。',
     backLabel: '戻る',
   }
 )
@@ -91,7 +74,6 @@ const skillStore = useSkillStore()
 const situationOptions: AppUser['situation'][] = ['現役', '隠居', '引退', '']
 
 const isLoading = ref(true)
-const isEditMode = ref(false)
 const errorMessage = ref<string | null>(null)
 const appUserExists = ref(false)
 const userSkillExists = ref(false)
@@ -102,10 +84,6 @@ const appUser = ref<AppUser>(defaultAppUser())
 const originalAppUser = ref<AppUser>(defaultAppUser())
 const ownedSkills = ref<OwnedSkill[]>([])
 const originalOwnedSkills = ref<OwnedSkill[]>([])
-const imageItems = ref<ImageItem[]>([])
-const originalImageItems = ref<ImageItem[]>([])
-const selectedImageItems = ref<ImageItem[]>([])
-const deletedPersistedImageUrls = ref<string[]>([])
 
 const affiliationDateStr = ref<string | null>(null)
 const gameStartDateAtStr = ref<string | null>(null)
@@ -119,47 +97,46 @@ const skillCatalogElement = ref('all')
 const skillCatalogEquipmentType = ref('all')
 const skillCatalogStatus = ref<SkillCatalogStatus>('unowned')
 const skillCatalogPage = ref(0)
-const imageUploadKey = ref(0)
-
-const isCarouselVisible = ref(false)
-const isProfileDrawerVisible = ref(false)
-const isImagesDrawerVisible = ref(false)
-const isOwnedSkillQuickAccessVisible = ref(false)
-const isOwnedSkillQuickAccessCompactViewport = ref(false)
-const carouselSlide = ref(0)
-const touchStartX = ref<number | null>(null)
-let ownedSkillQuickAccessMediaQuery: MediaQueryList | null = null
-const activeCarouselImages = computed(() =>
-  imageItems.value.map((item) => item.previewUrl)
-)
-const currentCarouselImage = computed(
-  () => activeCarouselImages.value[carouselSlide.value] ?? ''
-)
 
 const pageSubtitle = computed(() => user.value.displayName || '登録内容未設定')
 const showProfile = computed(() => props.includeProfile)
 const isCompactMode = computed(() => props.compactMode)
-const useDrawerLayout = computed(() => !isCompactMode.value)
-const activeCompactSection = ref<
-  'skills' | 'images' | 'level' | 'proficiency-skill'
->('skills')
 const canEditGuildId = computed(() => hasAdmin.value)
-const showProfileInline = computed(
-  () => showProfile.value && !useDrawerLayout.value
-)
-const showSkillsInline = computed(
-  () => useDrawerLayout.value || activeCompactSection.value === 'skills'
-)
-const showImagesInline = computed(
-  () => !useDrawerLayout.value && activeCompactSection.value === 'images'
-)
-const showLevelInline = computed(
-  () => !useDrawerLayout.value && activeCompactSection.value === 'level'
-)
-const showProficiencySkillInline = computed(
-  () =>
-    !useDrawerLayout.value && activeCompactSection.value === 'proficiency-skill'
-)
+
+type WorkspaceSectionKey = 'profile' | 'skills' | 'level' | 'proficiency-skill'
+
+const activeWorkspaceTab = ref<WorkspaceSectionKey>('skills')
+const editingSection = ref<WorkspaceSectionKey | null>(null)
+
+const workspaceTabs = computed(() => {
+  const tabs: { key: WorkspaceSectionKey; label: string; badge?: number }[] = []
+
+  if (showProfile.value) {
+    tabs.push({ key: 'profile', label: 'プロフィール' })
+  }
+
+  tabs.push({
+    key: 'skills',
+    label: '所持スキル',
+    badge: ownedSkillRows.value.length,
+  })
+
+  if (isCompactMode.value) {
+    tabs.push({ key: 'level', label: '熟練度Lv' })
+  }
+
+  tabs.push({ key: 'proficiency-skill', label: '武器熟練度スキル' })
+
+  return tabs
+})
+
+const isSectionEditing = (key: WorkspaceSectionKey) =>
+  editingSection.value === key
+
+const setSectionEditing = (key: WorkspaceSectionKey, value: boolean) => {
+  editingSection.value = value ? key : null
+}
+
 const weaponProficiencyFields = computed(() =>
   weaponProficiencyDefinitions.map((definition) => ({
     ...definition,
@@ -212,38 +189,6 @@ const skillMasterSearchTextById = computed(
         buildSkillMasterSearchText(skill),
       ])
     )
-)
-const imageCountLabel = computed(() => `${imageItems.value.length}件`)
-const modeLabel = computed(() =>
-  isEditMode.value ? '編集モード' : '閲覧モード'
-)
-const shouldShowOwnedSkillQuickAccessButton = computed(
-  () => isEditMode.value && !isOwnedSkillQuickAccessVisible.value
-)
-const ownedSkillQuickAccessButtonLabel = computed(() => {
-  if (isEditMode.value) {
-    return ownedSkillRows.value.length > 0
-      ? `確認して保存 ${ownedSkillRows.value.length}件`
-      : '確認して保存'
-  }
-
-  return `チェック済みを確認 ${ownedSkillRows.value.length}件`
-})
-const ownedSkillQuickAccessTitle = computed(() =>
-  isEditMode.value ? '変更内容を確認して保存' : 'いつでもチェック済み一覧を確認'
-)
-const ownedSkillQuickAccessDescription = computed(() =>
-  isEditMode.value
-    ? 'この Drawer からチェック解除、変更を保存、編集中止ができます。'
-    : '画面の下まで移動しなくても、現在登録されているチェック済みスキルをすぐ確認できます。'
-)
-const ownedSkillQuickAccessPosition = computed(() =>
-  isOwnedSkillQuickAccessCompactViewport.value ? 'bottom' : 'right'
-)
-const ownedSkillQuickAccessStyle = computed(() =>
-  isOwnedSkillQuickAccessCompactViewport.value
-    ? { height: 'min(80vh, 46rem)' }
-    : { width: 'min(96vw, 42rem)' }
 )
 const weaponProficiencyLevelRangeLabel = `${weaponProficiencyMinLevel}〜${weaponProficiencyMaxLevel}`
 const skillCatalogPageSize = 25
@@ -305,10 +250,6 @@ const visibleSkillCatalogRows = computed(() => {
     first + skillCatalogPageSize
   )
 })
-
-const createImageId = () =>
-  globalThis.crypto?.randomUUID?.() ||
-  `image-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 
 const cloneUser = (
   payload?: Partial<WorkspaceProfile> | null
@@ -413,15 +354,6 @@ const cloneOwnedSkills = (payload: OwnedSkill[]): OwnedSkill[] => {
     })
 }
 
-const cloneImageItems = (payload: ImageItem[]): ImageItem[] =>
-  payload.map((item) => ({
-    ...item,
-    file: null,
-    objectUrl: null,
-    isNew: false,
-    persistedUrl: item.persistedUrl || item.previewUrl,
-  }))
-
 const dateToModel = (value: Date | null | undefined) => {
   if (!value) return null
 
@@ -445,53 +377,6 @@ const syncDateModels = (payload: WorkspaceProfile) => {
   originalBirthDateAtStr.value = birthDateAtStr.value
 }
 
-const cleanupObjectUrls = (items: ImageItem[]) => {
-  items.forEach((item) => {
-    if (item.objectUrl) {
-      URL.revokeObjectURL(item.objectUrl)
-    }
-  })
-}
-
-const extractImageUrls = (payload: WorkspaceProfile) => {
-  const rawUrls = payload.imageUrls
-  const seenUrls = new Set<string>()
-
-  return rawUrls.filter((url) => {
-    if (typeof url !== 'string' || url === '' || seenUrls.has(url)) {
-      return false
-    }
-
-    seenUrls.add(url)
-    return true
-  })
-}
-
-const createPersistedImageItems = (urls: string[]): ImageItem[] =>
-  urls.map((url) => ({
-    id: createImageId(),
-    previewUrl: url,
-    persistedUrl: url,
-    file: null,
-    objectUrl: null,
-    isNew: false,
-    label: '保存済み画像',
-  }))
-
-const createPendingImageItem = (file: File): ImageItem => {
-  const objectUrl = URL.createObjectURL(file)
-
-  return {
-    id: createImageId(),
-    previewUrl: objectUrl,
-    persistedUrl: null,
-    file,
-    objectUrl,
-    isNew: true,
-    label: file.name,
-  }
-}
-
 const resetSkillFilters = () => {
   skillCatalogQuery.value = ''
   skillCatalogElement.value = 'all'
@@ -501,20 +386,13 @@ const resetSkillFilters = () => {
 }
 
 const resetDraft = () => {
-  cleanupObjectUrls(imageItems.value)
-
   user.value = cloneUser(originalUser.value)
   appUser.value = cloneAppUser(originalAppUser.value)
   ownedSkills.value = cloneOwnedSkills(originalOwnedSkills.value)
-  imageItems.value = cloneImageItems(originalImageItems.value)
-  selectedImageItems.value = []
-  deletedPersistedImageUrls.value = []
   affiliationDateStr.value = originalAffiliationDateStr.value
   gameStartDateAtStr.value = originalGameStartDateAtStr.value
   birthDateAtStr.value = originalBirthDateAtStr.value
-  imageUploadKey.value += 1
   resetSkillFilters()
-  activeCompactSection.value = 'skills'
 }
 
 const loadWorkspace = async () => {
@@ -528,9 +406,6 @@ const loadWorkspace = async () => {
     isLoading.value = true
     errorMessage.value = null
     resetSkillFilters()
-    cleanupObjectUrls(imageItems.value)
-    selectedImageItems.value = []
-    deletedPersistedImageUrls.value = []
 
     await skillStore.fetchMasterData()
     await skillStore.fetchUserSkills(props.userId)
@@ -568,11 +443,8 @@ const loadWorkspace = async () => {
     userSkillExists.value = Boolean(nextUserSkill?.id)
     syncDateModels(nextUser)
 
-    const nextImageItems = createPersistedImageItems(extractImageUrls(nextUser))
-    imageItems.value = nextImageItems
-    originalImageItems.value = cloneImageItems(nextImageItems)
-    imageUploadKey.value += 1
-    activeCompactSection.value = 'skills'
+    activeWorkspaceTab.value = 'skills'
+    editingSection.value = null
   } catch (error) {
     errorMessage.value = '登録内容の読み込み中にエラーが発生しました。'
     console.error('Failed to load user workspace:', error)
@@ -621,107 +493,6 @@ const toggleOwnedSkill = (skill: SkillMaster) => {
   addOwnedSkill(skill)
 }
 
-const onImageFilesSelect = (event: { files?: File[] }) => {
-  const files = event.files ?? []
-  if (!files.length) return
-
-  const existingPendingFileKeys = new Set(
-    imageItems.value
-      .filter((item) => item.file)
-      .map(
-        (item) =>
-          `${item.file!.name}:${item.file!.size}:${item.file!.lastModified}`
-      )
-  )
-
-  const nextItems = files
-    .filter((file) => {
-      const key = `${file.name}:${file.size}:${file.lastModified}`
-      if (existingPendingFileKeys.has(key)) {
-        return false
-      }
-
-      existingPendingFileKeys.add(key)
-      return true
-    })
-    .map((file) => createPendingImageItem(file))
-
-  if (!nextItems.length) {
-    notifyInfo('同じ画像は既に追加済みです。')
-    imageUploadKey.value += 1
-    return
-  }
-
-  imageItems.value = [...imageItems.value, ...nextItems]
-  imageUploadKey.value += 1
-}
-
-const removeImage = (imageId: string) => {
-  const target = imageItems.value.find((item) => item.id === imageId)
-  if (!target) return
-
-  if (target.persistedUrl) {
-    deletedPersistedImageUrls.value = [
-      ...new Set([...deletedPersistedImageUrls.value, target.persistedUrl]),
-    ]
-  }
-
-  if (target.objectUrl) {
-    URL.revokeObjectURL(target.objectUrl)
-  }
-
-  imageItems.value = imageItems.value.filter((item) => item.id !== imageId)
-  selectedImageItems.value = selectedImageItems.value.filter(
-    (item) => item.id !== imageId
-  )
-}
-
-const openImageCarousel = (clickedIndex: number) => {
-  carouselSlide.value = clickedIndex
-  isCarouselVisible.value = true
-}
-
-const openImageCarouselById = (imageId: string) => {
-  const imageIndex = imageItems.value.findIndex((item) => item.id === imageId)
-  if (imageIndex === -1) return
-  openImageCarousel(imageIndex)
-}
-
-const previousImage = () => {
-  if (!activeCarouselImages.value.length) return
-  carouselSlide.value =
-    (carouselSlide.value - 1 + activeCarouselImages.value.length) %
-    activeCarouselImages.value.length
-}
-
-const nextImage = () => {
-  if (!activeCarouselImages.value.length) return
-  carouselSlide.value =
-    (carouselSlide.value + 1) % activeCarouselImages.value.length
-}
-
-const handleTouchStart = (event: TouchEvent) => {
-  touchStartX.value = event.changedTouches[0]?.clientX ?? null
-}
-
-const handleTouchEnd = (event: TouchEvent) => {
-  if (touchStartX.value === null) return
-
-  const delta = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.value
-  if (Math.abs(delta) > 40) {
-    if (delta < 0) nextImage()
-    else previousImage()
-  }
-
-  touchStartX.value = null
-}
-
-const handleKeydown = (event: KeyboardEvent) => {
-  if (!isCarouselVisible.value) return
-  if (event.key === 'ArrowLeft') previousImage()
-  if (event.key === 'ArrowRight') nextImage()
-}
-
 watch(
   [
     skillCatalogQuery,
@@ -744,125 +515,43 @@ watch(
   }
 )
 
-watch(isEditMode, (nextIsEditMode) => {
-  if (!nextIsEditMode && activeCompactSection.value === 'level') {
-    activeCompactSection.value = 'skills'
-  }
-
-  if (!nextIsEditMode) {
-    isOwnedSkillQuickAccessVisible.value = false
-    return
-  }
-
-  notifyInfo('右下の「確認して保存」ボタンから保存と編集中止ができます。')
-})
-
 watch(
   () => props.userId,
   async (nextUserId, previousUserId) => {
     if (nextUserId === previousUserId) return
 
-    isEditMode.value = false
+    editingSection.value = null
     await loadWorkspace()
   }
 )
 
 onMounted(async () => {
-  window.addEventListener('keydown', handleKeydown)
-  ownedSkillQuickAccessMediaQuery = window.matchMedia('(max-width: 1023px)')
-  isOwnedSkillQuickAccessCompactViewport.value =
-    ownedSkillQuickAccessMediaQuery.matches
-
-  if (typeof ownedSkillQuickAccessMediaQuery.addEventListener === 'function') {
-    ownedSkillQuickAccessMediaQuery.addEventListener(
-      'change',
-      handleOwnedSkillQuickAccessViewportChange
-    )
-  } else if (
-    typeof ownedSkillQuickAccessMediaQuery.addListener === 'function'
-  ) {
-    ownedSkillQuickAccessMediaQuery.addListener(
-      syncOwnedSkillQuickAccessViewport
-    )
-  }
-
   await loadWorkspace()
 })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleKeydown)
-  if (
-    ownedSkillQuickAccessMediaQuery &&
-    typeof ownedSkillQuickAccessMediaQuery.removeEventListener === 'function'
-  ) {
-    ownedSkillQuickAccessMediaQuery.removeEventListener(
-      'change',
-      handleOwnedSkillQuickAccessViewportChange
-    )
-  } else if (
-    ownedSkillQuickAccessMediaQuery &&
-    typeof ownedSkillQuickAccessMediaQuery.removeListener === 'function'
-  ) {
-    ownedSkillQuickAccessMediaQuery.removeListener(
-      syncOwnedSkillQuickAccessViewport
-    )
-  }
-  cleanupObjectUrls(imageItems.value)
-  cleanupObjectUrls(originalImageItems.value)
-})
-
-const onCancelEdit = () => {
+const onSectionCancel = () => {
   resetDraft()
-  isEditMode.value = false
+  editingSection.value = null
 }
 
-const createUploadFileName = (file: File) => {
-  const extension = file.name.includes('.')
-    ? file.name.slice(file.name.lastIndexOf('.'))
-    : ''
-  return `${createImageId()}${extension}`
-}
+const emitBack = () => {
+  if (
+    editingSection.value !== null &&
+    !window.confirm('編集中の内容は保存されていません。このまま戻りますか？')
+  ) {
+    return
+  }
 
-const syncOwnedSkillQuickAccessViewport = () => {
-  if (typeof window === 'undefined') return
-
-  isOwnedSkillQuickAccessCompactViewport.value = window.matchMedia(
-    '(max-width: 1023px)'
-  ).matches
-}
-
-const handleOwnedSkillQuickAccessViewportChange = (
-  event: MediaQueryListEvent
-) => {
-  isOwnedSkillQuickAccessCompactViewport.value = event.matches
+  emit('back')
 }
 
 const onSubmit = async () => {
   const normalizedOwnedSkills = cloneOwnedSkills(ownedSkills.value)
-  const uploadedUrls: string[] = []
-  let persistedImageUrls = false
 
   await useSpinner(async () => {
     try {
-      const resolvedImageUrls: string[] = []
-      for (const item of imageItems.value) {
-        if (item.persistedUrl) {
-          resolvedImageUrls.push(item.persistedUrl)
-          continue
-        }
-
-        if (!item.file) {
-          continue
-        }
-
-        const uploadedUrl = await uploadFile(
-          item.file,
-          `user_images/${props.userId}`,
-          createUploadFileName(item.file)
-        )
-        uploadedUrls.push(uploadedUrl)
-        resolvedImageUrls.push(uploadedUrl)
-      }
+      // 画像管理UIは廃止済み。既存のimageUrlsはそのまま引き継いで保存する。
+      const resolvedImageUrls = user.value.imageUrls
 
       const nextUser = cloneUser({
         ...user.value,
@@ -940,8 +629,6 @@ const onSubmit = async () => {
         await dbUsersModule.doc(props.userId).insert(nextAppUser)
         appUserExists.value = true
       }
-      persistedImageUrls = true
-
       appUser.value = nextAppUser
       originalAppUser.value = cloneAppUser(nextAppUser)
       if (globalLoginUserData.value.id === props.userId) {
@@ -962,56 +649,19 @@ const onSubmit = async () => {
         skillStore.clearCurrentUserSkills()
       }
 
-      if (deletedPersistedImageUrls.value.length > 0) {
-        const deletionResults = await Promise.allSettled(
-          [...new Set(deletedPersistedImageUrls.value)].map((url) =>
-            deleteFileByUrl(url)
-          )
-        )
-        const failedDeletions = deletionResults.filter(
-          (result): result is PromiseRejectedResult =>
-            result.status === 'rejected'
-        )
-        if (failedDeletions.length > 0) {
-          notifyInfo(
-            '古い画像の一部を削除できませんでしたが、新しい並び順は保存済みです。'
-          )
-          console.error('Failed to delete old user images:', failedDeletions)
-        }
-      }
-
-      const persistedImages = createPersistedImageItems(resolvedImageUrls)
-      cleanupObjectUrls(imageItems.value)
-
       user.value = nextUser
       originalUser.value = cloneUser(nextUser)
       ownedSkills.value = normalizedOwnedSkills
       originalOwnedSkills.value = cloneOwnedSkills(normalizedOwnedSkills)
-      imageItems.value = persistedImages
-      originalImageItems.value = cloneImageItems(persistedImages)
-      selectedImageItems.value = []
-      deletedPersistedImageUrls.value = []
       syncDateModels(nextUser)
-      imageUploadKey.value += 1
-      isEditMode.value = false
+      editingSection.value = null
       resetSkillFilters()
-      activeCompactSection.value = 'skills'
       notifySuccess('保存しました。')
     } catch (error) {
-      if (!persistedImageUrls && uploadedUrls.length > 0) {
-        await Promise.allSettled(
-          uploadedUrls.map((url) => deleteFileByUrl(url))
-        )
-      }
-
       notifyError('保存に失敗しました。')
       console.error('Failed to save user workspace:', error)
     }
   })
-}
-
-const emitBack = () => {
-  emit('back')
 }
 </script>
 
@@ -1042,7 +692,7 @@ const emitBack = () => {
       v-else
       class="user-workspace-form"
       :class="{ 'user-workspace-form--compact': isCompactMode }"
-      @submit.prevent="onSubmit"
+      @submit.prevent
     >
       <Card class="user-workspace-card">
         <template #content>
@@ -1050,399 +700,129 @@ const emitBack = () => {
             <RMPageHeader
               :title="props.pageTitle"
               :subtitle="pageSubtitle"
-              :description="
-                isEditMode ? props.editDescription : props.viewDescription
-              "
               :icon="props.pageIcon"
             >
               <template #actions>
-                <div class="user-workspace-header-actions">
-                  <RMButton
-                    v-if="!isEditMode"
-                    :label="props.backLabel"
-                    color="grey-7"
-                    outline
-                    width="162px"
-                    buttonHeight="44px"
-                    letterSize="14px"
-                    @click="emitBack"
-                  />
-                  <RMModeToggle v-model="isEditMode" />
-                </div>
+                <RMButton
+                  :label="props.backLabel"
+                  color="grey-7"
+                  outline
+                  width="162px"
+                  buttonHeight="44px"
+                  letterSize="14px"
+                  @click="emitBack"
+                />
               </template>
             </RMPageHeader>
 
-            <div v-if="!isCompactMode" class="user-workspace-summary">
-              <div class="user-workspace-summary__item">
-                <div class="user-workspace-summary__label">所持スキル</div>
-                <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
-              </div>
-              <div class="user-workspace-summary__item">
-                <div class="user-workspace-summary__label">画像</div>
-                <Tag
-                  :value="imageCountLabel"
-                  :severity="imageItems.length > 0 ? 'success' : 'secondary'"
+            <RMInlineTabs v-model="activeWorkspaceTab" :tabs="workspaceTabs">
+              <template #default="{ activeKey }">
+                <RMUserWorkspaceProfileSection
+                  v-if="activeKey === 'profile'"
+                  v-model:user="user"
+                  :editing="isSectionEditing('profile')"
+                  :canEditGuildId="canEditGuildId"
+                  :situationOptions="situationOptions"
+                  v-model:affiliationDateStr="affiliationDateStr"
+                  v-model:gameStartDateAtStr="gameStartDateAtStr"
+                  v-model:birthDateAtStr="birthDateAtStr"
+                  @update:editing="(value) => setSectionEditing('profile', value)"
+                  @cancel="onSectionCancel"
+                  @save="onSubmit"
                 />
-              </div>
-              <div class="user-workspace-summary__item">
-                <div class="user-workspace-summary__label">現在の状態</div>
-                <Tag
-                  :value="modeLabel"
-                  :severity="isEditMode ? 'contrast' : 'secondary'"
-                />
-              </div>
-            </div>
-            <div v-if="useDrawerLayout" class="user-workspace-overlay-actions">
-              <button
-                v-if="showProfile"
-                type="button"
-                class="user-workspace-overlay-action"
-                @click="isProfileDrawerVisible = true"
-              >
-                <div class="user-workspace-overlay-action__title">
-                  プロフィールを開く
-                </div>
-                <div class="user-workspace-overlay-action__text">
-                  基本情報・日付・連絡先は Drawer にまとめて表示します。
-                </div>
-              </button>
-              <button
-                type="button"
-                class="user-workspace-overlay-action"
-                @click="isImagesDrawerVisible = true"
-              >
-                <div class="user-workspace-overlay-action__title">
-                  画像管理を開く
-                </div>
-                <div class="user-workspace-overlay-action__text">
-                  画像追加、並び替え、プレビュー確認は Drawer
-                  で集中して行えます。
-                </div>
-              </button>
-            </div>
-            <div v-else class="user-workspace-focus-switch">
-              <div class="user-workspace-focus-switch__copy">
-                ギルド運用では必要な項目だけ切り替えて編集できます。
-              </div>
-              <div class="user-workspace-focus-switch__actions">
-                <Button
-                  type="button"
-                  :label="`所持スキル ${ownedSkillRows.length}件`"
-                  :severity="
-                    activeCompactSection === 'skills' ? 'contrast' : 'secondary'
-                  "
-                  :outlined="activeCompactSection !== 'skills'"
-                  @click="activeCompactSection = 'skills'"
-                />
-                <!--
-                <Button
-                  type="button"
-                  :label="`画像管理 ${imageItems.length}件`"
-                  :severity="
-                    activeCompactSection === 'images' ? 'contrast' : 'secondary'
-                  "
-                  :outlined="activeCompactSection !== 'images'"
-                  @click="activeCompactSection = 'images'"
-                />
-                -->
-                <Button
-                  type="button"
-                  label="熟練度Lv"
-                  :severity="
-                    activeCompactSection === 'level' ? 'contrast' : 'secondary'
-                  "
-                  :outlined="activeCompactSection !== 'level'"
-                  @click="activeCompactSection = 'level'"
-                />
-                <Button
-                  type="button"
-                  label="武器熟練度スキル"
-                  :severity="
-                    activeCompactSection === 'proficiency-skill'
-                      ? 'contrast'
-                      : 'secondary'
-                  "
-                  :outlined="activeCompactSection !== 'proficiency-skill'"
-                  @click="activeCompactSection = 'proficiency-skill'"
-                />
-              </div>
-              <div
-                v-if="showLevelInline"
-                class="user-workspace-focus-switch__level-panel"
-              >
-                <div class="user-workspace-focus-switch__level-label">
-                  武器熟練度Lvを登録
-                </div>
-                <div class="user-workspace-focus-switch__level-note">
-                  各武器種の熟練度Lvを
-                  {{ weaponProficiencyLevelRangeLabel }}
-                  から選択できます。未登録の項目は空欄のままで保存されます。
-                </div>
-                <div class="user-workspace-focus-switch__level-grid">
-                  <div
-                    v-for="field in weaponProficiencyFields"
-                    :key="field.key"
-                    class="user-workspace-focus-switch__level-field"
-                  >
-                    <div class="user-workspace-field__label">
-                      {{ field.label }}
-                    </div>
-                    <Dropdown
-                      :modelValue="field.value"
-                      :options="weaponProficiencyLevelOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      :disabled="!isEditMode"
-                      placeholder="Lvを選択"
-                      showClear
-                      class="user-workspace-focus-switch__level-input"
-                      @update:modelValue="
-                        updateWeaponProficiencyLevel(field.key, $event)
-                      "
-                    />
-                  </div>
-                </div>
-              </div>
-              <div
-                v-if="showProficiencySkillInline"
-                class="user-workspace-anchor"
-                id="workspace-proficiency-skill"
-              >
-                <RMUserWorkspaceProficiencySkillSection
-                  v-model:progress="user.weaponProficiencySkillProgress"
-                  :isEditMode="isEditMode"
-                />
-              </div>
-            </div>
 
-            <div v-if="!isEditMode" class="rm-inline-note">
-              {{
-                isCompactMode
-                  ? '閲覧モードでは必要な項目だけ切り替えて確認できます。変更が必要な場合だけ編集モードへ切り替えてください。'
-                  : 'プロフィールと画像は必要なときだけ Drawer で開き、メイン画面では所持スキルに集中できます。変更が必要な場合だけ編集モードへ切り替えてください。'
-              }}
-            </div>
-            <div v-else class="user-workspace-edit-guide">
-              保存と編集中止は、右下の「確認して保存」ボタンから開く Drawer
-              で行えます。
-            </div>
+                <RMUserWorkspaceSkillsSection
+                  v-else-if="activeKey === 'skills'"
+                  :editing="isSectionEditing('skills')"
+                  :ownedSkillRows="ownedSkillRows"
+                  :filteredSkillCatalogRows="filteredSkillCatalogRows"
+                  :visibleSkillCatalogRows="visibleSkillCatalogRows"
+                  v-model:skillCatalogPage="skillCatalogPage"
+                  :skillCatalogPageSize="skillCatalogPageSize"
+                  v-model:skillCatalogQuery="skillCatalogQuery"
+                  v-model:skillCatalogElement="skillCatalogElement"
+                  v-model:skillCatalogEquipmentType="skillCatalogEquipmentType"
+                  v-model:skillCatalogStatus="skillCatalogStatus"
+                  :skillCatalogElementOptions="skillCatalogElementOptions"
+                  :skillCatalogEquipmentTypeOptions="skillCatalogEquipmentTypeOptions"
+                  @toggle-skill="toggleOwnedSkill"
+                  @remove-skill="removeOwnedSkill"
+                  @reset-filters="resetSkillFilters"
+                  @update:editing="(value) => setSectionEditing('skills', value)"
+                  @cancel="onSectionCancel"
+                  @save="onSubmit"
+                />
+
+                <div v-else-if="activeKey === 'level'" class="user-workspace-focus-switch__level-panel">
+                  <RMSectionEdit
+                    :editing="isSectionEditing('level')"
+                    :can-edit="true"
+                    title="熟練度Lv"
+                    @update:editing="(value) => setSectionEditing('level', value)"
+                    @cancel="onSectionCancel"
+                    @save="onSubmit"
+                  >
+                    <template #view>
+                      <div class="user-workspace-focus-switch__level-grid">
+                        <div
+                          v-for="field in weaponProficiencyFields"
+                          :key="field.key"
+                          class="user-workspace-focus-switch__level-field"
+                        >
+                          <div class="user-workspace-field__label">
+                            {{ field.label }}
+                          </div>
+                          <div class="workspace-view-value">
+                            {{ field.value ?? '未設定' }}
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                    <template #edit>
+                      <div class="user-workspace-focus-switch__level-note">
+                        各武器種の熟練度Lvを{{ weaponProficiencyLevelRangeLabel }}から選択できます。
+                      </div>
+                      <div class="user-workspace-focus-switch__level-grid">
+                        <div
+                          v-for="field in weaponProficiencyFields"
+                          :key="field.key"
+                          class="user-workspace-focus-switch__level-field"
+                        >
+                          <div class="user-workspace-field__label">
+                            {{ field.label }}
+                          </div>
+                          <Dropdown
+                            :modelValue="field.value"
+                            :options="weaponProficiencyLevelOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Lvを選択"
+                            showClear
+                            class="user-workspace-focus-switch__level-input"
+                            @update:modelValue="
+                              updateWeaponProficiencyLevel(field.key, $event)
+                            "
+                          />
+                        </div>
+                      </div>
+                    </template>
+                  </RMSectionEdit>
+                </div>
+
+                <RMUserWorkspaceProficiencySkillSection
+                  v-else-if="activeKey === 'proficiency-skill'"
+                  v-model:progress="user.weaponProficiencySkillProgress"
+                  :editing="isSectionEditing('proficiency-skill')"
+                  @update:editing="(value) => setSectionEditing('proficiency-skill', value)"
+                  @cancel="onSectionCancel"
+                  @save="onSubmit"
+                />
+              </template>
+            </RMInlineTabs>
           </div>
         </template>
       </Card>
-
-      <div
-        v-if="showProfileInline"
-        id="workspace-profile"
-        class="user-workspace-anchor"
-      >
-        <RMUserWorkspaceProfileSection
-          v-model:user="user"
-          :isEditMode="isEditMode"
-          :canEditGuildId="canEditGuildId"
-          :situationOptions="situationOptions"
-          v-model:affiliationDateStr="affiliationDateStr"
-          v-model:gameStartDateAtStr="gameStartDateAtStr"
-          v-model:birthDateAtStr="birthDateAtStr"
-        />
-      </div>
-
-      <div
-        v-if="showSkillsInline"
-        id="workspace-skills"
-        class="user-workspace-anchor"
-      >
-        <RMUserWorkspaceSkillsSection
-          :isEditMode="isEditMode"
-          :ownedSkillRows="ownedSkillRows"
-          :filteredSkillCatalogRows="filteredSkillCatalogRows"
-          :visibleSkillCatalogRows="visibleSkillCatalogRows"
-          v-model:skillCatalogPage="skillCatalogPage"
-          :skillCatalogPageSize="skillCatalogPageSize"
-          v-model:skillCatalogQuery="skillCatalogQuery"
-          v-model:skillCatalogElement="skillCatalogElement"
-          v-model:skillCatalogEquipmentType="skillCatalogEquipmentType"
-          v-model:skillCatalogStatus="skillCatalogStatus"
-          :skillCatalogElementOptions="skillCatalogElementOptions"
-          :skillCatalogEquipmentTypeOptions="skillCatalogEquipmentTypeOptions"
-          @toggle-skill="toggleOwnedSkill"
-          @remove-skill="removeOwnedSkill"
-          @reset-filters="resetSkillFilters"
-        />
-      </div>
-
-      <div
-        v-if="showImagesInline"
-        id="workspace-images"
-        class="user-workspace-anchor"
-      >
-        <RMUserWorkspaceImagesSection
-          :isEditMode="isEditMode"
-          :imageUploadKey="imageUploadKey"
-          :imageCountLabel="imageCountLabel"
-          v-model:imageItems="imageItems"
-          v-model:selectedImageItems="selectedImageItems"
-          @select-files="onImageFilesSelect"
-          @remove-image="removeImage"
-          @open-carousel="openImageCarousel"
-          @open-carousel-by-id="openImageCarouselById"
-        />
-      </div>
     </form>
-
-    <div
-      v-if="shouldShowOwnedSkillQuickAccessButton"
-      class="user-workspace-quick-access"
-    >
-      <Button
-        type="button"
-        icon="pi pi-list-check"
-        :label="ownedSkillQuickAccessButtonLabel"
-        severity="contrast"
-        rounded
-        class="user-workspace-quick-access__button"
-        @click="isOwnedSkillQuickAccessVisible = true"
-      />
-    </div>
-
-    <Drawer
-      v-model:visible="isOwnedSkillQuickAccessVisible"
-      :position="ownedSkillQuickAccessPosition"
-      :header="ownedSkillQuickAccessTitle"
-      :style="ownedSkillQuickAccessStyle"
-      class="owned-skill-quick-access-drawer"
-    >
-      <div class="owned-skill-quick-access-drawer__content">
-        <div class="owned-skill-quick-access-drawer__summary">
-          <div>
-            <div class="owned-skill-quick-access-drawer__title">
-              {{ ownedSkillQuickAccessTitle }}
-            </div>
-            <div class="owned-skill-quick-access-drawer__description">
-              {{ ownedSkillQuickAccessDescription }}
-            </div>
-          </div>
-          <Tag :value="`${ownedSkillRows.length}件`" severity="info" />
-        </div>
-
-        <div v-if="ownedSkillRows.length === 0" class="user-workspace-empty">
-          現在チェック済みのスキルはありません。
-        </div>
-
-        <RMUserWorkspaceOwnedSkillList
-          v-else
-          :isEditMode="isEditMode"
-          :ownedSkillRows="ownedSkillRows"
-          :show-skill-actions="isEditMode"
-          :show-action-hint="isEditMode"
-          @remove-skill="removeOwnedSkill"
-        />
-
-        <div v-if="isEditMode" class="owned-skill-quick-access-drawer__footer">
-          <Button
-            type="button"
-            label="編集をやめる"
-            severity="secondary"
-            outlined
-            class="owned-skill-quick-access-drawer__footer-button"
-            @click="onCancelEdit"
-          />
-          <Button
-            type="button"
-            label="変更を保存"
-            class="owned-skill-quick-access-drawer__footer-button"
-            @click="onSubmit"
-          />
-        </div>
-      </div>
-    </Drawer>
-
-    <Drawer
-      v-if="showProfile && useDrawerLayout"
-      v-model:visible="isProfileDrawerVisible"
-      position="right"
-      header="プロフィール"
-      :style="{ width: 'min(96vw, 40rem)' }"
-      class="user-workspace-drawer"
-    >
-      <div id="workspace-profile" class="user-workspace-drawer__content">
-        <RMUserWorkspaceProfileSection
-          v-model:user="user"
-          :isEditMode="isEditMode"
-          :canEditGuildId="canEditGuildId"
-          :situationOptions="situationOptions"
-          v-model:affiliationDateStr="affiliationDateStr"
-          v-model:gameStartDateAtStr="gameStartDateAtStr"
-          v-model:birthDateAtStr="birthDateAtStr"
-        />
-      </div>
-    </Drawer>
-
-    <Drawer
-      v-if="useDrawerLayout"
-      v-model:visible="isImagesDrawerVisible"
-      position="right"
-      header="画像管理"
-      :style="{ width: 'min(96vw, 44rem)' }"
-      class="user-workspace-drawer"
-    >
-      <div id="workspace-images" class="user-workspace-drawer__content">
-        <RMUserWorkspaceImagesSection
-          :isEditMode="isEditMode"
-          :imageUploadKey="imageUploadKey"
-          :imageCountLabel="imageCountLabel"
-          v-model:imageItems="imageItems"
-          v-model:selectedImageItems="selectedImageItems"
-          @select-files="onImageFilesSelect"
-          @remove-image="removeImage"
-          @open-carousel="openImageCarousel"
-          @open-carousel-by-id="openImageCarouselById"
-        />
-      </div>
-    </Drawer>
-
-    <Dialog
-      v-model:visible="isCarouselVisible"
-      modal
-      header="画像プレビュー"
-      :style="{ width: 'min(96vw, 900px)' }"
-      :dismissableMask="true"
-    >
-      <div
-        class="image-preview-dialog__shell"
-        @touchstart="handleTouchStart"
-        @touchend="handleTouchEnd"
-      >
-        <Button
-          v-if="activeCarouselImages.length > 1"
-          type="button"
-          icon="pi pi-chevron-left"
-          rounded
-          text
-          class="image-preview-dialog__nav"
-          @click="previousImage"
-        />
-        <div class="image-preview-dialog__image-wrap">
-          <img
-            :src="currentCarouselImage"
-            alt=""
-            class="image-preview-dialog__image"
-          />
-        </div>
-        <Button
-          v-if="activeCarouselImages.length > 1"
-          type="button"
-          icon="pi pi-chevron-right"
-          rounded
-          text
-          class="image-preview-dialog__nav"
-          @click="nextImage"
-        />
-      </div>
-      <div class="image-preview-dialog__count">
-        {{ activeCarouselImages.length ? carouselSlide + 1 : 0 }} /
-        {{ activeCarouselImages.length }}
-      </div>
-    </Dialog>
   </div>
 </template>
 
@@ -1463,80 +843,11 @@ const emitBack = () => {
   overflow: hidden;
 }
 
-.user-workspace-card__content,
-.user-workspace-section {
+.user-workspace-card__content {
   padding: clamp(16px, 2.2vw, 22px);
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.user-workspace-anchor {
-  scroll-margin-top: calc(var(--rm-header-height) + 28px);
-}
-
-.user-workspace-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.user-workspace-overlay-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.user-workspace-overlay-action {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 18px;
-  border: 1px solid rgba(75, 105, 130, 0.14);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.82);
-  text-align: left;
-  transition: transform 0.18s ease, border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.user-workspace-overlay-action:hover {
-  transform: translateY(-1px);
-  border-color: rgba(75, 105, 130, 0.34);
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
-}
-
-.user-workspace-overlay-action__title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--rm-text);
-}
-
-.user-workspace-overlay-action__text {
-  color: var(--rm-text-soft);
-  line-height: 1.7;
-}
-
-.user-workspace-focus-switch {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(248, 250, 252, 0.92);
-  border: 1px solid #e2e8f0;
-}
-
-.user-workspace-focus-switch__copy {
-  color: #64748b;
-  line-height: 1.6;
-}
-
-.user-workspace-focus-switch__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 10px;
 }
 
 .user-workspace-focus-switch__level-panel {
@@ -1546,12 +857,6 @@ const emitBack = () => {
   border-radius: 14px;
   border: 1px solid #cbd5e1;
   background: rgba(255, 255, 255, 0.88);
-}
-
-.user-workspace-focus-switch__level-label {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: #475569;
 }
 
 .user-workspace-focus-switch__level-note {
@@ -1575,51 +880,10 @@ const emitBack = () => {
   width: 100%;
 }
 
-.user-workspace-summary__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(248, 250, 252, 0.92);
-  border: 1px solid #e2e8f0;
-}
-
-.user-workspace-summary__label {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #475569;
-}
-
-.user-workspace-section__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.user-workspace-section__description {
-  margin-top: 6px;
-  color: #64748b;
-  line-height: 1.7;
-}
-
-.user-workspace-drawer__content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.user-workspace-section section {
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid #e2e8f0;
-  background: rgba(248, 250, 252, 0.88);
-}
-
-.user-workspace-field {
-  margin-top: 14px;
+.workspace-view-value {
+  color: #1f2937;
+  line-height: 1.6;
+  word-break: break-word;
 }
 
 .user-workspace-field__label {
@@ -1629,634 +893,13 @@ const emitBack = () => {
   color: #475569;
 }
 
-.user-workspace-dropdown,
-.skill-checker__search,
-.owned-skill-item__input {
-  width: 100%;
-}
-
-.skill-checker {
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(248, 250, 252, 0.88);
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.skill-checker__intro {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.skill-checker__title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #334155;
-}
-
-.skill-checker__description,
-.skill-checker__help {
-  margin: 0;
-  color: #64748b;
-  line-height: 1.6;
-}
-
-.skill-checker__filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.skill-checker__filter-label {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #475569;
-}
-
-.skill-checker__filter-actions,
-.skill-checker__summary-tags,
-.skill-catalog-card__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.skill-checker__summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.skill-catalog-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 12px;
-}
-
-.skill-catalog-card {
-  width: 100%;
-  padding: 12px;
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  align-items: flex-start;
-  gap: 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  background: #fff;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.skill-catalog-card:hover {
-  transform: translateY(-1px);
-  border-color: #94a3b8;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-}
-
-.skill-catalog-card--owned {
-  border-color: #86efac;
-  background: rgba(240, 253, 244, 0.96);
-}
-
-.skill-catalog-card__media {
-  display: flex;
-}
-
-.skill-catalog-card__image,
-.skill-catalog-card__placeholder {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-}
-
-.skill-catalog-card__image {
-  object-fit: cover;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-}
-
-.skill-catalog-card__placeholder {
-  display: grid;
-  place-items: center;
-  background: #e2e8f0;
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.skill-catalog-card__body {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.skill-catalog-card__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.skill-catalog-card__name {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #1f2937;
-  word-break: break-word;
-}
-
-.skill-catalog-card__meta {
-  font-size: 0.8rem;
-  color: #64748b;
-  word-break: break-all;
-}
-
-.skill-catalog-card__hint {
-  color: #475569;
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.user-workspace-empty {
-  padding: 18px;
-  border-radius: 18px;
-  border: 1px dashed #cbd5e1;
-  color: #64748b;
-  text-align: center;
-  background: #fff;
-}
-
-.owned-skill-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.owned-skill-list__header {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.owned-skill-list__title {
-  font-weight: 800;
-  color: #334155;
-}
-
-.owned-skill-list__subtitle {
-  color: #64748b;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.owned-skill-item {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  background: rgba(248, 250, 252, 0.88);
-}
-
-.owned-skill-item__media {
-  display: flex;
-  align-items: flex-start;
-}
-
-.owned-skill-item__image,
-.owned-skill-item__placeholder {
-  width: 84px;
-  height: 84px;
-  border-radius: 18px;
-}
-
-.owned-skill-item__image {
-  object-fit: cover;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-}
-
-.owned-skill-item__placeholder {
-  display: grid;
-  place-items: center;
-  background: #e2e8f0;
-  color: #64748b;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.owned-skill-item__body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-.owned-skill-item__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.owned-skill-item__name {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #1f2937;
-  word-break: break-word;
-}
-
-.owned-skill-item__meta {
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 0.82rem;
-  word-break: break-all;
-}
-
-.owned-skill-item__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.image-toolbox {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid #e2e8f0;
-  background: rgba(248, 250, 252, 0.88);
-}
-
-.image-toolbox__help {
-  color: #64748b;
-  line-height: 1.6;
-}
-
-.image-order-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
-  gap: 16px;
-  align-items: start;
-}
-
-.image-order-list__header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.image-order-list__title {
-  font-weight: 800;
-  color: #334155;
-}
-
-.image-order-list__subtitle {
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.image-order-item {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.image-order-item__preview {
-  padding: 0;
-  border: none;
-  background: transparent;
-  border-radius: 16px;
-  cursor: pointer;
-}
-
-.image-order-item__image {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  object-fit: cover;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-}
-
-.image-order-item__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.image-order-item__title {
-  font-weight: 700;
-  color: #334155;
-}
-
-.image-order-item__subtitle {
-  color: #64748b;
-  font-size: 0.82rem;
-  word-break: break-word;
-}
-
-.image-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
-  gap: 12px;
-}
-
-.image-sort-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.image-sort-grid__title {
-  font-weight: 800;
-  color: #334155;
-}
-
-.image-sort-grid__description {
-  color: #64748b;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.image-preview-grid__item {
-  position: relative;
-  padding: 0;
-  border: none;
-  background: transparent;
-  border-radius: 18px;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.image-preview-grid__item--sortable {
-  border-radius: 18px;
-  background: rgba(248, 250, 252, 0.88);
-  border: 1px solid #e2e8f0;
-  padding: 8px;
-  cursor: default;
-}
-
-.image-preview-grid__preview {
-  position: relative;
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: none;
-  background: transparent;
-  border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.image-sort-grid__handle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  color: #fff;
-  cursor: grab;
-}
-
-.image-sort-grid__handle:active {
-  cursor: grabbing;
-}
-
-.image-preview-grid__image {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 18px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-}
-
-.image-preview-grid__badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  color: #fff;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.user-workspace-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 12px;
-  width: 100%;
-}
-
-.user-workspace-edit-guide {
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(59, 130, 246, 0.22);
-  background: rgba(239, 246, 255, 0.9);
-  color: #1d4ed8;
-  font-size: 0.9rem;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-.user-workspace-quick-access {
-  position: fixed;
-  right: max(20px, calc(env(safe-area-inset-right) + 20px));
-  bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px));
-  z-index: 950;
-  pointer-events: none;
-}
-
-.user-workspace-quick-access__button {
-  pointer-events: auto;
-  min-height: 48px;
-  padding-inline: 18px;
-  border-radius: 999px;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
-}
-
-.owned-skill-quick-access-drawer__content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.owned-skill-quick-access-drawer__summary {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.owned-skill-quick-access-drawer__title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #334155;
-}
-
-.owned-skill-quick-access-drawer__description {
-  margin-top: 6px;
-  color: #64748b;
-  line-height: 1.6;
-}
-
-.owned-skill-quick-access-drawer__footer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-top: 4px;
-}
-
-.owned-skill-quick-access-drawer__footer-button {
-  min-width: 160px;
-}
-
-.owned-skill-quick-access-drawer :deep(.p-drawer-content) {
-  padding-top: 0;
-}
-
-.image-preview-dialog__shell {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.image-preview-dialog__image-wrap {
-  display: grid;
-  place-items: center;
-  min-height: 320px;
-}
-
-.image-preview-dialog__image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 16px;
-}
-
-.image-preview-dialog__count {
-  margin-top: 12px;
-  text-align: center;
-  color: #64748b;
-}
-
-@media (max-width: 960px) {
-  .image-order-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 767px) {
-  .user-workspace-card__content,
-  .user-workspace-section {
+  .user-workspace-card__content {
     padding: 16px;
-  }
-
-  .user-workspace-section section,
-  .skill-checker,
-  .image-toolbox {
-    padding: 12px;
-  }
-
-  .user-workspace-focus-switch__actions :deep(.p-button) {
-    width: 100%;
   }
 
   .user-workspace-focus-switch__level-grid {
     grid-template-columns: 1fr;
-  }
-
-  .skill-checker__summary {
-    align-items: stretch;
-  }
-
-  .skill-checker__summary :deep(.p-button) {
-    width: 100%;
-  }
-
-  .skill-catalog-card {
-    grid-template-columns: 64px minmax(0, 1fr);
-  }
-
-  .skill-catalog-card__image,
-  .skill-catalog-card__placeholder {
-    width: 64px;
-    height: 64px;
-  }
-
-  .owned-skill-item {
-    grid-template-columns: 1fr;
-  }
-
-  .image-preview-dialog__shell {
-    grid-template-columns: 1fr;
-  }
-
-  .image-preview-dialog__nav {
-    justify-self: center;
-  }
-
-  .user-workspace-quick-access {
-    left: max(12px, calc(env(safe-area-inset-left) + 12px));
-    right: max(12px, calc(env(safe-area-inset-right) + 12px));
-    bottom: max(12px, calc(env(safe-area-inset-bottom) + 12px));
-  }
-
-  .user-workspace-quick-access__button {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .user-workspace-header-actions {
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .user-workspace-header-actions > * {
-    flex: 0 0 auto;
-  }
-
-  .user-workspace-header-actions :deep(.rm-mode-toggle-shell) {
-    align-items: center;
-  }
-
-  .owned-skill-quick-access-drawer__footer {
-    flex-direction: column-reverse;
-  }
-
-  .owned-skill-quick-access-drawer__footer-button {
-    width: 100%;
   }
 }
 </style>

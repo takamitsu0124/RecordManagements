@@ -48,8 +48,6 @@ const onBack = () => {
     :fallback-app-user="fallbackAppUser"
     page-title="スキル・熟練度管理"
     page-icon="pi pi-star"
-    view-description="ギルド運用で必要な所持スキル、武器熟練度Lv、武器熟練度スキルを確認できます。変更が必要なときだけ編集モードに切り替えてください。"
-    edit-description="所持スキル、武器熟練度Lv、武器熟練度スキルを切り替えながら、必要な内容だけ集中して更新できます。"
     back-label="ギルド詳細へ"
     @back="onBack"
   />

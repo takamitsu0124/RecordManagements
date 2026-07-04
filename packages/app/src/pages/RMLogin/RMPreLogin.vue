@@ -24,14 +24,13 @@ const router = useRouter()
           <RMPageHeader
             title="RecordManagement"
             subtitle="必要な情報へすぐ入れるログイン導線"
-            description="アカウント作成は管理者のみ可能です。招待や登録が必要な場合は、管理者へ依頼してください。"
+            description="アカウント作成は管理者のみ可能です。招待や登録は管理者へ依頼してください。"
             centered
           />
 
           <ul class="pre-login-card__points">
             <li>登録済みメールアドレスでそのままログインできます。</li>
             <li>所属ギルドやユーザー作成の相談先は管理者です。</li>
-            <li>ログイン後はホームから各操作へ最短で移動できます。</li>
           </ul>
 
           <RMButton

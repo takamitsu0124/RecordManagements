@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import Drawer from 'primevue/drawer'
 import ProgressSpinner from 'primevue/progressspinner'
 import { dbGuildModule, dbUsersModule } from '@rm/db'
 import {
@@ -14,6 +13,7 @@ import {
   summarizeWeaponProficiencySkillUnlockRate,
   weaponProficiencySkillWeaponDefinitions,
 } from '@rm/types'
+import RMGuildBannerPanel from './components/RMGuildBannerPanel.vue'
 import RMGuildDetailMembersSection from './components/RMGuildDetailMembersSection.vue'
 import RMGuildDetailOverviewSection from './components/RMGuildDetailOverviewSection.vue'
 import RMGuildDetailSkillsSection from './components/RMGuildDetailSkillsSection.vue'
@@ -29,8 +29,7 @@ import {
 } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
-import RMFloatingGuideButton from 'src/components/RMFloatingGuideButton/RMFloatingGuideButton.vue'
-import RMModeToggle from 'src/components/RMModeToggle/RMModeToggle.vue'
+import RMInlineTabs from 'src/components/RMInlineTabs/RMInlineTabs.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import {
@@ -40,7 +39,6 @@ import {
 } from 'src/composables/useAppNotifications'
 import { fetchGuild, fetchGuildUsers } from 'src/services/guildData'
 import { useSkillStore } from 'src/store'
-import RMGuildBannerDialog from './components/RMGuildBannerDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,10 +52,7 @@ const isMemberLoading = ref(false)
 const isSkillLoading = ref(false)
 const errorMessage = ref<string | null>(null)
 const skillErrorMessage = ref<string | null>(null)
-const isEditMode = ref(false)
-const isOverviewDrawerVisible = ref(false)
-const isMembersDrawerVisible = ref(false)
-const isBannerDialogVisible = ref(false)
+const activeGuildTab = ref('skills')
 const roleDrafts = ref<Record<string, AppRole>>({})
 const skillTableFilters = ref({
   skillName: { value: '', matchMode: 'contains' },
@@ -392,18 +387,18 @@ const summaryItems = computed(() => [
     icon: 'pi pi-chart-bar',
     tone: 'progress',
   },
+])
+
+const guildTabs = computed(() => [
+  { key: 'skills', label: 'スキル検索', icon: 'pi pi-search' },
+  { key: 'overview', label: '概要', icon: 'pi pi-info-circle' },
   {
-    label: '現在の表示モード',
-    value:
-      isEditMode.value && canManageGuildMembers.value
-        ? '管理モード'
-        : '閲覧モード',
-    icon:
-      isEditMode.value && canManageGuildMembers.value
-        ? 'pi pi-pencil'
-        : 'pi pi-eye',
-    tone: 'mode',
+    key: 'members',
+    label: 'メンバー運用',
+    icon: 'pi pi-users',
+    badge: pendingMembers.value.length > 0 ? pendingMembers.value.length : undefined,
   },
+  { key: 'banners', label: 'バナー', icon: 'pi pi-image' },
 ])
 
 const managerGuide = computed(() =>
@@ -560,7 +555,7 @@ const goToPostSkill = (member: {
   displayName: string
   role: AppRole
 }) => {
-  if (!isEditMode.value) return
+  if (!canManageGuildMembers.value) return
 
   if (guildId.value) {
     router.push({
@@ -688,44 +683,6 @@ const attrSeverity = (attr: string) => {
   return 'secondary'
 }
 
-const scrollToSection = (targetId: string) => {
-  const element = document.getElementById(targetId)
-  if (!element) return
-
-  element.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  })
-}
-
-const runAfterGuideClose = (closeDrawer: () => void, callback: () => void) => {
-  closeDrawer()
-  requestAnimationFrame(callback)
-}
-
-const openOverviewFromGuide = (closeDrawer: () => void) => {
-  runAfterGuideClose(closeDrawer, () => {
-    isOverviewDrawerVisible.value = true
-  })
-}
-
-const focusSkillSearchFromGuide = (closeDrawer: () => void) => {
-  runAfterGuideClose(closeDrawer, () => {
-    scrollToSection('guild-skill-search')
-  })
-}
-
-const openMembersFromGuide = (closeDrawer: () => void) => {
-  runAfterGuideClose(closeDrawer, () => {
-    isMembersDrawerVisible.value = true
-  })
-}
-
-const openBannersFromGuide = (closeDrawer: () => void) => {
-  runAfterGuideClose(closeDrawer, () => {
-    isBannerDialogVisible.value = true
-  })
-}
 </script>
 
 <template>
@@ -757,11 +714,6 @@ const openBannersFromGuide = (closeDrawer: () => void) => {
           <RMPageHeader
             :title="guildDetail.guildName"
             :subtitle="`ID: ${guildDetail.id}`"
-            :description="
-              isEditMode && canManageGuildMembers
-                ? '管理モードでは承認・権限変更に加え、検索結果からスキル詳細編集へ進めます。'
-                : '通常は閲覧モードです。スキル検索は常に使え、管理権限がある場合のみ運用操作が有効になります。'
-            "
             icon="pi pi-users"
           >
             <template #actions>
@@ -771,37 +723,62 @@ const openBannersFromGuide = (closeDrawer: () => void) => {
                 severity="contrast"
                 @click="goToGuildSchedule"
               />
-              <RMModeToggle
-                v-model="isEditMode"
-                onLabel="管理モード"
-                offLabel="閲覧モード"
-                :disabled="!canManageGuildMembers"
-              />
             </template>
           </RMPageHeader>
 
-          <div id="guild-skill-search" class="guild-detail-anchor">
-            <RMGuildDetailSkillsSection
-              :approvedMembers="approvedMembers"
-              :memberSkillSummaries="memberSkillSummaries"
-              :isSkillLoading="isSkillLoading"
-              :isEditMode="isEditMode"
-              :canManageGuildMembers="canManageGuildMembers"
-              :currentUserId="globalLoginUserData.id"
-              :roleLabels="roleLabels"
-              :guildSkillRows="guildSkillRows"
-              :filteredGuildSkillRows="filteredGuildSkillRows"
-              :skillErrorMessage="skillErrorMessage"
-              v-model:skillTableFilters="skillTableFilters"
-              :elementOptions="elementOptions"
-              :equipmentTypeOptions="equipmentTypeOptions"
-              :searchGuide="searchGuide"
-              :roleSeverity="roleSeverity"
-              :attrSeverity="attrSeverity"
-              @clear-filters="clearSkillFilters"
-              @edit-member="goToPostSkill"
-            />
-          </div>
+          <RMInlineTabs v-model="activeGuildTab" :tabs="guildTabs">
+            <template #default="{ activeKey }">
+              <RMGuildDetailSkillsSection
+                v-if="activeKey === 'skills'"
+                :approvedMembers="approvedMembers"
+                :memberSkillSummaries="memberSkillSummaries"
+                :isSkillLoading="isSkillLoading"
+                :canManageGuildMembers="canManageGuildMembers"
+                :currentUserId="globalLoginUserData.id"
+                :roleLabels="roleLabels"
+                :guildSkillRows="guildSkillRows"
+                :filteredGuildSkillRows="filteredGuildSkillRows"
+                :skillErrorMessage="skillErrorMessage"
+                v-model:skillTableFilters="skillTableFilters"
+                :elementOptions="elementOptions"
+                :equipmentTypeOptions="equipmentTypeOptions"
+                :searchGuide="searchGuide"
+                :roleSeverity="roleSeverity"
+                :attrSeverity="attrSeverity"
+                @clear-filters="clearSkillFilters"
+                @edit-member="goToPostSkill"
+              />
+
+              <RMGuildDetailOverviewSection
+                v-else-if="activeKey === 'overview'"
+                :guildDetail="guildDetail"
+                :canManageGuildMembers="canManageGuildMembers"
+                :managerGuide="managerGuide"
+                :guildFoundingDateLabel="guildFoundingDateLabel"
+                :summaryItems="summaryItems"
+              />
+
+              <RMGuildDetailMembersSection
+                v-else-if="activeKey === 'members'"
+                :approvedMembers="approvedMembers"
+                :pendingMembers="pendingMembers"
+                :canManageGuildMembers="canManageGuildMembers"
+                :isMemberLoading="isMemberLoading"
+                :currentUserId="globalLoginUserData.id"
+                v-model:roleDrafts="roleDrafts"
+                :roleOptions="roleOptions"
+                :roleLabels="roleLabels"
+                :canChangeRole="canChangeRole"
+                :roleSeverity="roleSeverity"
+                @edit-member="goToPostSkill"
+                @save-role="saveRole"
+                @revoke-approval="revokeApproval"
+                @approve-member="approveMember"
+              />
+
+              <RMGuildBannerPanel v-else-if="activeKey === 'banners'" />
+            </template>
+          </RMInlineTabs>
 
           <div class="rm-actions guild-detail-actions">
             <RMButton label="戻る" flat color="grey" @click="goBack" />
@@ -815,122 +792,6 @@ const openBannersFromGuide = (closeDrawer: () => void) => {
         </div>
       </template>
     </Card>
-
-    <RMFloatingGuideButton
-      v-if="guildDetail"
-      buttonAriaLabel="ギルド画面のガイドを開く"
-      drawerHeader="この画面の使い方"
-      :drawerStyle="{ width: 'min(96vw, 26rem)' }"
-    >
-      <template #default="{ closeDrawer }">
-        <div class="guild-detail-guide-drawer">
-          <div class="guild-detail-guide-drawer__intro">
-            必要な情報や運用導線はこのガイドから開けます。本文はスキル検索に集中できる構成にしています。
-          </div>
-
-          <div class="guild-detail-shortcuts">
-            <button
-              type="button"
-              class="guild-detail-shortcut"
-              @click="openOverviewFromGuide(closeDrawer)"
-            >
-              <div class="guild-detail-shortcut__title">ギルド概要を見る</div>
-              <div class="guild-detail-shortcut__text">
-                基本情報・運用メモ・全体サマリーを右側 Drawer
-                でまとめて確認できます。
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="guild-detail-shortcut"
-              @click="focusSkillSearchFromGuide(closeDrawer)"
-            >
-              <div class="guild-detail-shortcut__title">スキル検索へ移動</div>
-              <div class="guild-detail-shortcut__text">
-                メンバー別の所持状況を見ながら、欲しいスキルを条件で絞り込みます。
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="guild-detail-shortcut"
-              @click="openMembersFromGuide(closeDrawer)"
-            >
-              <div class="guild-detail-shortcut__title">メンバー運用を開く</div>
-              <div class="guild-detail-shortcut__text">
-                承認待ち確認、権限変更、個別のスキル編集導線を Drawer
-                に集約しています。
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="guild-detail-shortcut"
-              @click="openBannersFromGuide(closeDrawer)"
-            >
-              <div class="guild-detail-shortcut__title">バナーを見る</div>
-              <div class="guild-detail-shortcut__text">
-                表示期間に一致するバナーをダイアログで確認できます。
-              </div>
-            </button>
-          </div>
-        </div>
-      </template>
-    </RMFloatingGuideButton>
-
-    <RMGuildBannerDialog
-      v-if="guildDetail"
-      v-model:visible="isBannerDialogVisible"
-    />
-
-    <Drawer
-      v-if="guildDetail"
-      v-model:visible="isOverviewDrawerVisible"
-      position="right"
-      header="ギルド概要"
-      :style="{ width: 'min(96vw, 40rem)' }"
-      class="guild-detail-drawer"
-    >
-      <div id="guild-overview" class="guild-detail-drawer__content">
-        <RMGuildDetailOverviewSection
-          :guildDetail="guildDetail"
-          :canManageGuildMembers="canManageGuildMembers"
-          :managerGuide="managerGuide"
-          :guildFoundingDateLabel="guildFoundingDateLabel"
-          :summaryItems="summaryItems"
-        />
-      </div>
-    </Drawer>
-
-    <Drawer
-      v-if="guildDetail"
-      v-model:visible="isMembersDrawerVisible"
-      position="right"
-      header="メンバー運用"
-      :style="{ width: 'min(96vw, 42rem)' }"
-      class="guild-detail-drawer"
-    >
-      <div id="guild-member-management" class="guild-detail-drawer__content">
-        <RMGuildDetailMembersSection
-          :approvedMembers="approvedMembers"
-          :pendingMembers="pendingMembers"
-          :isEditMode="isEditMode"
-          :canManageGuildMembers="canManageGuildMembers"
-          :isMemberLoading="isMemberLoading"
-          :currentUserId="globalLoginUserData.id"
-          v-model:roleDrafts="roleDrafts"
-          :roleOptions="roleOptions"
-          :roleLabels="roleLabels"
-          :canChangeRole="canChangeRole"
-          :roleSeverity="roleSeverity"
-          @edit-member="goToPostSkill"
-          @save-role="saveRole"
-          @revoke-approval="revokeApproval"
-          @approve-member="approveMember"
-        />
-      </div>
-    </Drawer>
   </div>
 </template>
 
@@ -941,67 +802,6 @@ const openBannersFromGuide = (closeDrawer: () => void) => {
 
 .guild-detail-card__content {
   padding: clamp(16px, 2vw, 22px);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.guild-detail-anchor {
-  scroll-margin-top: calc(var(--rm-header-height) + 28px);
-}
-
-.guild-detail-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
-}
-
-.guild-detail-shortcut {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px;
-  border: 1px solid rgba(75, 105, 130, 0.14);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.84);
-  text-align: left;
-  transition: transform 0.18s ease, border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.guild-detail-shortcut:hover {
-  transform: translateY(-1px);
-  border-color: rgba(75, 105, 130, 0.34);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
-}
-
-.guild-detail-shortcut__title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--rm-text);
-}
-
-.guild-detail-shortcut__text {
-  color: var(--rm-text-soft);
-  line-height: 1.7;
-}
-
-.guild-detail-guide-drawer {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.guild-detail-guide-drawer__intro {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(239, 246, 255, 0.92);
-  border: 1px solid rgba(191, 219, 254, 0.9);
-  color: #1d4ed8;
-  line-height: 1.7;
-}
-
-.guild-detail-drawer__content {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1090,10 +890,6 @@ const openBannersFromGuide = (closeDrawer: () => void) => {
 
 .guild-summary-card--unlock {
   border-color: #c4b5fd;
-}
-
-.guild-summary-card--mode {
-  border-color: #dbeafe;
 }
 
 .guild-detail-overview-grid,

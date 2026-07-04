@@ -9,6 +9,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import type { AttendanceEvent, AttendanceResponse } from '@rm/types'
 import { globalLoginUserData } from 'src/boot/main'
+import RMConfirmDialog from 'src/components/RMConfirmDialog/RMConfirmDialog.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
@@ -47,6 +48,17 @@ const publicUrl = computed(() =>
 const summaryRows = computed(() =>
   event.value ? buildAttendanceSummaryRows(event.value) : []
 )
+
+// 作成日から30日後に自動削除される（scheduled Cloud Functionの保持期間と合わせる）。
+const ATTENDANCE_RETENTION_DAYS = 30
+
+const autoDeleteAt = computed(() => {
+  if (!event.value) return null
+  return new Date(
+    event.value.createdAt.getTime() +
+      ATTENDANCE_RETENTION_DAYS * 24 * 60 * 60 * 1000
+  )
+})
 
 const loadPage = async () => {
   if (!eventId.value) {
@@ -95,7 +107,6 @@ const copyPublicUrl = async () => {
 
 const onCloseEvent = async () => {
   if (!event.value || event.value.isClosed) return
-  if (!window.confirm('この出欠確認を締め切りますか？')) return
 
   isClosing.value = true
 
@@ -113,7 +124,6 @@ const onCloseEvent = async () => {
 
 const onDeleteEvent = async () => {
   if (!event.value) return
-  if (!window.confirm('この出欠確認を削除しますか？')) return
 
   isDeleting.value = true
 
@@ -129,6 +139,51 @@ const onDeleteEvent = async () => {
   }
 }
 
+type PendingConfirmAction = 'close' | 'delete' | null
+const pendingConfirmAction = ref<PendingConfirmAction>(null)
+
+const confirmDialogConfig = computed(() => {
+  if (pendingConfirmAction.value === 'close') {
+    return {
+      title: '出欠確認を締め切る',
+      message:
+        'この出欠確認を締め切りますか？締切後は新しい回答を受け付けなくなります。',
+      confirmLabel: '締め切る',
+      severity: 'warn' as const,
+      loading: isClosing.value,
+    }
+  }
+  if (pendingConfirmAction.value === 'delete') {
+    return {
+      title: '出欠確認を削除',
+      message: 'この出欠確認を削除しますか？この操作は取り消せません。',
+      confirmLabel: '削除する',
+      severity: 'danger' as const,
+      loading: isDeleting.value,
+    }
+  }
+  return null
+})
+
+const requestCloseEvent = () => {
+  if (!event.value || event.value.isClosed) return
+  pendingConfirmAction.value = 'close'
+}
+
+const requestDeleteEvent = () => {
+  if (!event.value) return
+  pendingConfirmAction.value = 'delete'
+}
+
+const runPendingConfirmAction = async () => {
+  if (pendingConfirmAction.value === 'close') {
+    await onCloseEvent()
+  } else if (pendingConfirmAction.value === 'delete') {
+    await onDeleteEvent()
+  }
+  pendingConfirmAction.value = null
+}
+
 onMounted(() => {
   void loadPage()
 })
@@ -140,7 +195,6 @@ onMounted(() => {
       <RMPageHeader
         title="出欠確認の管理"
         subtitle="候補ごとの集計と回答一覧を確認できます。"
-        description="公開URLコピー、締切、削除までこの画面でまとめて行えます。"
         icon="pi pi-chart-bar"
       >
         <template #actions>
@@ -168,108 +222,138 @@ onMounted(() => {
       <template v-else-if="event">
         <Card>
           <template #content>
-            <div class="attendance-manage__hero">
-              <div>
-                <div class="attendance-manage__title">{{ event.title }}</div>
-                <div class="attendance-manage__meta">
-                  <Tag
-                    :value="event.isClosed ? '締切済み' : '受付中'"
-                    :severity="event.isClosed ? 'secondary' : 'success'"
+            <div class="attendance-manage__card-content">
+              <div class="attendance-manage__hero">
+                <div>
+                  <div class="attendance-manage__title">{{ event.title }}</div>
+                  <div class="attendance-manage__meta">
+                    <Tag
+                      :value="event.isClosed ? '締切済み' : '受付中'"
+                      :severity="event.isClosed ? 'secondary' : 'success'"
+                    />
+                    <Tag :value="`回答 ${event.responseCount}件`" severity="contrast" />
+                  </div>
+                </div>
+
+                <div class="attendance-manage__actions">
+                  <Button
+                    label="公開URLをコピー"
+                    icon="pi pi-copy"
+                    severity="secondary"
+                    outlined
+                    @click="copyPublicUrl"
                   />
-                  <Tag :value="`回答 ${event.responseCount}件`" severity="contrast" />
+                  <Button
+                    label="締め切る"
+                    icon="pi pi-lock"
+                    severity="warn"
+                    :disabled="event.isClosed"
+                    :loading="isClosing"
+                    @click="requestCloseEvent"
+                  />
+                  <Button
+                    label="削除"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    outlined
+                    :loading="isDeleting"
+                    @click="requestDeleteEvent"
+                  />
                 </div>
               </div>
 
-              <div class="attendance-manage__actions">
-                <Button
-                  label="公開URLをコピー"
-                  icon="pi pi-copy"
-                  severity="secondary"
-                  outlined
-                  @click="copyPublicUrl"
-                />
-                <Button
-                  label="締め切る"
-                  icon="pi pi-lock"
-                  severity="warn"
-                  :disabled="event.isClosed"
-                  :loading="isClosing"
-                  @click="onCloseEvent"
-                />
-                <Button
-                  label="削除"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  outlined
-                  :loading="isDeleting"
-                  @click="onDeleteEvent"
-                />
+              <div class="attendance-manage__detail-grid">
+                <div><strong>場所:</strong> {{ event.location || '未設定' }}</div>
+                <div>
+                  <strong>公開URL:</strong>
+                  <a :href="publicUrl" target="_blank" rel="noopener noreferrer">
+                    {{ publicUrl }}
+                  </a>
+                </div>
+                <div>
+                  <strong>締切:</strong>
+                  {{
+                    event.answerDeadlineAt
+                      ? formatAttendanceDateTime(event.answerDeadlineAt)
+                      : '未設定'
+                  }}
+                </div>
+                <div><strong>説明:</strong> {{ event.description || '未設定' }}</div>
+                <div class="attendance-manage__retention">
+                  <strong>自動削除予定:</strong>
+                  {{ autoDeleteAt ? formatAttendanceDateTime(autoDeleteAt) : '-' }}
+                  （作成から30日後）
+                </div>
               </div>
-            </div>
-
-            <div class="attendance-manage__detail-grid">
-              <div><strong>場所:</strong> {{ event.location || '未設定' }}</div>
-              <div>
-                <strong>公開URL:</strong>
-                <a :href="publicUrl" target="_blank" rel="noopener noreferrer">
-                  {{ publicUrl }}
-                </a>
-              </div>
-              <div>
-                <strong>締切:</strong>
-                {{
-                  event.answerDeadlineAt
-                    ? formatAttendanceDateTime(event.answerDeadlineAt)
-                    : '未設定'
-                }}
-              </div>
-              <div><strong>説明:</strong> {{ event.description || '未設定' }}</div>
             </div>
           </template>
         </Card>
 
         <Card>
           <template #content>
-            <div class="attendance-manage__section-title">候補ごとの集計</div>
-            <AttendanceSummaryTable :summaries="summaryRows" />
+            <div class="attendance-manage__card-content">
+              <div class="attendance-manage__section-title">候補ごとの集計</div>
+              <AttendanceSummaryTable :summaries="summaryRows" />
+            </div>
           </template>
         </Card>
 
         <Card>
           <template #content>
-            <div class="attendance-manage__section-title">回答者一覧</div>
+            <div class="attendance-manage__card-content">
+              <div class="attendance-manage__section-title">回答者一覧</div>
 
-            <RMEmptyState
-              v-if="responses.length === 0"
-              icon="pi pi-user-minus"
-              title="回答はまだありません"
-              message="公開URLから回答が送信されると、ここに一覧と集計が反映されます。"
-            />
+              <RMEmptyState
+                v-if="responses.length === 0"
+                icon="pi pi-user-minus"
+                title="回答はまだありません"
+                message="公開URLから回答が送信されると、ここに一覧と集計が反映されます。"
+              />
 
-            <div v-else class="rm-mobile-scroll">
-              <DataTable :value="responses" responsiveLayout="scroll">
-                <Column field="displayName" header="名前" style="min-width: 180px" />
-                <Column header="各候補の回答" style="min-width: 420px">
-                  <template #body="{ data }">
-                    {{ formatAttendanceAnswersForDisplay(event.candidates, data.answers) }}
-                  </template>
-                </Column>
-                <Column field="comment" header="コメント" style="min-width: 220px" />
-                <Column header="回答日時" style="min-width: 160px">
-                  <template #body="{ data }">
-                    {{ formatAttendanceDateTime(data.createdAt) }}
-                  </template>
-                </Column>
-              </DataTable>
+              <div v-else class="rm-mobile-scroll">
+                <DataTable :value="responses" responsiveLayout="scroll">
+                  <Column field="displayName" header="名前" style="min-width: 180px" />
+                  <Column header="各候補の回答" style="min-width: 420px">
+                    <template #body="{ data }">
+                      {{ formatAttendanceAnswersForDisplay(event.candidates, data.answers) }}
+                    </template>
+                  </Column>
+                  <Column field="comment" header="コメント" style="min-width: 220px" />
+                  <Column header="回答日時" style="min-width: 160px">
+                    <template #body="{ data }">
+                      {{ formatAttendanceDateTime(data.createdAt) }}
+                    </template>
+                  </Column>
+                </DataTable>
+              </div>
             </div>
           </template>
         </Card>
       </template>
+
+      <RMConfirmDialog
+        :visible="!!confirmDialogConfig"
+        :title="confirmDialogConfig?.title"
+        :message="confirmDialogConfig?.message ?? ''"
+        :confirm-label="confirmDialogConfig?.confirmLabel"
+        :severity="confirmDialogConfig?.severity"
+        :loading="confirmDialogConfig?.loading"
+        @update:visible="(value) => { if (!value) pendingConfirmAction = null }"
+        @cancel="pendingConfirmAction = null"
+        @confirm="runPendingConfirmAction"
+      />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.attendance-manage__card-content {
+  padding: clamp(16px, 2.2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .attendance-manage__hero {
   display: flex;
   justify-content: space-between;
@@ -299,13 +383,16 @@ onMounted(() => {
 .attendance-manage__detail-grid {
   display: grid;
   gap: 10px;
-  margin-top: 16px;
   color: #475569;
   line-height: 1.7;
 }
 
+.attendance-manage__retention {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
 .attendance-manage__section-title {
-  margin-bottom: 14px;
   font-size: 1rem;
   font-weight: 800;
   color: #1f2937;

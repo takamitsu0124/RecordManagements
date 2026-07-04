@@ -25,7 +25,6 @@ const props = defineProps<{
   approvedMembers: GuildUserRow[]
   memberSkillSummaries: GuildMemberSkillSummary[]
   isSkillLoading: boolean
-  isEditMode: boolean
   canManageGuildMembers: boolean
   currentUserId: string
   roleLabels: Record<AppRole, string>
@@ -462,7 +461,7 @@ watch(
               </div>
             </div>
             <Button
-              v-if="isEditMode && canManageGuildMembers"
+              v-if="canManageGuildMembers"
               label="スキル・熟練度を編集"
               outlined
               severity="contrast"

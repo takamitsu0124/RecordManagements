@@ -20,8 +20,6 @@ const onBack = () => {
 		:user-id="userId"
 		page-title="マイページ"
 		page-icon="pi pi-user"
-		view-description="プロフィール、所持スキル、画像の登録内容を 1 画面で確認できます。変更が必要なときだけ編集モードに切り替えてください。"
-		edit-description="プロフィール、所持スキル、画像順を 1 回の保存でまとめて更新できます。"
 		back-label="戻る"
 		@back="onBack"
 	/>

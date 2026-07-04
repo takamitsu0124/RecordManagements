@@ -42,7 +42,11 @@ const menuClick = (currentMenu: { name: string; url: string; isShow: boolean }) 
     />
     <main class="after-login-layout__content">
       <div class="after-login-layout__content-shell">
-        <router-view />
+        <router-view v-slot="{ Component, route }">
+          <Transition name="rm-page" mode="out-in">
+            <component :is="Component" :key="route.fullPath" />
+          </Transition>
+        </router-view>
       </div>
     </main>
   </div>

@@ -57,6 +57,10 @@ const isClosed = computed(() =>
   event.value ? isAttendanceEventClosedForResponses(event.value) : true
 )
 
+// 締切後（または主催者が締め切った後）にだけ集計結果を公開する。
+// 「回答受付が閉じている」状態と同じ条件を流用している。
+const canViewResults = computed(() => isClosed.value)
+
 const initializeDraftAnswers = (attendanceEvent: AttendanceEvent) => {
   answers.value = Object.fromEntries(
     attendanceEvent.candidates.map((candidate) => [
@@ -165,8 +169,7 @@ onMounted(() => {
     <div class="rm-page-stack">
       <RMPageHeader
         title="出欠回答"
-        subtitle="公開URLを知っている人なら回答と集計を確認できます。"
-        description="候補ごとの現在の件数を見ながら、そのまま回答を送信できます。"
+        subtitle="公開URLを知っている人なら誰でも回答できます。集計結果は締切後に公開されます。"
         icon="pi pi-check-circle"
         centered
       />
@@ -186,25 +189,27 @@ onMounted(() => {
       <template v-else-if="event">
         <Card>
           <template #content>
-            <div class="attendance-public__hero">
-              <div class="attendance-public__title">{{ event.title }}</div>
-              <div class="attendance-public__meta">
-                <Tag
-                  :value="isClosed ? '締切済み' : '回答受付中'"
-                  :severity="isClosed ? 'secondary' : 'success'"
-                />
-                <Tag :value="`回答 ${event.responseCount}件`" severity="contrast" />
-              </div>
-              <div class="attendance-public__details">
-                <div><strong>場所:</strong> {{ event.location || '未設定' }}</div>
-                <div><strong>説明:</strong> {{ event.description || '未設定' }}</div>
-                <div>
-                  <strong>締切:</strong>
-                  {{
-                    event.answerDeadlineAt
-                      ? formatAttendanceDateTime(event.answerDeadlineAt)
-                      : '未設定'
-                  }}
+            <div class="attendance-public__card-content">
+              <div class="attendance-public__hero">
+                <div class="attendance-public__title">{{ event.title }}</div>
+                <div class="attendance-public__meta">
+                  <Tag
+                    :value="isClosed ? '締切済み' : '回答受付中'"
+                    :severity="isClosed ? 'secondary' : 'success'"
+                  />
+                  <Tag :value="`回答 ${event.responseCount}件`" severity="contrast" />
+                </div>
+                <div class="attendance-public__details">
+                  <div><strong>場所:</strong> {{ event.location || '未設定' }}</div>
+                  <div><strong>説明:</strong> {{ event.description || '未設定' }}</div>
+                  <div>
+                    <strong>締切:</strong>
+                    {{
+                      event.answerDeadlineAt
+                        ? formatAttendanceDateTime(event.answerDeadlineAt)
+                        : '未設定'
+                    }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -213,23 +218,41 @@ onMounted(() => {
 
         <Card>
           <template #content>
-            <div class="attendance-public__section-title">候補ごとの集計</div>
-            <AttendanceSummaryTable :summaries="summaryRows" />
+            <div class="attendance-public__card-content">
+              <div class="attendance-public__section-title">候補ごとの集計</div>
+
+              <AttendanceSummaryTable v-if="canViewResults" :summaries="summaryRows" />
+
+              <div v-else class="attendance-public__results-locked">
+                <i class="pi pi-lock" aria-hidden="true" />
+                <p class="attendance-public__results-locked-title">
+                  集計結果は{{
+                    event.answerDeadlineAt
+                      ? `${formatAttendanceDateTime(event.answerDeadlineAt)}の締切後`
+                      : '主催者が締め切るまで'
+                  }}に公開されます。
+                </p>
+                <p class="attendance-public__results-locked-note">
+                  他の人の回答に影響されないよう、締切までは非公開にしています。
+                </p>
+              </div>
+            </div>
           </template>
         </Card>
 
         <Card>
           <template #content>
-            <div class="attendance-public__section-title">回答フォーム</div>
+            <div class="attendance-public__card-content">
+              <div class="attendance-public__section-title">回答フォーム</div>
 
-            <div
-              v-if="isClosed"
-              class="attendance-public__notice attendance-public__notice--closed"
-            >
-              この出欠確認は締切済みのため、新しい回答は送信できません。
-            </div>
+              <div
+                v-if="isClosed"
+                class="attendance-public__notice attendance-public__notice--closed"
+              >
+                この出欠確認は締切済みのため、新しい回答は送信できません。
+              </div>
 
-            <form class="attendance-public__form" @submit.prevent="onSubmit">
+              <form class="attendance-public__form" @submit.prevent="onSubmit">
               <div class="attendance-public__field">
                 <label>名前 *</label>
                 <InputText
@@ -307,6 +330,7 @@ onMounted(() => {
                 />
               </div>
             </form>
+            </div>
           </template>
         </Card>
       </template>
@@ -315,6 +339,13 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.attendance-public__card-content {
+  padding: clamp(16px, 2.2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .attendance-public__hero,
 .attendance-public__form {
   display: grid;
@@ -341,14 +372,12 @@ onMounted(() => {
 }
 
 .attendance-public__section-title {
-  margin-bottom: 14px;
   font-size: 1rem;
   font-weight: 800;
   color: #1f2937;
 }
 
 .attendance-public__notice {
-  margin-bottom: 14px;
   padding: 12px 14px;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
@@ -359,6 +388,35 @@ onMounted(() => {
 .attendance-public__notice--closed {
   border-color: rgba(148, 163, 184, 0.4);
   background: rgba(248, 250, 252, 0.94);
+}
+
+.attendance-public__results-locked {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 16px;
+  border-radius: 18px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.attendance-public__results-locked .pi-lock {
+  font-size: 1.4rem;
+  color: #94a3b8;
+}
+
+.attendance-public__results-locked-title {
+  margin: 0;
+  font-weight: 700;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.attendance-public__results-locked-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
 .attendance-public__field {

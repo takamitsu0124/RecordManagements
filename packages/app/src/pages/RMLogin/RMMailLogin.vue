@@ -52,12 +52,11 @@ const signIn = async () => {
           <RMPageHeader
             title="RecordManagement"
             subtitle="メールアドレスでログイン"
-            description="検索と閲覧を素早く始められるよう、必要な入力だけを残したシンプルな導線にしています。"
             centered
           />
 
           <p class="login-card__support">
-            登録済みメールアドレスでログインします。うまく入れない場合は、管理者にアカウント状態を確認してください。
+            うまく入れない場合は、管理者にアカウント状態を確認してください。
           </p>
 
           <div class="rm-form-stack">

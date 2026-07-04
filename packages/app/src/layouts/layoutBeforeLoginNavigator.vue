@@ -4,7 +4,11 @@
 
 <template>
   <div class="_login_layout">
-    <router-view />
+    <router-view v-slot="{ Component, route }">
+      <Transition name="rm-page" mode="out-in">
+        <component :is="Component" :key="route.fullPath" />
+      </Transition>
+    </router-view>
   </div>
   <div id="recaptcha-container" v-show="false" />
 </template>

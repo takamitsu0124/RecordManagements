@@ -65,8 +65,8 @@ const editorTitle = computed(() =>
 )
 const editorDescription = computed(() =>
   isEditingExisting.value
-    ? '既存バナーの公開状態、掲載期間、画像を Drawer から更新できます。'
-    : 'ギルドダッシュボードに表示するバナーを Drawer から登録できます。'
+    ? '公開状態、掲載期間、画像を更新できます。'
+    : ''
 )
 const filteredBannerList = computed(() => {
   return bannerList.value.filter((banner) => {
@@ -268,7 +268,6 @@ onBeforeUnmount(() => {
             <RMPageHeader
               title="バナーマスター管理"
               :subtitle="bannerCountLabel"
-              description="ギルドダッシュボードに表示するバナーを管理します。画像は Storage にアップロードし、URL を banner_master に保存します。"
               icon="pi pi-images"
             >
               <template #actions>
@@ -293,11 +292,6 @@ onBeforeUnmount(() => {
                 </div>
               </template>
             </RMPageHeader>
-
-            <div class="rm-inline-note">
-              公開状態と掲載期間で絞り込みながら一覧確認できます。画像は保存時に
-              Firebase Storage へアップロードされます。
-            </div>
 
             <div class="banner-master-admin-filter-row rm-filter-toolbar">
               <Dropdown
@@ -412,7 +406,10 @@ onBeforeUnmount(() => {
               <div class="banner-master-admin-drawer__title">
                 {{ editorTitle }}
               </div>
-              <div class="banner-master-admin-drawer__description">
+              <div
+                v-if="editorDescription"
+                class="banner-master-admin-drawer__description"
+              >
                 {{ editorDescription }}
               </div>
             </div>

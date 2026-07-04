@@ -77,7 +77,7 @@ const homeActions = computed(() => {
     {
       key: 'mypage',
       title: 'マイページ',
-      description: 'プロフィール確認や、スキル・熟練度管理へ進みます。',
+      description: 'スキル・熟練度の管理はこちらから。',
       icon: 'edit',
       label: '開く',
       onClick: goToUserEdit,
@@ -113,7 +113,7 @@ const homeActions = computed(() => {
       {
         key: 'user-register',
         title: 'ユーザー登録',
-        description: 'Admin が招待・作成フローを進めるための入口です。',
+        description: 'Admin 権限で新規ユーザーを招待・作成します。',
         icon: 'person_add',
         label: '登録する',
         onClick: registerUser,
@@ -133,7 +133,7 @@ const homeActions = computed(() => {
     actions.push({
       key: 'guild-register',
       title: 'ギルド登録',
-      description: 'まだ所属ギルドがない場合に、ギルド情報を作成します。',
+      description: '所属ギルドが未登録の場合はこちらから作成します。',
       icon: 'add_home',
       label: '作成する',
       onClick: registerGuild,
@@ -144,7 +144,7 @@ const homeActions = computed(() => {
     actions.push({
       key: 'guild-select',
       title: 'ギルドダッシュボード',
-      description: 'ギルド情報やメンバー管理、今後の検索導線に進みます。',
+      description: 'ギルド情報の確認とメンバー管理を行います。',
       icon: 'touch_app',
       label: '表示する',
       onClick: selectGuild,
@@ -169,7 +169,6 @@ const homeActions = computed(() => {
       <RMPageHeader
         title="ホーム"
         subtitle="主要操作を迷わず始められるように整理しています。"
-        description="普段使う操作はカードでまとめ、保存や編集に進む前に目的が分かる導線に揃えています。"
         icon="pi pi-home"
       />
 
