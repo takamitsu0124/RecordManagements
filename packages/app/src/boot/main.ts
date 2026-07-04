@@ -271,6 +271,11 @@ const checkRouter = (router: Router) => {
       resolveInitialAuthState()
     }
 
+    // router.currentRoute は初回ナビゲーションが確定するまで "/" のプレースホルダーの
+    // ままなので、先に isReady() を待ってから読まないと、ログイン中に /a/:publicToken
+    // のような深いリンクへ直接アクセスした際に "/" 宛の着地判定が誤発火してしまう。
+    await router.isReady()
+
     await syncRouteWithAuthState(user)
     await ensureRouteRoleAccess(router.currentRoute.value.name)
   })

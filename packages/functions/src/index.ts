@@ -1,6 +1,8 @@
 import { getApps, initializeApp } from 'firebase-admin/app'
+import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { onObjectFinalized } from 'firebase-functions/v2/storage'
 import { error as logError, info as logInfo } from 'firebase-functions/logger'
 import { defineSecret } from 'firebase-functions/params'
@@ -147,5 +149,75 @@ export const normalizeUploadedObjectCacheControl = onObjectFinalized(
         error: error instanceof Error ? error.message : String(error)
       })
     }
+  }
+)
+
+// 出欠確認機能: 作成から30日経過したデータを完全に削除する。
+// Firestoreルールでは attendance_events / attendance_responses の delete を
+// クライアントから一切禁止しているため、Admin SDK(ルールを経由しない)で実行する。
+// このリテンション日数はマイページ側の案内文言(RMAttendanceCreatePage.vue / RMAttendanceManagePage.vue)
+// と一致させること。
+const ATTENDANCE_RETENTION_DAYS = 30
+const FIRESTORE_BATCH_DELETE_LIMIT = 450
+
+export const purgeExpiredAttendanceData = onSchedule(
+  {
+    region: 'asia-northeast1',
+    schedule: '0 4 * * *',
+    timeZone: 'Asia/Tokyo'
+  },
+  async () => {
+    const firestore = getFirestore()
+    const cutoff = Timestamp.fromMillis(
+      Date.now() - ATTENDANCE_RETENTION_DAYS * 24 * 60 * 60 * 1000
+    )
+
+    const expiredEventsSnapshot = await firestore
+      .collection('attendance_events')
+      .where('createdAt', '<', cutoff)
+      .get()
+
+    if (expiredEventsSnapshot.empty) {
+      return
+    }
+
+    let purgedEventCount = 0
+    let purgedResponseCount = 0
+
+    for (const eventDoc of expiredEventsSnapshot.docs) {
+      try {
+        const responsesSnapshot = await firestore
+          .collection('attendance_responses')
+          .where('eventId', '==', eventDoc.id)
+          .get()
+
+        for (
+          let offset = 0;
+          offset < responsesSnapshot.docs.length;
+          offset += FIRESTORE_BATCH_DELETE_LIMIT
+        ) {
+          const batch = firestore.batch()
+          responsesSnapshot.docs
+            .slice(offset, offset + FIRESTORE_BATCH_DELETE_LIMIT)
+            .forEach((responseDoc) => batch.delete(responseDoc.ref))
+          await batch.commit()
+        }
+
+        await eventDoc.ref.delete()
+
+        purgedEventCount += 1
+        purgedResponseCount += responsesSnapshot.size
+      } catch (error) {
+        logError('Failed to purge expired attendance event', {
+          eventId: eventDoc.id,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+
+    logInfo('Purged expired attendance data', {
+      purgedEventCount,
+      purgedResponseCount
+    })
   }
 )

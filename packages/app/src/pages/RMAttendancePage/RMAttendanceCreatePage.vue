@@ -4,11 +4,11 @@ import { useRouter } from 'vue-router'
 import { genFirebaseRandomId } from '@codelic/datagen'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import DatePicker from 'primevue/datepicker'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import type { AttendanceCandidate } from '@rm/types'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
+import RMWheelDateTimePicker from 'src/components/RMWheelDateTimePicker/RMWheelDateTimePicker.vue'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 import { globalLoginUserData } from 'src/boot/main'
 import { createAttendanceEvent } from 'src/services/attendanceData'
@@ -154,17 +154,13 @@ const onSubmit = async () => {
 
             <div class="attendance-create__field">
               <label>回答締切日時</label>
-              <DatePicker
+              <RMWheelDateTimePicker
                 v-model="answerDeadlineAt"
-                showTime
-                hourFormat="24"
-                showIcon
-                iconDisplay="input"
-                dateFormat="yy/mm/dd"
-                showButtonBar
                 placeholder="未設定でも可"
-                class="attendance-create__datepicker"
               />
+              <p class="attendance-create__field-hint">
+                集計結果は締切後（未設定の場合は主催者が手動で締め切るまで）に公開されます。
+              </p>
             </div>
 
             <div class="attendance-create__field">
@@ -198,30 +194,12 @@ const onSubmit = async () => {
 
                       <div class="attendance-create__field">
                         <label>開始日時 *</label>
-                        <DatePicker
-                          v-model="candidate.startAt"
-                          showTime
-                          hourFormat="24"
-                          showIcon
-                          iconDisplay="input"
-                          dateFormat="yy/mm/dd"
-                          showButtonBar
-                          class="attendance-create__datepicker"
-                        />
+                        <RMWheelDateTimePicker v-model="candidate.startAt" />
                       </div>
 
                       <div class="attendance-create__field">
                         <label>終了日時</label>
-                        <DatePicker
-                          v-model="candidate.endAt"
-                          showTime
-                          hourFormat="24"
-                          showIcon
-                          iconDisplay="input"
-                          dateFormat="yy/mm/dd"
-                          showButtonBar
-                          class="attendance-create__datepicker"
-                        />
+                        <RMWheelDateTimePicker v-model="candidate.endAt" />
                       </div>
 
                       <div class="attendance-create__candidate-actions">
@@ -239,6 +217,10 @@ const onSubmit = async () => {
                 </Card>
               </div>
             </div>
+
+            <p class="attendance-create__retention-note">
+              作成した出欠確認データは、作成日から30日後に自動的に削除されます。
+            </p>
 
             <div class="attendance-create__footer">
               <Button
@@ -289,6 +271,24 @@ const onSubmit = async () => {
   color: #475569;
 }
 
+.attendance-create__field-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.attendance-create__retention-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
 .attendance-create__field-head {
   display: flex;
   align-items: center;
@@ -302,6 +302,10 @@ const onSubmit = async () => {
   gap: 12px;
 }
 
+.attendance-create__candidate-card {
+  padding: 18px;
+}
+
 .attendance-create__candidate-grid {
   display: grid;
   gap: 14px;
@@ -311,11 +315,6 @@ const onSubmit = async () => {
 .attendance-create__candidate-actions {
   display: flex;
   align-items: flex-end;
-}
-
-.attendance-create__datepicker,
-.attendance-create__datepicker :deep(.p-datepicker) {
-  width: 100%;
 }
 
 .attendance-create__footer {

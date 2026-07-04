@@ -173,6 +173,10 @@ onMounted(() => {
   gap: 14px;
 }
 
+.attendance-list__card {
+  padding: clamp(16px, 2.2vw, 22px);
+}
+
 .attendance-list__content {
   display: grid;
   gap: 14px;

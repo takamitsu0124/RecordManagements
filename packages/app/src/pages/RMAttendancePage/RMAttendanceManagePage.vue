@@ -49,6 +49,17 @@ const summaryRows = computed(() =>
   event.value ? buildAttendanceSummaryRows(event.value) : []
 )
 
+// 作成日から30日後に自動削除される（scheduled Cloud Functionの保持期間と合わせる）。
+const ATTENDANCE_RETENTION_DAYS = 30
+
+const autoDeleteAt = computed(() => {
+  if (!event.value) return null
+  return new Date(
+    event.value.createdAt.getTime() +
+      ATTENDANCE_RETENTION_DAYS * 24 * 60 * 60 * 1000
+  )
+})
+
 const loadPage = async () => {
   if (!eventId.value) {
     errorMessage.value = 'イベントIDが見つかりません。'
@@ -211,99 +222,110 @@ onMounted(() => {
       <template v-else-if="event">
         <Card>
           <template #content>
-            <div class="attendance-manage__hero">
-              <div>
-                <div class="attendance-manage__title">{{ event.title }}</div>
-                <div class="attendance-manage__meta">
-                  <Tag
-                    :value="event.isClosed ? '締切済み' : '受付中'"
-                    :severity="event.isClosed ? 'secondary' : 'success'"
+            <div class="attendance-manage__card-content">
+              <div class="attendance-manage__hero">
+                <div>
+                  <div class="attendance-manage__title">{{ event.title }}</div>
+                  <div class="attendance-manage__meta">
+                    <Tag
+                      :value="event.isClosed ? '締切済み' : '受付中'"
+                      :severity="event.isClosed ? 'secondary' : 'success'"
+                    />
+                    <Tag :value="`回答 ${event.responseCount}件`" severity="contrast" />
+                  </div>
+                </div>
+
+                <div class="attendance-manage__actions">
+                  <Button
+                    label="公開URLをコピー"
+                    icon="pi pi-copy"
+                    severity="secondary"
+                    outlined
+                    @click="copyPublicUrl"
                   />
-                  <Tag :value="`回答 ${event.responseCount}件`" severity="contrast" />
+                  <Button
+                    label="締め切る"
+                    icon="pi pi-lock"
+                    severity="warn"
+                    :disabled="event.isClosed"
+                    :loading="isClosing"
+                    @click="requestCloseEvent"
+                  />
+                  <Button
+                    label="削除"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    outlined
+                    :loading="isDeleting"
+                    @click="requestDeleteEvent"
+                  />
                 </div>
               </div>
 
-              <div class="attendance-manage__actions">
-                <Button
-                  label="公開URLをコピー"
-                  icon="pi pi-copy"
-                  severity="secondary"
-                  outlined
-                  @click="copyPublicUrl"
-                />
-                <Button
-                  label="締め切る"
-                  icon="pi pi-lock"
-                  severity="warn"
-                  :disabled="event.isClosed"
-                  :loading="isClosing"
-                  @click="requestCloseEvent"
-                />
-                <Button
-                  label="削除"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  outlined
-                  :loading="isDeleting"
-                  @click="requestDeleteEvent"
-                />
+              <div class="attendance-manage__detail-grid">
+                <div><strong>場所:</strong> {{ event.location || '未設定' }}</div>
+                <div>
+                  <strong>公開URL:</strong>
+                  <a :href="publicUrl" target="_blank" rel="noopener noreferrer">
+                    {{ publicUrl }}
+                  </a>
+                </div>
+                <div>
+                  <strong>締切:</strong>
+                  {{
+                    event.answerDeadlineAt
+                      ? formatAttendanceDateTime(event.answerDeadlineAt)
+                      : '未設定'
+                  }}
+                </div>
+                <div><strong>説明:</strong> {{ event.description || '未設定' }}</div>
+                <div class="attendance-manage__retention">
+                  <strong>自動削除予定:</strong>
+                  {{ autoDeleteAt ? formatAttendanceDateTime(autoDeleteAt) : '-' }}
+                  （作成から30日後）
+                </div>
               </div>
-            </div>
-
-            <div class="attendance-manage__detail-grid">
-              <div><strong>場所:</strong> {{ event.location || '未設定' }}</div>
-              <div>
-                <strong>公開URL:</strong>
-                <a :href="publicUrl" target="_blank" rel="noopener noreferrer">
-                  {{ publicUrl }}
-                </a>
-              </div>
-              <div>
-                <strong>締切:</strong>
-                {{
-                  event.answerDeadlineAt
-                    ? formatAttendanceDateTime(event.answerDeadlineAt)
-                    : '未設定'
-                }}
-              </div>
-              <div><strong>説明:</strong> {{ event.description || '未設定' }}</div>
             </div>
           </template>
         </Card>
 
         <Card>
           <template #content>
-            <div class="attendance-manage__section-title">候補ごとの集計</div>
-            <AttendanceSummaryTable :summaries="summaryRows" />
+            <div class="attendance-manage__card-content">
+              <div class="attendance-manage__section-title">候補ごとの集計</div>
+              <AttendanceSummaryTable :summaries="summaryRows" />
+            </div>
           </template>
         </Card>
 
         <Card>
           <template #content>
-            <div class="attendance-manage__section-title">回答者一覧</div>
+            <div class="attendance-manage__card-content">
+              <div class="attendance-manage__section-title">回答者一覧</div>
 
-            <RMEmptyState
-              v-if="responses.length === 0"
-              icon="pi pi-user-minus"
-              title="回答はまだありません"
-              message="公開URLから回答が送信されると、ここに一覧と集計が反映されます。"
-            />
+              <RMEmptyState
+                v-if="responses.length === 0"
+                icon="pi pi-user-minus"
+                title="回答はまだありません"
+                message="公開URLから回答が送信されると、ここに一覧と集計が反映されます。"
+              />
 
-            <div v-else class="rm-mobile-scroll">
-              <DataTable :value="responses" responsiveLayout="scroll">
-                <Column field="displayName" header="名前" style="min-width: 180px" />
-                <Column header="各候補の回答" style="min-width: 420px">
-                  <template #body="{ data }">
-                    {{ formatAttendanceAnswersForDisplay(event.candidates, data.answers) }}
-                  </template>
-                </Column>
-                <Column field="comment" header="コメント" style="min-width: 220px" />
-                <Column header="回答日時" style="min-width: 160px">
-                  <template #body="{ data }">
-                    {{ formatAttendanceDateTime(data.createdAt) }}
-                  </template>
-                </Column>
-              </DataTable>
+              <div v-else class="rm-mobile-scroll">
+                <DataTable :value="responses" responsiveLayout="scroll">
+                  <Column field="displayName" header="名前" style="min-width: 180px" />
+                  <Column header="各候補の回答" style="min-width: 420px">
+                    <template #body="{ data }">
+                      {{ formatAttendanceAnswersForDisplay(event.candidates, data.answers) }}
+                    </template>
+                  </Column>
+                  <Column field="comment" header="コメント" style="min-width: 220px" />
+                  <Column header="回答日時" style="min-width: 160px">
+                    <template #body="{ data }">
+                      {{ formatAttendanceDateTime(data.createdAt) }}
+                    </template>
+                  </Column>
+                </DataTable>
+              </div>
             </div>
           </template>
         </Card>
@@ -325,6 +347,13 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.attendance-manage__card-content {
+  padding: clamp(16px, 2.2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .attendance-manage__hero {
   display: flex;
   justify-content: space-between;
@@ -354,13 +383,16 @@ onMounted(() => {
 .attendance-manage__detail-grid {
   display: grid;
   gap: 10px;
-  margin-top: 16px;
   color: #475569;
   line-height: 1.7;
 }
 
+.attendance-manage__retention {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
 .attendance-manage__section-title {
-  margin-bottom: 14px;
   font-size: 1rem;
   font-weight: 800;
   color: #1f2937;
