@@ -1,4 +1,5 @@
 import { computed, reactive } from 'vue'
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
 import {
 	OwnedSkill,
 	SkillMaster,
@@ -6,7 +7,7 @@ import {
 	defaultSkillMaster,
 	defaultUserSkill,
 } from '@rm/types'
-import { dbSkillMasterModule, dbUserSkillsModule } from '@rm/db'
+import { db, dbSkillMasterModule, dbUserSkillsModule } from '@rm/db'
 import { normalizeSkillMasterRecord } from 'src/helpers/skillMasterSchema'
 
 export type SkillDetail = SkillMaster & {
@@ -176,6 +177,87 @@ const userSkillDetails = computed<UserSkillDetail[]>(() => {
 	})
 })
 
+// スキルマスターは件数が多い(1000件超)割にほぼ更新されず削除機能もないため、
+// 毎回全件読み取りするとFirestoreの読み取り課金が無駄に増える。
+// 「一番新しいupdatedAtを持つ1件」だけを読み取って前回取得時から変化が
+// なければlocalStorageのキャッシュをそのまま使い、変化があった時だけ全件を
+// 再取得する。管理画面からの手動削除など更新日時が変わらない編集経路に
+// 備えて、キャッシュには24時間の有効期限も設ける。
+const SKILL_MASTER_CACHE_KEY = 'rm:skillMasterCache:v1'
+const SKILL_MASTER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000
+
+type SkillMasterCachePayload = {
+	latestUpdatedAt: string
+	cachedAt: number
+	records: SkillMaster[]
+}
+
+const readSkillMasterCache = (): SkillMasterCachePayload | null => {
+	try {
+		const raw = localStorage.getItem(SKILL_MASTER_CACHE_KEY)
+		if (!raw) return null
+
+		const parsed = JSON.parse(raw) as Partial<SkillMasterCachePayload>
+		if (
+			typeof parsed.latestUpdatedAt !== 'string' ||
+			typeof parsed.cachedAt !== 'number' ||
+			!Array.isArray(parsed.records)
+		) {
+			return null
+		}
+
+		if (Date.now() - parsed.cachedAt > SKILL_MASTER_CACHE_MAX_AGE_MS) {
+			return null
+		}
+
+		return parsed as SkillMasterCachePayload
+	} catch {
+		return null
+	}
+}
+
+const writeSkillMasterCache = (
+	latestUpdatedAt: string,
+	records: SkillMaster[]
+) => {
+	try {
+		localStorage.setItem(
+			SKILL_MASTER_CACHE_KEY,
+			JSON.stringify({ latestUpdatedAt, cachedAt: Date.now(), records })
+		)
+	} catch {
+		// 容量超過やプライベートモードで保存できなくても致命的ではないため無視する
+	}
+}
+
+const rehydrateSkillMasterDates = (record: SkillMaster): SkillMaster => ({
+	...record,
+	createdAt: new Date(record.createdAt),
+	updatedAt: new Date(record.updatedAt),
+})
+
+const fetchLatestSkillMasterUpdatedAt = async (): Promise<string | null> => {
+	const latestQuery = query(
+		collection(db, 'skill_master'),
+		orderBy('updatedAt', 'desc'),
+		limit(1)
+	)
+	const snapshot = await getDocs(latestQuery)
+	if (snapshot.empty) return null
+
+	const rawUpdatedAt = snapshot.docs[0].data().updatedAt as
+		| { toDate: () => Date }
+		| Date
+		| string
+		| undefined
+	const date =
+		rawUpdatedAt && typeof rawUpdatedAt === 'object' && 'toDate' in rawUpdatedAt
+			? rawUpdatedAt.toDate()
+			: new Date(rawUpdatedAt as string | Date)
+
+	return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 const fetchMasterData = async (): Promise<SkillMaster[]> => {
 	if (masterDataLoaded) {
 		return state.masterData
@@ -187,12 +269,32 @@ const fetchMasterData = async (): Promise<SkillMaster[]> => {
 
 	masterDataPromise = withLoading(async () => {
 		try {
+			const latestUpdatedAt = await fetchLatestSkillMasterUpdatedAt()
+			const cached = readSkillMasterCache()
+
+			if (
+				cached &&
+				latestUpdatedAt !== null &&
+				cached.latestUpdatedAt >= latestUpdatedAt
+			) {
+				state.masterData = cached.records
+					.map(rehydrateSkillMasterDates)
+					.sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+				masterDataLoaded = true
+				return state.masterData
+			}
+
 			await dbSkillMasterModule.fetch()
 			const nextMasterData = Array.from(dbSkillMasterModule.data.values())
 				.map((skill) => normalizeSkillMasterRecord(skill))
 				.sort((a, b) => a.name.localeCompare(b.name, 'ja'))
 			state.masterData = nextMasterData
 			masterDataLoaded = true
+
+			if (latestUpdatedAt !== null) {
+				writeSkillMasterCache(latestUpdatedAt, nextMasterData)
+			}
+
 			return state.masterData
 		} finally {
 			masterDataPromise = null
