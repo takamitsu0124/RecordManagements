@@ -51,6 +51,7 @@ const shouldShowActionHint = computed(
           v-if="skill.image"
           :src="skill.image"
           alt=""
+          loading="lazy"
           class="owned-skill-item__image"
         />
         <div v-else class="owned-skill-item__placeholder">No image</div>

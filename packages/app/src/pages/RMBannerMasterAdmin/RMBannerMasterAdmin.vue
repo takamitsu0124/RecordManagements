@@ -354,6 +354,7 @@ onBeforeUnmount(() => {
                       v-if="data.imageUrl"
                       :src="data.imageUrl"
                       :alt="data.id"
+                      loading="lazy"
                       class="banner-master-admin-banner-cell__image"
                     />
                     <div

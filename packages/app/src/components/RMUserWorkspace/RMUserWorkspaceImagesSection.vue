@@ -106,6 +106,7 @@ const selectedImageItemsModel = computed({
                   <img
                     :src="option.previewUrl"
                     alt=""
+                    loading="lazy"
                     class="image-order-item__image"
                   />
                 </button>
@@ -161,6 +162,7 @@ const selectedImageItemsModel = computed({
                     <img
                       :src="element.previewUrl"
                       alt=""
+                      loading="lazy"
                       class="image-preview-grid__image"
                     />
                     <span class="image-preview-grid__badge">{{
@@ -184,6 +186,7 @@ const selectedImageItemsModel = computed({
             <img
               :src="item.previewUrl"
               alt=""
+              loading="lazy"
               class="image-preview-grid__image"
             />
             <span class="image-preview-grid__badge">{{ index + 1 }}</span>

@@ -911,6 +911,7 @@ const importSkillMasterCsv = async () => {
                       v-if="data.image"
                       :src="data.image"
                       alt=""
+                      loading="lazy"
                       class="skill-master-admin-skill-cell__image"
                     />
                     <div

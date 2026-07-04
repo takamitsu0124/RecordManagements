@@ -122,6 +122,7 @@ watch(
           <img
             :src="banner.imageUrl"
             :alt="banner.id"
+            loading="lazy"
             class="guild-banner-dialog__image"
           />
           <div class="guild-banner-dialog__meta">
