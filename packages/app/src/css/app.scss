@@ -369,3 +369,19 @@ img {
     transition: none;
   }
 }
+
+// RMSectionEditの固定保存フッター(bodyへteleportされる)と、左下固定のスクロール
+// トップボタンが被らないよう、フッター表示中はスクロールトップボタンを上にずらす。
+.rm-scroll-top-button {
+  transition: transform 0.2s ease;
+}
+
+body:has(.rm-section-edit__sticky-footer) .rm-scroll-top-button {
+  transform: translateY(-76px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-scroll-top-button {
+    transition: none;
+  }
+}

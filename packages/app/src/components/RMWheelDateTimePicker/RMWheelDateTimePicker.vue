@@ -211,10 +211,17 @@ const onClear = () => {
       class="rm-wheel-datetime-dialog"
     >
       <div class="rm-wheel-datetime-columns">
-        <div class="rm-wheel-datetime-highlight" aria-hidden="true" />
-
-        <div class="rm-wheel-datetime-column-wrap">
+        <div class="rm-wheel-datetime-column-labels">
           <div class="rm-wheel-datetime-column-label">年</div>
+          <div class="rm-wheel-datetime-column-label">月</div>
+          <div class="rm-wheel-datetime-column-label">日</div>
+          <div class="rm-wheel-datetime-column-label">時</div>
+          <div class="rm-wheel-datetime-column-label">分</div>
+        </div>
+
+        <div class="rm-wheel-datetime-scroll-row">
+          <div class="rm-wheel-datetime-highlight" aria-hidden="true" />
+
           <div
             ref="yearColumnRef"
             class="rm-wheel-datetime-column"
@@ -237,10 +244,7 @@ const onClear = () => {
             </div>
             <div class="rm-wheel-datetime-column__pad" />
           </div>
-        </div>
 
-        <div class="rm-wheel-datetime-column-wrap">
-          <div class="rm-wheel-datetime-column-label">月</div>
           <div
             ref="monthColumnRef"
             class="rm-wheel-datetime-column"
@@ -263,10 +267,7 @@ const onClear = () => {
             </div>
             <div class="rm-wheel-datetime-column__pad" />
           </div>
-        </div>
 
-        <div class="rm-wheel-datetime-column-wrap">
-          <div class="rm-wheel-datetime-column-label">日</div>
           <div
             ref="dayColumnRef"
             class="rm-wheel-datetime-column"
@@ -289,10 +290,7 @@ const onClear = () => {
             </div>
             <div class="rm-wheel-datetime-column__pad" />
           </div>
-        </div>
 
-        <div class="rm-wheel-datetime-column-wrap">
-          <div class="rm-wheel-datetime-column-label">時</div>
           <div
             ref="hourColumnRef"
             class="rm-wheel-datetime-column"
@@ -315,10 +313,7 @@ const onClear = () => {
             </div>
             <div class="rm-wheel-datetime-column__pad" />
           </div>
-        </div>
 
-        <div class="rm-wheel-datetime-column-wrap">
-          <div class="rm-wheel-datetime-column-label">分</div>
           <div
             ref="minuteColumnRef"
             class="rm-wheel-datetime-column"
@@ -419,28 +414,34 @@ const onClear = () => {
 }
 
 .rm-wheel-datetime-columns {
-  position: relative;
   display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
-.rm-wheel-datetime-column-wrap {
-  flex: 1;
+.rm-wheel-datetime-column-labels {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 6px;
-  min-width: 0;
 }
 
 .rm-wheel-datetime-column-label {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
   font-size: 0.78rem;
   font-weight: 700;
   color: #64748b;
 }
 
+.rm-wheel-datetime-scroll-row {
+  position: relative;
+  display: flex;
+  gap: 6px;
+}
+
 .rm-wheel-datetime-column {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 220px;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
@@ -492,7 +493,8 @@ const onClear = () => {
 }
 
 @media (max-width: 480px) {
-  .rm-wheel-datetime-columns {
+  .rm-wheel-datetime-column-labels,
+  .rm-wheel-datetime-scroll-row {
     gap: 4px;
   }
 

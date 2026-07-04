@@ -189,10 +189,15 @@ const onClear = () => {
       class="rm-wheel-date-dialog"
     >
       <div class="rm-wheel-columns">
-        <div class="rm-wheel-highlight" aria-hidden="true" />
-
-        <div class="rm-wheel-column-wrap">
+        <div class="rm-wheel-column-labels">
           <div class="rm-wheel-column-label">年</div>
+          <div class="rm-wheel-column-label">月</div>
+          <div class="rm-wheel-column-label">日</div>
+        </div>
+
+        <div class="rm-wheel-scroll-row">
+          <div class="rm-wheel-highlight" aria-hidden="true" />
+
           <div
             ref="yearColumnRef"
             class="rm-wheel-column"
@@ -215,10 +220,7 @@ const onClear = () => {
             </div>
             <div class="rm-wheel-column__pad" />
           </div>
-        </div>
 
-        <div class="rm-wheel-column-wrap">
-          <div class="rm-wheel-column-label">月</div>
           <div
             ref="monthColumnRef"
             class="rm-wheel-column"
@@ -241,10 +243,7 @@ const onClear = () => {
             </div>
             <div class="rm-wheel-column__pad" />
           </div>
-        </div>
 
-        <div class="rm-wheel-column-wrap">
-          <div class="rm-wheel-column-label">日</div>
           <div
             ref="dayColumnRef"
             class="rm-wheel-column"
@@ -345,28 +344,34 @@ const onClear = () => {
 }
 
 .rm-wheel-columns {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rm-wheel-column-labels {
   display: flex;
   gap: 8px;
 }
 
-.rm-wheel-column-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
 .rm-wheel-column-label {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
   font-size: 0.8rem;
   font-weight: 700;
   color: #64748b;
 }
 
+.rm-wheel-scroll-row {
+  position: relative;
+  display: flex;
+  gap: 8px;
+}
+
 .rm-wheel-column {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 220px;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
