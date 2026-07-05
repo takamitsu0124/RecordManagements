@@ -26,6 +26,7 @@ import RMUserWorkspaceSkillsSection from './RMUserWorkspaceSkillsSection.vue'
 import type {
   OwnedSkillRow,
   SkillCatalogRow,
+  SkillCatalogSortOption,
   SkillCatalogStatus,
   WorkspaceProfile,
 } from './types'
@@ -96,6 +97,7 @@ const skillCatalogQuery = ref('')
 const skillCatalogElement = ref('all')
 const skillCatalogEquipmentType = ref('all')
 const skillCatalogStatus = ref<SkillCatalogStatus>('unowned')
+const skillCatalogSortOption = ref<SkillCatalogSortOption>('default')
 const skillCatalogPage = ref(0)
 
 const pageSubtitle = computed(() => user.value.displayName || '登録内容未設定')
@@ -209,6 +211,35 @@ const skillCatalogEquipmentTypeOptions = computed(() =>
     .sort((a, b) => a.localeCompare(b, 'ja'))
 )
 
+// nullは「未設定」として並び順の末尾に固定する(昇順・降順のどちらでも
+// 値が無いスキルが先頭に来て埋もれてしまわないようにするため)。
+const compareNullableGaugeValue = (
+  left: number | null,
+  right: number | null,
+  direction: 1 | -1
+) => {
+  if (left === null && right === null) return 0
+  if (left === null) return 1
+  if (right === null) return -1
+  return (left - right) * direction
+}
+
+const sortSkillCatalogRows = (
+  rows: SkillCatalogRow[],
+  sortOption: SkillCatalogSortOption
+): SkillCatalogRow[] => {
+  if (sortOption === 'default') return rows
+
+  const direction = sortOption.endsWith('Desc') ? -1 : 1
+  const field = sortOption.startsWith('breakGauge')
+    ? 'breakGauge'
+    : 'switchGauge'
+
+  return [...rows].sort((a, b) =>
+    compareNullableGaugeValue(a[field], b[field], direction)
+  )
+}
+
 const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
   const rows: SkillCatalogRow[] = []
   const query = normalizedSkillCatalogQuery.value
@@ -240,7 +271,7 @@ const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
     })
   }
 
-  return rows
+  return sortSkillCatalogRows(rows, skillCatalogSortOption.value)
 })
 
 const visibleSkillCatalogRows = computed(() => {
@@ -382,6 +413,7 @@ const resetSkillFilters = () => {
   skillCatalogElement.value = 'all'
   skillCatalogEquipmentType.value = 'all'
   skillCatalogStatus.value = 'unowned'
+  skillCatalogSortOption.value = 'default'
   skillCatalogPage.value = 0
 }
 
@@ -499,6 +531,7 @@ watch(
     skillCatalogElement,
     skillCatalogEquipmentType,
     skillCatalogStatus,
+    skillCatalogSortOption,
   ],
   () => {
     skillCatalogPage.value = 0
@@ -743,6 +776,7 @@ const onSubmit = async () => {
                   v-model:skillCatalogElement="skillCatalogElement"
                   v-model:skillCatalogEquipmentType="skillCatalogEquipmentType"
                   v-model:skillCatalogStatus="skillCatalogStatus"
+                  v-model:skillCatalogSortOption="skillCatalogSortOption"
                   :skillCatalogElementOptions="skillCatalogElementOptions"
                   :skillCatalogEquipmentTypeOptions="skillCatalogEquipmentTypeOptions"
                   @toggle-skill="toggleOwnedSkill"
