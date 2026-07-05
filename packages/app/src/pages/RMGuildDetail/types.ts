@@ -33,6 +33,13 @@ export type GuildSkillRow = {
   normalizedSearchText: string
 }
 
+export type GuildSkillSortOption =
+  | 'default'
+  | 'breakGaugeAsc'
+  | 'breakGaugeDesc'
+  | 'switchGaugeAsc'
+  | 'switchGaugeDesc'
+
 export type GuildMemberSkillSummary = {
   uid: string
   displayName: string
