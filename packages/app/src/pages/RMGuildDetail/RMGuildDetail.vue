@@ -20,6 +20,7 @@ import RMGuildDetailSkillsSection from './components/RMGuildDetailSkillsSection.
 import type {
   GuildMemberSkillSummary,
   GuildSkillRow,
+  GuildSkillSortOption,
   GuildUserRow,
 } from './types'
 import {
@@ -56,9 +57,11 @@ const activeGuildTab = ref('skills')
 const roleDrafts = ref<Record<string, AppRole>>({})
 const skillTableFilters = ref({
   skillName: { value: '', matchMode: 'contains' },
+  member: { value: null as string | null, matchMode: 'equals' },
   element: { value: null as string | null, matchMode: 'equals' },
   equipmentType: { value: null as string | null, matchMode: 'equals' },
 })
+const skillSortOption = ref<GuildSkillSortOption>('default')
 
 const currentGuildId = computed(() =>
   typeof guildId.value === 'string' ? guildId.value : ''
@@ -302,6 +305,9 @@ const normalizedSkillNameFilter = computed(() =>
     .toLowerCase()
 )
 
+const selectedMemberFilter = computed(
+  () => skillTableFilters.value.member.value || ''
+)
 const selectedElementFilter = computed(
   () => skillTableFilters.value.element.value || ''
 )
@@ -309,12 +315,44 @@ const selectedEquipmentTypeFilter = computed(
   () => skillTableFilters.value.equipmentType.value || ''
 )
 
+// nullは「未設定」として並び順の末尾に固定する(昇順・降順のどちらでも
+// 値が無いスキルが先頭に来て埋もれてしまわないようにするため)。
+const compareNullableGaugeValue = (
+  left: number | null,
+  right: number | null,
+  direction: 1 | -1
+) => {
+  if (left === null && right === null) return 0
+  if (left === null) return 1
+  if (right === null) return -1
+  return (left - right) * direction
+}
+
+const sortGuildSkillRows = (
+  rows: GuildSkillRow[],
+  sortOption: GuildSkillSortOption
+): GuildSkillRow[] => {
+  if (sortOption === 'default') return rows
+
+  const direction = sortOption.endsWith('Desc') ? -1 : 1
+  const field = sortOption.startsWith('breakGauge')
+    ? 'breakGauge'
+    : 'switchGauge'
+
+  return [...rows].sort((a, b) =>
+    compareNullableGaugeValue(a[field], b[field], direction)
+  )
+}
+
 const filteredGuildSkillRows = computed(() => {
-  return guildSkillRows.value.filter((row) => {
+  const matched = guildSkillRows.value.filter((row) => {
     const matchesSkillName =
       normalizedSkillNameFilter.value === '' ||
       row.normalizedSearchText.includes(normalizedSkillNameFilter.value)
 
+    const matchesMember =
+      selectedMemberFilter.value === '' ||
+      row.userId === selectedMemberFilter.value
     const matchesElement =
       selectedElementFilter.value === '' ||
       row.element === selectedElementFilter.value
@@ -322,8 +360,21 @@ const filteredGuildSkillRows = computed(() => {
       selectedEquipmentTypeFilter.value === '' ||
       row.equipmentType === selectedEquipmentTypeFilter.value
 
-    return matchesSkillName && matchesElement && matchesEquipmentType
+    return (
+      matchesSkillName &&
+      matchesMember &&
+      matchesElement &&
+      matchesEquipmentType
+    )
   })
+
+  return sortGuildSkillRows(matched, skillSortOption.value)
+})
+
+const memberOptions = computed(() => {
+  return [...approvedMembers.value]
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, 'ja'))
+    .map((member) => ({ label: member.displayName, value: member.uid }))
 })
 
 const elementOptions = computed(() => {
@@ -351,8 +402,10 @@ const equipmentTypeOptions = computed(() => {
 const activeFilterCount = computed(() => {
   return [
     normalizedSkillNameFilter.value !== '',
+    selectedMemberFilter.value !== '',
     selectedElementFilter.value !== '',
     selectedEquipmentTypeFilter.value !== '',
+    skillSortOption.value !== 'default',
   ].filter(Boolean).length
 })
 
@@ -415,7 +468,7 @@ const searchGuide = computed(() => {
     return '検索条件が空の間は、ギルド内メンバーの全スキル一覧をそのまま確認できます。'
   }
 
-  return `${activeFilterCount.value} 件の条件で ${filteredGuildSkillRows.value.length} 件を表示しています。自然属性と装備種別で絞り込みながら、攻撃属性とスキル種別も一覧で確認できます。`
+  return `${activeFilterCount.value} 件の条件で ${filteredGuildSkillRows.value.length} 件を表示しています。メンバー・自然属性・装備種別で絞り込みながら、ブレイクゲージ/スイッチゲージ増加量の並び替えも使えます。`
 })
 
 const syncRoleDrafts = () => {
@@ -513,9 +566,11 @@ const formatGuildFoundingDate = (date: Date | null) => {
 const clearSkillFilters = () => {
   skillTableFilters.value = {
     skillName: { value: '', matchMode: 'contains' },
+    member: { value: null, matchMode: 'equals' },
     element: { value: null, matchMode: 'equals' },
     equipmentType: { value: null, matchMode: 'equals' },
   }
+  skillSortOption.value = 'default'
 }
 
 const goToGuildSchedule = () => {
@@ -740,6 +795,8 @@ const attrSeverity = (attr: string) => {
                 :filteredGuildSkillRows="filteredGuildSkillRows"
                 :skillErrorMessage="skillErrorMessage"
                 v-model:skillTableFilters="skillTableFilters"
+                v-model:skillSortOption="skillSortOption"
+                :memberOptions="memberOptions"
                 :elementOptions="elementOptions"
                 :equipmentTypeOptions="equipmentTypeOptions"
                 :searchGuide="searchGuide"

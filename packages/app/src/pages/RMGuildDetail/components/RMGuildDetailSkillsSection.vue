@@ -18,6 +18,7 @@ import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import type {
   GuildMemberSkillSummary,
   GuildSkillRow,
+  GuildSkillSortOption,
   GuildUserRow,
 } from '../types'
 
@@ -33,9 +34,12 @@ const props = defineProps<{
   skillErrorMessage: string | null
   skillTableFilters: {
     skillName: { value: string; matchMode: string }
+    member: { value: string | null; matchMode: string }
     element: { value: string | null; matchMode: string }
     equipmentType: { value: string | null; matchMode: string }
   }
+  skillSortOption: GuildSkillSortOption
+  memberOptions: Array<{ label: string; value: string }>
   elementOptions: Array<{ label: string; value: string }>
   equipmentTypeOptions: Array<{ label: string; value: string }>
   searchGuide: string
@@ -48,10 +52,12 @@ const emit = defineEmits<{
     e: 'update:skillTableFilters',
     value: {
       skillName: { value: string; matchMode: string }
+      member: { value: string | null; matchMode: string }
       element: { value: string | null; matchMode: string }
       equipmentType: { value: string | null; matchMode: string }
     }
   ): void
+  (e: 'update:skillSortOption', value: GuildSkillSortOption): void
   (e: 'clear-filters'): void
   (e: 'edit-member', member: GuildMemberSkillSummary): void
 }>()
@@ -73,6 +79,14 @@ const updateSkillNameFilter = (value: string) =>
     },
   })
 
+const updateMemberFilter = (value: string | null) =>
+  updateSkillTableFilters({
+    member: {
+      ...props.skillTableFilters.member,
+      value,
+    },
+  })
+
 const updateElementFilter = (value: string | null) =>
   updateSkillTableFilters({
     element: {
@@ -88,6 +102,16 @@ const updateEquipmentTypeFilter = (value: string | null) =>
       value,
     },
   })
+
+const setSkillSortOption = (value: GuildSkillSortOption | null) =>
+  emit('update:skillSortOption', value ?? 'default')
+
+const skillSortOptions: Array<{ label: string; value: GuildSkillSortOption }> = [
+  { label: 'ブレイクゲージ増加量(昇順)', value: 'breakGaugeAsc' },
+  { label: 'ブレイクゲージ増加量(降順)', value: 'breakGaugeDesc' },
+  { label: 'スイッチゲージ増加量(昇順)', value: 'switchGaugeAsc' },
+  { label: 'スイッチゲージ増加量(降順)', value: 'switchGaugeDesc' },
+]
 
 const isMemberSkillDialogVisible = ref(false)
 
@@ -149,7 +173,7 @@ watch(
           <div>
             <div class="guild-panel-header__title">スキル検索</div>
             <div class="guild-panel-header__subtitle">
-              名称、技名、自然属性、装備種別で絞り込みながら、攻撃属性とスキル種別も確認できます。
+              名称、技名、メンバー、自然属性、装備種別で絞り込み、ブレイクゲージ/スイッチゲージ増加量で並び替えできます。
             </div>
           </div>
           <Tag
@@ -165,6 +189,16 @@ watch(
           :modelValue="skillTableFilters.skillName.value"
           placeholder="名称・技名・ID・メンバー名で検索"
           @update:modelValue="updateSkillNameFilter"
+        />
+        <Dropdown
+          :modelValue="skillTableFilters.member.value"
+          :options="memberOptions"
+          optionLabel="label"
+          optionValue="value"
+          showClear
+          filter
+          placeholder="誰の(メンバー)"
+          @update:modelValue="updateMemberFilter"
         />
         <Dropdown
           :modelValue="skillTableFilters.element.value"
@@ -184,6 +218,15 @@ watch(
           filter
           placeholder="装備種別"
           @update:modelValue="updateEquipmentTypeFilter"
+        />
+        <Dropdown
+          :modelValue="skillSortOption === 'default' ? null : skillSortOption"
+          :options="skillSortOptions"
+          optionLabel="label"
+          optionValue="value"
+          showClear
+          placeholder="並び替え"
+          @update:modelValue="setSkillSortOption"
         />
         <Button
           label="条件をクリア"
