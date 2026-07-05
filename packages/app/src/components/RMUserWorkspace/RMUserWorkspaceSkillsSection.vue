@@ -12,6 +12,7 @@ import RMUserWorkspaceOwnedSkillList from './RMUserWorkspaceOwnedSkillList.vue'
 import type {
   OwnedSkillRow,
   SkillCatalogRow,
+  SkillCatalogSortOption,
   SkillCatalogStatus,
 } from './types'
 
@@ -26,6 +27,7 @@ const props = defineProps<{
   skillCatalogElement: string
   skillCatalogEquipmentType: string
   skillCatalogStatus: SkillCatalogStatus
+  skillCatalogSortOption: SkillCatalogSortOption
   skillCatalogElementOptions: string[]
   skillCatalogEquipmentTypeOptions: string[]
 }>()
@@ -36,6 +38,7 @@ const emit = defineEmits<{
   (e: 'update:skillCatalogElement', value: string): void
   (e: 'update:skillCatalogEquipmentType', value: string): void
   (e: 'update:skillCatalogStatus', value: SkillCatalogStatus): void
+  (e: 'update:skillCatalogSortOption', value: SkillCatalogSortOption): void
   (e: 'toggle-skill', skill: SkillMaster): void
   (e: 'remove-skill', skillId: string): void
   (e: 'reset-filters'): void
@@ -55,6 +58,18 @@ const setSkillCatalogEquipmentType = (value: string) =>
   emit('update:skillCatalogEquipmentType', value)
 const setSkillCatalogStatus = (value: SkillCatalogStatus) =>
   emit('update:skillCatalogStatus', value)
+const setSkillCatalogSortOption = (value: SkillCatalogSortOption) =>
+  emit('update:skillCatalogSortOption', value)
+
+const skillCatalogSortOptions: Array<{
+  value: SkillCatalogSortOption
+  label: string
+}> = [
+  { value: 'breakGaugeAsc', label: 'ブレイクゲージ増加量(昇順)' },
+  { value: 'breakGaugeDesc', label: 'ブレイクゲージ増加量(降順)' },
+  { value: 'switchGaugeAsc', label: 'スイッチゲージ増加量(昇順)' },
+  { value: 'switchGaugeDesc', label: 'スイッチゲージ増加量(降順)' },
+]
 const setSkillCatalogPage = (event: { page: number }) =>
   emit('update:skillCatalogPage', event.page)
 const skillCatalogGridRef = ref<HTMLElement | null>(null)
@@ -278,6 +293,36 @@ watch(
                 "
                 :outlined="skillCatalogEquipmentType !== equipmentType"
                 @click="setSkillCatalogEquipmentType(equipmentType)"
+              />
+            </div>
+          </div>
+
+          <div class="skill-checker__filter-group">
+            <div class="skill-checker__filter-label">並び替え</div>
+            <div class="skill-checker__filter-actions">
+              <Button
+                type="button"
+                label="すべて"
+                size="small"
+                :severity="
+                  skillCatalogSortOption === 'default' ? 'contrast' : 'secondary'
+                "
+                :outlined="skillCatalogSortOption !== 'default'"
+                @click="setSkillCatalogSortOption('default')"
+              />
+              <Button
+                v-for="sortOption in skillCatalogSortOptions"
+                :key="sortOption.value"
+                type="button"
+                :label="sortOption.label"
+                size="small"
+                :severity="
+                  skillCatalogSortOption === sortOption.value
+                    ? 'contrast'
+                    : 'secondary'
+                "
+                :outlined="skillCatalogSortOption !== sortOption.value"
+                @click="setSkillCatalogSortOption(sortOption.value)"
               />
             </div>
           </div>

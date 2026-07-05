@@ -23,6 +23,13 @@ export type OwnedSkillRow = OwnedSkill & {
 
 export type SkillCatalogStatus = 'all' | 'owned' | 'unowned'
 
+export type SkillCatalogSortOption =
+  | 'default'
+  | 'breakGaugeAsc'
+  | 'breakGaugeDesc'
+  | 'switchGaugeAsc'
+  | 'switchGaugeDesc'
+
 export type SkillCatalogRow = SkillMaster & {
   isOwned: boolean
   ownedLevel: number

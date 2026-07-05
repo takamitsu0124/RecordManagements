@@ -118,8 +118,25 @@ const selectedElement = ref('')
 const selectedEquipmentType = ref('')
 const selectedSkillType = ref('')
 const selectedAttackType = ref('')
-const minBreakGauge = ref<number | null>(null)
-const minSwitchGauge = ref<number | null>(null)
+type SkillMasterSortOption =
+  | 'default'
+  | 'breakGaugeAsc'
+  | 'breakGaugeDesc'
+  | 'switchGaugeAsc'
+  | 'switchGaugeDesc'
+
+const skillMasterSortOption = ref<SkillMasterSortOption>('default')
+
+const skillMasterSortOptions: Array<{
+  label: string
+  value: SkillMasterSortOption
+}> = [
+  { label: '並び替えなし', value: 'default' },
+  { label: 'ブレイクゲージ増加量(昇順)', value: 'breakGaugeAsc' },
+  { label: 'ブレイクゲージ増加量(降順)', value: 'breakGaugeDesc' },
+  { label: 'スイッチゲージ増加量(昇順)', value: 'switchGaugeAsc' },
+  { label: 'スイッチゲージ増加量(降順)', value: 'switchGaugeDesc' },
+]
 const isEditMode = ref(false)
 const isEditorVisible = ref(false)
 const form = ref<SkillMaster>(defaultSkillMaster())
@@ -158,8 +175,7 @@ const activeFilterCount = computed(
       selectedEquipmentType.value,
       selectedSkillType.value,
       selectedAttackType.value,
-      minBreakGauge.value,
-      minSwitchGauge.value,
+      skillMasterSortOption.value === 'default' ? '' : skillMasterSortOption.value,
     ].filter((value) => value !== '' && value !== null).length
 )
 const hasActiveFilters = computed(() => activeFilterCount.value > 0)
@@ -200,11 +216,40 @@ const skillCsvStatusLabel = computed(() => {
   return `新規 ${skillCsvInsertCount.value} / 更新 ${skillCsvUpdateCount.value} / 変更なし ${skillCsvUnchangedCount.value}`
 })
 
+// nullは「未設定」として並び順の末尾に固定する(昇順・降順のどちらでも
+// 値が無いスキルが先頭に来て埋もれてしまわないようにするため)。
+const compareNullableGaugeValue = (
+  left: number | null,
+  right: number | null,
+  direction: 1 | -1
+) => {
+  if (left === null && right === null) return 0
+  if (left === null) return 1
+  if (right === null) return -1
+  return (left - right) * direction
+}
+
+const sortBySkillMasterSortOption = (
+  skills: SkillMaster[],
+  sortOption: SkillMasterSortOption
+) => {
+  if (sortOption === 'default') return skills
+
+  const direction = sortOption.endsWith('Desc') ? -1 : 1
+  const field = sortOption.startsWith('breakGauge')
+    ? 'breakGauge'
+    : 'switchGauge'
+
+  return [...skills].sort((a, b) =>
+    compareNullableGaugeValue(a[field], b[field], direction)
+  )
+}
+
 const filteredSkillMasterList = computed(() => {
   const query = normalizedSearchText.value
   const searchTextById = skillMasterSearchTextById.value
 
-  return skillMasterList.value.filter((skill) => {
+  const matched = skillMasterList.value.filter((skill) => {
     const matchesText =
       query === '' || Boolean(searchTextById.get(skill.id)?.includes(query))
 
@@ -219,23 +264,17 @@ const filteredSkillMasterList = computed(() => {
     const matchesAttackType =
       selectedAttackType.value === '' ||
       skill.attackType === selectedAttackType.value
-    const matchesBreakGauge =
-      minBreakGauge.value === null ||
-      (skill.breakGauge ?? Number.NEGATIVE_INFINITY) >= minBreakGauge.value
-    const matchesSwitchGauge =
-      minSwitchGauge.value === null ||
-      (skill.switchGauge ?? Number.NEGATIVE_INFINITY) >= minSwitchGauge.value
 
     return (
       matchesText &&
       matchesElement &&
       matchesEquipmentType &&
       matchesSkillType &&
-      matchesAttackType &&
-      matchesBreakGauge &&
-      matchesSwitchGauge
+      matchesAttackType
     )
   })
+
+  return sortBySkillMasterSortOption(matched, skillMasterSortOption.value)
 })
 
 const isAbilityForm = computed(() => form.value.equipmentType === 'アビリティ')
@@ -270,8 +309,7 @@ const resetFilters = () => {
   selectedEquipmentType.value = ''
   selectedSkillType.value = ''
   selectedAttackType.value = ''
-  minBreakGauge.value = null
-  minSwitchGauge.value = null
+  skillMasterSortOption.value = 'default'
 }
 
 const clearSkillCsvSelection = (preserveResults = false) => {
@@ -858,17 +896,11 @@ const importSkillMasterCsv = async () => {
                 showClear
                 placeholder="攻撃属性"
               />
-              <InputNumber
-                v-model="minSwitchGauge"
-                :useGrouping="false"
-                inputClass="w-full"
-                placeholder="Switch Gauge 以上"
-              />
-              <InputNumber
-                v-model="minBreakGauge"
-                :useGrouping="false"
-                inputClass="w-full"
-                placeholder="Break Gauge 以上"
+              <Dropdown
+                v-model="skillMasterSortOption"
+                :options="skillMasterSortOptions"
+                optionLabel="label"
+                optionValue="value"
               />
             </div>
 
