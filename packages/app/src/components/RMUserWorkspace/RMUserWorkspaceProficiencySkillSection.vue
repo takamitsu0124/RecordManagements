@@ -472,8 +472,8 @@ watch(
             type="button"
             label="一括登録モード"
             icon="pi pi-check-square"
-            text
             size="small"
+            class="proficiency-skill__bulk-mode-button"
             @click="enterBulkMode"
           />
           <Button
@@ -769,6 +769,110 @@ watch(
   min-width: 220px;
 }
 
+.proficiency-skill__bulk-mode-button {
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding-inline: 16px;
+  border: 1px solid rgba(191, 219, 254, 0.92);
+  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: proficiency-bulk-button-pulse 2s ease-in-out infinite,
+    proficiency-bulk-button-float 2s ease-in-out infinite;
+}
+
+.proficiency-skill__bulk-mode-button :deep(.p-button-icon) {
+  animation: proficiency-bulk-button-icon-nudge 1.2s ease-in-out infinite;
+}
+
+.proficiency-skill__bulk-mode-button::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.38) 48%,
+    rgba(255, 255, 255, 0) 66%
+  );
+  transform: translateX(-180%) skewX(-18deg);
+  animation: proficiency-bulk-button-shine 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.proficiency-skill__bulk-mode-button :deep(.p-button-label),
+.proficiency-skill__bulk-mode-button :deep(.p-button-icon) {
+  position: relative;
+  z-index: 1;
+}
+
+.proficiency-skill__bulk-mode-button:hover,
+.proficiency-skill__bulk-mode-button:focus-visible {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+}
+
+.proficiency-skill__bulk-mode-button:active {
+  transform: scale(0.98);
+}
+
+@keyframes proficiency-bulk-button-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0), 0 8px 18px rgba(15, 23, 42, 0.12);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(96, 165, 250, 0.24),
+      0 12px 24px rgba(59, 130, 246, 0.24);
+  }
+}
+
+@keyframes proficiency-bulk-button-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes proficiency-bulk-button-icon-nudge {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+
+  50% {
+    transform: translateX(3px) scale(1.08);
+  }
+}
+
+@keyframes proficiency-bulk-button-shine {
+  0%,
+  100% {
+    transform: translateX(-180%) skewX(-18deg);
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 0;
+  }
+
+  42% {
+    opacity: 1;
+  }
+
+  60% {
+    transform: translateX(180%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
 .proficiency-skill-mobile {
   display: grid;
   gap: 12px;
@@ -965,6 +1069,18 @@ watch(
 
   .proficiency-skill-sheet {
     display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proficiency-skill__bulk-mode-button,
+  .proficiency-skill__bulk-mode-button :deep(.p-button-icon),
+  .proficiency-skill__bulk-mode-button::after {
+    animation: none;
+  }
+
+  .proficiency-skill__bulk-mode-button {
+    transition: none;
   }
 }
 </style>
