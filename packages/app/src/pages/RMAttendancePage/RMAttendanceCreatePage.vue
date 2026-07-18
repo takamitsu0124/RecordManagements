@@ -26,8 +26,8 @@ const candidates = ref<CandidateDraft[]>([
     id: genFirebaseRandomId(),
     label: '',
     startAt: null,
-    endAt: null,
-  },
+    endAt: null
+  }
 ])
 const isSaving = ref(false)
 
@@ -40,7 +40,7 @@ const addCandidate = () => {
     id: genFirebaseRandomId(),
     label: '',
     startAt: null,
-    endAt: null,
+    endAt: null
   })
 }
 
@@ -101,7 +101,7 @@ const onSubmit = async () => {
       description: description.value,
       location: location.value,
       candidates: candidates.value,
-      answerDeadlineAt: answerDeadlineAt.value,
+      answerDeadlineAt: answerDeadlineAt.value
     })
 
     notifySuccess('出欠確認を作成しました。')

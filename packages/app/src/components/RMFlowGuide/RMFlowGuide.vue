@@ -21,7 +21,7 @@ const scrollToSection = (targetId: string) => {
 
   element.scrollIntoView({
     behavior: 'smooth',
-    block: 'start',
+    block: 'start'
   })
 }
 

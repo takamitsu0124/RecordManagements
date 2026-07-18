@@ -32,53 +32,53 @@ const emit = defineEmits<{
 const updateUser = (patch: Partial<WorkspaceProfile>) => {
   emit('update:user', {
     ...props.user,
-    ...patch,
+    ...patch
   })
 }
 
 const displayNameModel = computed({
   get: () => props.user.displayName,
-  set: (value: string) => updateUser({ displayName: value }),
+  set: (value: string) => updateUser({ displayName: value })
 })
 
 const displayNameKanaModel = computed({
   get: () => props.user.displayNameKana,
-  set: (value: string) => updateUser({ displayNameKana: value }),
+  set: (value: string) => updateUser({ displayNameKana: value })
 })
 
 const guildIdModel = computed({
   get: () => props.user.guildId,
-  set: (value: string) => updateUser({ guildId: value }),
+  set: (value: string) => updateUser({ guildId: value })
 })
 
 const affiliationNumModel = computed({
   get: () => props.user.affiliationNum,
-  set: (value: number | null) => updateUser({ affiliationNum: value ?? 0 }),
+  set: (value: number | null) => updateUser({ affiliationNum: value ?? 0 })
 })
 
 const situationModel = computed({
   get: () => props.user.situation,
-  set: (value: AppUser['situation']) => updateUser({ situation: value }),
+  set: (value: AppUser['situation']) => updateUser({ situation: value })
 })
 
 const phoneModel = computed({
   get: () => props.user.phone,
-  set: (value: string) => updateUser({ phone: value }),
+  set: (value: string) => updateUser({ phone: value })
 })
 
 const affiliationDateModel = computed<string | null>({
   get: () => props.affiliationDateStr,
-  set: (value) => emit('update:affiliationDateStr', value),
+  set: (value) => emit('update:affiliationDateStr', value)
 })
 
 const gameStartDateAtModel = computed<string | null>({
   get: () => props.gameStartDateAtStr,
-  set: (value) => emit('update:gameStartDateAtStr', value),
+  set: (value) => emit('update:gameStartDateAtStr', value)
 })
 
 const birthDateModel = computed<string | null>({
   get: () => props.birthDateAtStr,
-  set: (value) => emit('update:birthDateAtStr', value),
+  set: (value) => emit('update:birthDateAtStr', value)
 })
 </script>
 
@@ -88,7 +88,7 @@ const birthDateModel = computed<string | null>({
       <div class="user-workspace-section">
         <RMSectionEdit
           :editing="editing"
-          :can-edit="true"
+          :canEdit="true"
           title="プロフィール"
           @update:editing="(value) => emit('update:editing', value)"
           @cancel="emit('cancel')"

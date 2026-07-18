@@ -1,4 +1,4 @@
-import { RouteRecordRaw } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import login from './login'
 import home from './home'
 import guild from './guild'
@@ -15,7 +15,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'RMRoot',
         path: '',
-        redirect: { name: 'RMPreLogin' },
+        redirect: { name: 'RMPreLogin' }
       },
       ...login,
       ...home,
@@ -26,9 +26,9 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'RMComponent',
         path: '/RMComponent',
-        component: () => import('pages/RMComponent/RMComponent.vue'),
-      },
-    ],
+        component: () => import('pages/RMComponent/RMComponent.vue')
+      }
+    ]
   },
   ...attendance,
 
@@ -36,8 +36,8 @@ const routes: RouteRecordRaw[] = [
   // but you can also remove it
   {
     path: '/:catchAll(.*)*',
-    component: () => import('pages/ErrorNotFound.vue'),
-  },
+    component: () => import('pages/ErrorNotFound.vue')
+  }
 ]
 
 export default routes

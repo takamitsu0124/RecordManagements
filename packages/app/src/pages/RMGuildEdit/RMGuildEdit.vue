@@ -4,8 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import Dropdown from 'primevue/dropdown'
 import FileUpload from 'primevue/fileupload'
-import { dbGuildModule, deleteFileByUrl, uploadFile } from '@rm/db'
-import { Guild } from '@rm/types'
+import {
+  dbGuildModule,
+  deleteFileByUrl,
+  GUILD_LOGO_IMAGE_RESIZE_OPTIONS,
+  uploadFile
+} from '@rm/db'
+import type { Guild } from '@rm/types'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
@@ -104,7 +109,8 @@ const onSubmit = async () => {
         updatedLogoUrl = await uploadFile(
           newGuildLogoFile.value,
           uploadDirPath,
-          newGuildLogoFile.value.name
+          newGuildLogoFile.value.name,
+          GUILD_LOGO_IMAGE_RESIZE_OPTIONS
         )
       }
 
@@ -115,7 +121,7 @@ const onSubmit = async () => {
         guildFoundingDateAt: guildFoundingDate.value
           ? new Date(guildFoundingDate.value)
           : null,
-        guildLogo: updatedLogoUrl,
+        guildLogo: updatedLogoUrl
       }
 
       await dbGuildModule.doc(guildId.value as string).merge(updatedData)
@@ -123,7 +129,7 @@ const onSubmit = async () => {
       notifySuccess('ギルド情報が正常に更新されました。')
       router.push({
         name: 'RMGuildDetail',
-        params: { guildId: guildId.value as string },
+        params: { guildId: guildId.value }
       })
     } catch (error) {
       notifyError('ギルド情報の更新に失敗しました。')
@@ -136,7 +142,7 @@ const onCancel = () => {
   if (guildId.value) {
     router.push({
       name: 'RMGuildDetail',
-      params: { guildId: guildId.value as string },
+      params: { guildId: guildId.value }
     })
   } else {
     router.push('/')
@@ -196,6 +202,7 @@ const onCancel = () => {
               <p class="guild-logo-section__help">
                 一覧や詳細画面で表示されます。
               </p>
+              <!-- img-lazy-loading:allow -->
               <img
                 v-if="logoPreviewUrl"
                 :src="logoPreviewUrl"

@@ -4,7 +4,7 @@ import RMIcon from '../RMIcon/RMIcon.vue'
 import { lockBodyScroll, unlockBodyScroll } from 'src/helpers/bodyScrollLock'
 
 defineOptions({
-  inheritAttrs: false,
+  inheritAttrs: false
 })
 
 const props = defineProps({
@@ -18,12 +18,12 @@ const props = defineProps({
   toTopKey: { type: Number, default: 0 },
   kind: {
     type: String,
-    default: '',
+    default: ''
   },
   isSelect: { type: Boolean, default: false },
   isMaxGroup: { type: Boolean, default: false },
   isdrawerArea: { type: Boolean, default: false },
-  isdrawerGraphrea: { type: Boolean, default: false },
+  isdrawerGraphrea: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
@@ -35,7 +35,7 @@ const value = computed({
   get: () => props.modelValue,
   set: (nextValue) => {
     emit('update:modelValue', nextValue)
-  },
+  }
 })
 
 const area = ref<HTMLDivElement | null>(null)
@@ -47,7 +47,7 @@ watch(
     nextTick(() => {
       area.value?.scrollTo({
         top: 0,
-        behavior: 'smooth',
+        behavior: 'smooth'
       })
     })
   }
@@ -73,7 +73,7 @@ watch(
 const panelClass = computed(() => ({
   '_drawer--full': props.kind === 'full' || props.isFull,
   '_drawer--secondary': props.kind === 'second',
-  '_drawer--third': props.kind === 'third',
+  '_drawer--third': props.kind === 'third'
 }))
 
 const drawerClose = () => {
@@ -91,7 +91,7 @@ onBeforeUnmount(() => {
 <template>
   <Teleport to="body">
     <transition name="fade">
-      <div v-if="value" class="_overlay" @click="drawerClose"></div>
+      <div v-if="value" class="_overlay" @click="drawerClose" />
     </transition>
     <transition name="sheet-up">
       <div v-if="value" :class="['_drawer', panelClass, attrs.class]">
@@ -102,14 +102,14 @@ onBeforeUnmount(() => {
           :style="{ '--drawer-height': `${height}px`, '--drawer-bg': backgroundColor }"
         >
           <div class="_drawer_header">
-            <div class="_selected_message" v-if="props.isSelect">
+            <div v-if="props.isSelect" class="_selected_message">
               {{
                 isMaxGroup && isSelect
                   ? 'グループが最大数登録されています。'
                   : 'グループを選択してください。'
               }}
             </div>
-            <div v-else class="_empty_area"></div>
+            <div v-else class="_empty_area" />
             <button v-if="isClosebutton" type="button" class="_close_button" @click="drawerClose">
               <RMIcon name="close" class="_close_icon" />
             </button>

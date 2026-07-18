@@ -1,15 +1,16 @@
 import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore'
 import { db, dbGuildCalendarEventsModule, dbGuildModule, writeDocWithRandomId } from '@rm/db'
-import {
+import type {
   AppUser,
   Guild,
   GuildCalendarEvent,
-  GuildScheduleResponse,
+  GuildScheduleResponse} from '@rm/types'
+import {
   defaultAppUser,
   defaultGuildCalendarEvent,
   normalizeAttendanceFeatureVisibilityStatus,
   normalizeWeaponProficiencyLevels,
-  normalizeWeaponProficiencySkillProgress,
+  normalizeWeaponProficiencySkillProgress
 } from '@rm/types'
 
 const normalizeAppUser = (docId: string, data: AppUser): AppUser => ({
@@ -26,7 +27,7 @@ const normalizeAppUser = (docId: string, data: AppUser): AppUser => ({
   attendanceFeatureVisibilityStatus:
     normalizeAttendanceFeatureVisibilityStatus(
       data.attendanceFeatureVisibilityStatus
-    ),
+    )
 })
 
 const normalizeGuildScheduleResponse = (
@@ -34,7 +35,7 @@ const normalizeGuildScheduleResponse = (
   data: GuildScheduleResponse
 ): GuildScheduleResponse => ({
   ...data,
-  id: data.id || docId,
+  id: data.id || docId
 })
 
 const toDate = (value: unknown) => {
@@ -64,7 +65,7 @@ const normalizeGuildCalendarEvent = (
   createdAt: toDate(data.createdAt),
   updatedAt: toDate(data.updatedAt),
   startAt: toDate(data.startAt),
-  endAt: toDate(data.endAt),
+  endAt: toDate(data.endAt)
 })
 
 export const fetchGuild = async (
@@ -140,7 +141,7 @@ export const createGuildCalendarEvent = async (
     ...defaultGuildCalendarEvent(),
     ...payload,
     createdAt: new Date(),
-    updatedAt: new Date(),
+    updatedAt: new Date()
   })
 }
 

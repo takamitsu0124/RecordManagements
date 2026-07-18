@@ -1,20 +1,21 @@
-import { AppRole, appRoles } from '@rm/types'
+import type { AppRole} from '@rm/types'
+import { appRoles } from '@rm/types'
 import {
   checkMailAddress,
   checkPassword,
-  notEmpty,
+  notEmpty
 } from '@rm/utils'
 import { ref } from 'vue'
 
 /**
  * バリデーションエラーの情報を表す型
  */
-interface ValidationError {
+type ValidationError = {
   field: string
   message: string
 }
 
-export interface RegisterInfo {
+export type RegisterInfo = {
   email: string
   password: string
   name: string
@@ -25,7 +26,7 @@ export interface RegisterInfo {
 export const roleLabels: Record<AppRole, string> = {
   admin: 'Admin',
   guild_admin: 'Guild Admin',
-  member: 'General Member',
+  member: 'General Member'
 }
 
 const registerInfo = ref<RegisterInfo>({
@@ -33,7 +34,7 @@ const registerInfo = ref<RegisterInfo>({
   password: '',
   name: '',
   guildId: '',
-  role: 'member',
+  role: 'member'
 })
 
 const defaultRegisterInfo = (): RegisterInfo => ({
@@ -41,7 +42,7 @@ const defaultRegisterInfo = (): RegisterInfo => ({
   password: '',
   name: '',
   guildId: '',
-  role: 'member',
+  role: 'member'
 })
 
 /**
@@ -59,7 +60,7 @@ export function validateRegisterInfo(registerInfo: {
   const validators = [
     { field: 'email', validate: checkMailAddress },
     { field: 'password', validate: checkPassword },
-    { field: 'name', validate: notEmpty },
+    { field: 'name', validate: notEmpty }
   ]
 
   for (const { field, validate } of validators) {
@@ -99,5 +100,5 @@ export function getRegisterErrorMessage(error: unknown) {
 export const globalRegisterForm = () => ({
   registerInfo,
   defaultRegisterInfo,
-  validateRegisterInfo,
+  validateRegisterInfo
 })

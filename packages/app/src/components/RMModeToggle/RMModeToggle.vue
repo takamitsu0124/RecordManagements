@@ -8,7 +8,7 @@ const props = defineProps({
   offLabel: { type: String, default: '閲覧モード' },
   onIcon: { type: String, default: 'pi pi-pencil' },
   offIcon: { type: String, default: 'pi pi-eye' },
-  disabled: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
@@ -17,7 +17,7 @@ const emit = defineEmits<{
 
 const model = computed({
   get: () => props.modelValue,
-  set: (value: boolean) => emit('update:modelValue', value),
+  set: (value: boolean) => emit('update:modelValue', value)
 })
 
 const helperText = computed(() => {

@@ -3,7 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import { dbGuildModule, dbUsersModule, writeDocWithRandomId } from '@rm/db'
-import { defaultGuild, Guild } from '@rm/types'
+import type { Guild } from '@rm/types'
+import { defaultGuild } from '@rm/types'
 import { globalLoginUserData } from 'src/boot/main'
 import RMInput from 'src/components/RMInput/RMInput.vue'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -33,9 +34,9 @@ const onSubmit = async () => {
         officialMembers: 1,
         guildMember: {
           [creatorId]: {
-            name: globalLoginUserData.value.displayName || '',
-          },
-        },
+            name: globalLoginUserData.value.displayName || ''
+          }
+        }
       }
 
       const createdGuild = await writeDocWithRandomId(dbGuildModule, newGuild)
@@ -44,20 +45,20 @@ const onSubmit = async () => {
         if (globalLoginUserData.value.role !== 'admin') {
           await dbUsersModule.doc(creatorId).merge({
             guildId: createdGuild.id,
-            role: 'guild_admin',
+            role: 'guild_admin'
           })
 
           globalLoginUserData.value = {
             ...globalLoginUserData.value,
             guildId: createdGuild.id,
-            role: 'guild_admin',
+            role: 'guild_admin'
           }
         }
 
         notifySuccess('ギルドが正常に登録されました。')
         router.push({
           name: 'RMGuildDetail',
-          params: { guildId: createdGuild.id },
+          params: { guildId: createdGuild.id }
         })
         return
       }

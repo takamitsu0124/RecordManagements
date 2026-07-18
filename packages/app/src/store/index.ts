@@ -1,11 +1,12 @@
 import { computed, reactive } from 'vue'
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
-import {
+import type {
 	OwnedSkill,
 	SkillMaster,
-	UserSkill,
+	UserSkill} from '@rm/types'
+import {
 	defaultSkillMaster,
-	defaultUserSkill,
+	defaultUserSkill
 } from '@rm/types'
 import { db, dbSkillMasterModule, dbUserSkillsModule } from '@rm/db'
 import { normalizeSkillMasterRecord } from 'src/helpers/skillMasterSchema'
@@ -32,7 +33,7 @@ const defaultUserSkillBase = defaultUserSkill()
 const state = reactive<SkillStoreState>({
 	masterData: [],
 	currentUserSkills: [],
-	isLoading: false,
+	isLoading: false
 })
 
 let loadingCount = 0
@@ -80,7 +81,7 @@ const normalizeOwnedSkills = (ownedSkills: unknown): OwnedSkill[] => {
 			level:
 				typeof ownedSkill.level === 'number' && Number.isFinite(ownedSkill.level)
 					? ownedSkill.level
-					: 0,
+					: 0
 		})
 	}
 
@@ -93,7 +94,7 @@ const normalizeUserSkill = (userId: string, payload: UserSkill | null | undefine
 		...payload,
 		id: payload?.id || userId,
 		userId: payload?.userId || userId,
-		ownedSkills: normalizeOwnedSkills(payload?.ownedSkills),
+		ownedSkills: normalizeOwnedSkills(payload?.ownedSkills)
 	}
 }
 
@@ -130,7 +131,7 @@ const userOwnedSkills = computed(() => {
 		for (const ownedSkill of userSkill.ownedSkills) {
 			ownedSkills.push({
 				userId: userSkill.userId,
-				...ownedSkill,
+				...ownedSkill
 			})
 		}
 	}
@@ -145,14 +146,14 @@ const skillDetails = computed<SkillDetail[]>(() => {
 			? master
 			: {
 					...defaultSkillMasterBase,
-					id: ownedSkill.skillId,
+					id: ownedSkill.skillId
 				}
 
 		return {
 			...normalizedMaster,
 			skillId: ownedSkill.skillId,
 			level: ownedSkill.level,
-			masterMissing: !master,
+			masterMissing: !master
 		}
 	})
 })
@@ -164,7 +165,7 @@ const userSkillDetails = computed<UserSkillDetail[]>(() => {
 			? master
 			: {
 					...defaultSkillMasterBase,
-					id: ownedSkill.skillId,
+					id: ownedSkill.skillId
 				}
 
 		return {
@@ -172,7 +173,7 @@ const userSkillDetails = computed<UserSkillDetail[]>(() => {
 			userId: ownedSkill.userId,
 			skillId: ownedSkill.skillId,
 			level: ownedSkill.level,
-			masterMissing: !master,
+			masterMissing: !master
 		}
 	})
 })
@@ -233,7 +234,7 @@ const writeSkillMasterCache = (
 const rehydrateSkillMasterDates = (record: SkillMaster): SkillMaster => ({
 	...record,
 	createdAt: new Date(record.createdAt),
-	updatedAt: new Date(record.updatedAt),
+	updatedAt: new Date(record.updatedAt)
 })
 
 const fetchLatestSkillMasterUpdatedAt = async (): Promise<string | null> => {
@@ -439,7 +440,7 @@ export const skillStore = {
 	fetchUserSkills,
 	fetchUsersSkills,
 	setCurrentUserSkills,
-	clearCurrentUserSkills,
+	clearCurrentUserSkills
 }
 
 export const useSkillStore = () => skillStore

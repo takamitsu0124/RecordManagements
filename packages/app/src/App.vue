@@ -1,3 +1,13 @@
+<script setup lang="ts">
+import DynamicDialog from 'primevue/dynamicdialog'
+import RMScrollTopButton from 'src/components/RMScrollTopButton/RMScrollTopButton.vue'
+import Toast from 'primevue/toast'
+
+defineOptions({
+  name: 'App'
+})
+</script>
+
 <template>
   <Toast
     group="app-top"
@@ -13,13 +23,3 @@
   <RMScrollTopButton />
   <router-view />
 </template>
-
-<script setup lang="ts">
-import DynamicDialog from 'primevue/dynamicdialog'
-import RMScrollTopButton from 'src/components/RMScrollTopButton/RMScrollTopButton.vue'
-import Toast from 'primevue/toast'
-
-defineOptions({
-  name: 'App',
-})
-</script>

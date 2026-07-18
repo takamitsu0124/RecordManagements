@@ -38,7 +38,7 @@ const updateRoleDraft = (uid: string, role: AppRole | null) => {
 
   emit('update:roleDrafts', {
     ...props.roleDrafts,
-    [uid]: role,
+    [uid]: role
   })
 }
 
@@ -131,10 +131,10 @@ const saveRoleEdit = (member: GuildUserRow) => {
           >
             <RMSectionEdit
               :editing="isRoleEditing(member.uid)"
-              :can-edit="canChangeRole(member)"
+              :canEdit="canChangeRole(member)"
               size="row"
-              save-label="権限を保存"
-              :save-disabled="roleDrafts[member.uid] === member.role"
+              saveLabel="権限を保存"
+              :saveDisabled="roleDrafts[member.uid] === member.role"
               @update:editing="(value) => (value ? startRoleEdit(member) : cancelRoleEdit(member))"
               @cancel="cancelRoleEdit(member)"
               @save="saveRoleEdit(member)"
@@ -222,10 +222,10 @@ const saveRoleEdit = (member: GuildUserRow) => {
           <div class="guild-member-item__management">
             <RMSectionEdit
               :editing="isRoleEditing(member.uid)"
-              :can-edit="canChangeRole(member)"
+              :canEdit="canChangeRole(member)"
               size="row"
-              save-label="権限を保存"
-              :save-disabled="roleDrafts[member.uid] === member.role"
+              saveLabel="権限を保存"
+              :saveDisabled="roleDrafts[member.uid] === member.role"
               @update:editing="(value) => (value ? startRoleEdit(member) : cancelRoleEdit(member))"
               @cancel="cancelRoleEdit(member)"
               @save="saveRoleEdit(member)"

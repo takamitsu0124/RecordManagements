@@ -4,12 +4,13 @@ import Card from 'primevue/card'
 import Dropdown from 'primevue/dropdown'
 import ProgressSpinner from 'primevue/progressspinner'
 import { dbUsersModule, dbUserSkillsModule } from '@rm/db'
-import {
+import type {
   AppUser,
   OwnedSkill,
   SkillMaster,
   UserSkill,
-  WeaponProficiencyKey,
+  WeaponProficiencyKey} from '@rm/types'
+import {
   defaultAppUser,
   defaultSkillMaster,
   defaultUserSkill,
@@ -18,7 +19,7 @@ import {
   weaponProficiencyDefinitions,
   weaponProficiencyLevelOptions,
   weaponProficiencyMaxLevel,
-  weaponProficiencyMinLevel,
+  weaponProficiencyMinLevel
 } from '@rm/types'
 import RMUserWorkspaceProficiencySkillSection from './RMUserWorkspaceProficiencySkillSection.vue'
 import RMUserWorkspaceProfileSection from './RMUserWorkspaceProfileSection.vue'
@@ -28,7 +29,7 @@ import type {
   SkillCatalogRow,
   SkillCatalogSortOption,
   SkillCatalogStatus,
-  WorkspaceProfile,
+  WorkspaceProfile
 } from './types'
 import { defaultWorkspaceProfile } from './types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -41,7 +42,7 @@ import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import {
   notifyError,
   notifyInfo,
-  notifySuccess,
+  notifySuccess
 } from 'src/composables/useAppNotifications'
 import { useSkillStore } from 'src/store'
 import { buildSkillMasterSearchText } from 'src/helpers/skillMasterSchema'
@@ -62,7 +63,7 @@ const props = withDefaults(
     fallbackAppUser: null,
     pageTitle: 'マイページ',
     pageIcon: 'pi pi-user',
-    backLabel: '戻る',
+    backLabel: '戻る'
   }
 )
 
@@ -120,7 +121,7 @@ const workspaceTabs = computed(() => {
   tabs.push({
     key: 'skills',
     label: '所持スキル',
-    badge: ownedSkillRows.value.length,
+    badge: ownedSkillRows.value.length
   })
 
   if (isCompactMode.value) {
@@ -142,7 +143,7 @@ const setSectionEditing = (key: WorkspaceSectionKey, value: boolean) => {
 const weaponProficiencyFields = computed(() =>
   weaponProficiencyDefinitions.map((definition) => ({
     ...definition,
-    value: user.value.weaponProficiencyLevels[definition.key],
+    value: user.value.weaponProficiencyLevels[definition.key]
   }))
 )
 
@@ -154,7 +155,7 @@ const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
       : {
           ...defaultSkillMaster(),
           id: ownedSkill.skillId,
-          name: ownedSkill.skillId,
+          name: ownedSkill.skillId
         }
 
     return {
@@ -169,7 +170,8 @@ const ownedSkillRows = computed<OwnedSkillRow[]>(() =>
       skillName: fallbackMaster.skillName || '未設定',
       effect: fallbackMaster.effect || '',
       image: fallbackMaster.image,
-      masterMissing: !master,
+      imageThumb: fallbackMaster.imageThumb || '',
+      masterMissing: !master
     }
   })
 )
@@ -188,7 +190,7 @@ const skillMasterSearchTextById = computed(
     new Map(
       skillStore.state.masterData.map((skill) => [
         skill.id,
-        buildSkillMasterSearchText(skill),
+        buildSkillMasterSearchText(skill)
       ])
     )
 )
@@ -205,7 +207,7 @@ const skillCatalogEquipmentTypeOptions = computed(() =>
   [
     ...new Set(
       skillStore.state.masterData.map((skill) => skill.equipmentType.trim())
-    ),
+    )
   ]
     .filter((value): value is string => value !== '')
     .sort((a, b) => a.localeCompare(b, 'ja'))
@@ -267,7 +269,7 @@ const filteredSkillCatalogRows = computed<SkillCatalogRow[]>(() => {
     rows.push({
       ...skill,
       isOwned,
-      ownedLevel: ownedSkillLevels.get(skill.id) ?? 0,
+      ownedLevel: ownedSkillLevels.get(skill.id) ?? 0
     })
   }
 
@@ -288,7 +290,7 @@ const cloneUser = (
   const base = defaultWorkspaceProfile()
   const nextUser = {
     ...base,
-    ...(payload || {}),
+    ...(payload || {})
   }
 
   return {
@@ -296,7 +298,7 @@ const cloneUser = (
     email: payload?.email ?? base.email,
     phone: payload?.phone ?? base.phone,
     imageUrls: Array.isArray(payload?.imageUrls)
-      ? payload!.imageUrls.filter(
+      ? payload.imageUrls.filter(
           (url): url is string => typeof url === 'string'
         )
       : [],
@@ -305,7 +307,7 @@ const cloneUser = (
     ),
     weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
       payload?.weaponProficiencySkillProgress
-    ),
+    )
   }
 }
 
@@ -318,7 +320,7 @@ const cloneAppUser = (payload?: Partial<AppUser> | null): AppUser => ({
   weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
     payload?.weaponProficiencySkillProgress
   ),
-  role: payload?.role || 'member',
+  role: payload?.role || 'member'
 })
 
 const createUserProfileFromAppUser = (
@@ -337,7 +339,7 @@ const createUserProfileFromAppUser = (
     birthDateAt: payload?.birthDateAt || null,
     imageUrls: payload?.imageUrls || [],
     weaponProficiencyLevels: payload?.weaponProficiencyLevels,
-    weaponProficiencySkillProgress: payload?.weaponProficiencySkillProgress,
+    weaponProficiencySkillProgress: payload?.weaponProficiencySkillProgress
   })
 }
 
@@ -349,7 +351,7 @@ const resolveFallbackWorkspaceAppUser = (): AppUser | null => {
     return cloneAppUser({
       ...globalLoginUserData.value,
       id: props.userId,
-      uid: props.userId,
+      uid: props.userId
     })
   }
 
@@ -357,7 +359,7 @@ const resolveFallbackWorkspaceAppUser = (): AppUser | null => {
     return cloneAppUser({
       id: props.userId,
       uid: props.userId,
-      ...props.fallbackAppUser,
+      ...props.fallbackAppUser
     })
   }
 
@@ -373,7 +375,7 @@ const cloneOwnedSkills = (payload: OwnedSkill[]): OwnedSkill[] => {
       level:
         typeof skill.level === 'number' && Number.isFinite(skill.level)
           ? Math.max(0, Math.round(skill.level))
-          : 0,
+          : 0
     }))
     .filter((skill) => {
       if (!skill.skillId || seenSkillIds.has(skill.skillId)) {
@@ -493,7 +495,7 @@ const addOwnedSkill = (skill: SkillMaster) => {
 
   ownedSkills.value.push({
     skillId: skill.id,
-    level: 0,
+    level: 0
   })
 }
 
@@ -511,8 +513,8 @@ const updateWeaponProficiencyLevel = (
     ...user.value,
     weaponProficiencyLevels: {
       ...user.value.weaponProficiencyLevels,
-      [key]: typeof value === 'number' && Number.isFinite(value) ? value : null,
-    },
+      [key]: typeof value === 'number' && Number.isFinite(value) ? value : null
+    }
   })
 }
 
@@ -531,7 +533,7 @@ watch(
     skillCatalogElement,
     skillCatalogEquipmentType,
     skillCatalogStatus,
-    skillCatalogSortOption,
+    skillCatalogSortOption
   ],
   () => {
     skillCatalogPage.value = 0
@@ -598,7 +600,8 @@ const onSubmit = async () => {
         email: user.value.email.trim(),
         phone: user.value.phone.trim(),
         birthDateAt: modelToDate(birthDateAtStr.value),
-        weaponProficiencySkillProgress: user.value.weaponProficiencySkillProgress,
+        weaponProficiencySkillProgress:
+          user.value.weaponProficiencySkillProgress
       })
       const nextAppUser = cloneAppUser({
         ...appUser.value,
@@ -618,7 +621,7 @@ const onSubmit = async () => {
         phone: nextUser.phone,
         imageUrls: resolvedImageUrls,
         weaponProficiencyLevels: nextUser.weaponProficiencyLevels,
-        weaponProficiencySkillProgress: nextUser.weaponProficiencySkillProgress,
+        weaponProficiencySkillProgress: nextUser.weaponProficiencySkillProgress
       })
       const nextUsersPayload = props.includeProfile
         ? {
@@ -634,19 +637,19 @@ const onSubmit = async () => {
             weaponProficiencyLevels: nextAppUser.weaponProficiencyLevels,
             weaponProficiencySkillProgress:
               nextAppUser.weaponProficiencySkillProgress,
-            ...(canEditGuildId.value ? { guildId: nextAppUser.guildId } : {}),
+            ...(canEditGuildId.value ? { guildId: nextAppUser.guildId } : {})
           }
         : {
             imageUrls: nextAppUser.imageUrls,
             weaponProficiencyLevels: nextAppUser.weaponProficiencyLevels,
             weaponProficiencySkillProgress:
-              nextAppUser.weaponProficiencySkillProgress,
+              nextAppUser.weaponProficiencySkillProgress
           }
       const nextUserSkill: UserSkill = {
         ...defaultUserSkill(),
         id: props.userId,
         userId: props.userId,
-        ownedSkills: normalizedOwnedSkills,
+        ownedSkills: normalizedOwnedSkills
       }
 
       if (userSkillExists.value) {
@@ -667,7 +670,7 @@ const onSubmit = async () => {
       if (globalLoginUserData.value.id === props.userId) {
         globalLoginUserData.value = {
           ...globalLoginUserData.value,
-          ...nextAppUser,
+          ...nextAppUser
         }
       }
 
@@ -753,46 +756,57 @@ const onSubmit = async () => {
                 <RMUserWorkspaceProfileSection
                   v-if="activeKey === 'profile'"
                   v-model:user="user"
-                  :editing="isSectionEditing('profile')"
-                  :canEditGuildId="canEditGuildId"
-                  :situationOptions="situationOptions"
                   v-model:affiliationDateStr="affiliationDateStr"
                   v-model:gameStartDateAtStr="gameStartDateAtStr"
                   v-model:birthDateAtStr="birthDateAtStr"
-                  @update:editing="(value) => setSectionEditing('profile', value)"
+                  :editing="isSectionEditing('profile')"
+                  :canEditGuildId="canEditGuildId"
+                  :situationOptions="situationOptions"
+                  @update:editing="
+                    (value) => setSectionEditing('profile', value)
+                  "
                   @cancel="onSectionCancel"
                   @save="onSubmit"
                 />
 
                 <RMUserWorkspaceSkillsSection
                   v-else-if="activeKey === 'skills'"
-                  :editing="isSectionEditing('skills')"
-                  :ownedSkillRows="ownedSkillRows"
-                  :filteredSkillCatalogRows="filteredSkillCatalogRows"
-                  :visibleSkillCatalogRows="visibleSkillCatalogRows"
                   v-model:skillCatalogPage="skillCatalogPage"
-                  :skillCatalogPageSize="skillCatalogPageSize"
                   v-model:skillCatalogQuery="skillCatalogQuery"
                   v-model:skillCatalogElement="skillCatalogElement"
                   v-model:skillCatalogEquipmentType="skillCatalogEquipmentType"
                   v-model:skillCatalogStatus="skillCatalogStatus"
                   v-model:skillCatalogSortOption="skillCatalogSortOption"
+                  :editing="isSectionEditing('skills')"
+                  :ownedSkillRows="ownedSkillRows"
+                  :filteredSkillCatalogRows="filteredSkillCatalogRows"
+                  :visibleSkillCatalogRows="visibleSkillCatalogRows"
+                  :skillCatalogPageSize="skillCatalogPageSize"
                   :skillCatalogElementOptions="skillCatalogElementOptions"
-                  :skillCatalogEquipmentTypeOptions="skillCatalogEquipmentTypeOptions"
-                  @toggle-skill="toggleOwnedSkill"
-                  @remove-skill="removeOwnedSkill"
-                  @reset-filters="resetSkillFilters"
-                  @update:editing="(value) => setSectionEditing('skills', value)"
+                  :skillCatalogEquipmentTypeOptions="
+                    skillCatalogEquipmentTypeOptions
+                  "
+                  @toggleSkill="toggleOwnedSkill"
+                  @removeSkill="removeOwnedSkill"
+                  @resetFilters="resetSkillFilters"
+                  @update:editing="
+                    (value) => setSectionEditing('skills', value)
+                  "
                   @cancel="onSectionCancel"
                   @save="onSubmit"
                 />
 
-                <div v-else-if="activeKey === 'level'" class="user-workspace-focus-switch__level-panel">
+                <div
+                  v-else-if="activeKey === 'level'"
+                  class="user-workspace-focus-switch__level-panel"
+                >
                   <RMSectionEdit
                     :editing="isSectionEditing('level')"
-                    :can-edit="true"
+                    :canEdit="true"
                     title="熟練度Lv"
-                    @update:editing="(value) => setSectionEditing('level', value)"
+                    @update:editing="
+                      (value) => setSectionEditing('level', value)
+                    "
                     @cancel="onSectionCancel"
                     @save="onSubmit"
                   >
@@ -814,7 +828,9 @@ const onSubmit = async () => {
                     </template>
                     <template #edit>
                       <div class="user-workspace-focus-switch__level-note">
-                        各武器種の熟練度Lvを{{ weaponProficiencyLevelRangeLabel }}から選択できます。
+                        各武器種の熟練度Lvを{{
+                          weaponProficiencyLevelRangeLabel
+                        }}から選択できます。
                       </div>
                       <div class="user-workspace-focus-switch__level-grid">
                         <div
@@ -847,7 +863,9 @@ const onSubmit = async () => {
                   v-else-if="activeKey === 'proficiency-skill'"
                   v-model:progress="user.weaponProficiencySkillProgress"
                   :editing="isSectionEditing('proficiency-skill')"
-                  @update:editing="(value) => setSectionEditing('proficiency-skill', value)"
+                  @update:editing="
+                    (value) => setSectionEditing('proficiency-skill', value)
+                  "
                   @cancel="onSectionCancel"
                   @save="onSubmit"
                 />

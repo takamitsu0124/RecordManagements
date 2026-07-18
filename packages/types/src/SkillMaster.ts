@@ -31,6 +31,8 @@ export type SkillMaster = {
   effect: string
   /** スキル画像URL */
   image: string
+  /** スキル画像のサムネイルURL(一覧表示用の縮小版。未生成の場合は空文字) */
+  imageThumb: string
 } & DefaultType
 
 export function defaultSkillMaster(): SkillMaster {
@@ -54,6 +56,7 @@ export function defaultSkillMaster(): SkillMaster {
     cooldown: null,
     skillName: '',
     effect: '',
-    image: ''
+    image: '',
+    imageThumb: ''
   }
 }

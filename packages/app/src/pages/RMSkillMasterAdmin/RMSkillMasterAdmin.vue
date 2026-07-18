@@ -12,28 +12,38 @@ import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
-import { dbSkillMasterModule } from '@rm/db'
-import { SkillMaster, defaultSkillMaster } from '@rm/types'
+import {
+  dbSkillMasterModule,
+  SKILL_MASTER_IMAGE_RESIZE_OPTIONS,
+  SKILL_MASTER_THUMBNAIL_RESIZE_OPTIONS,
+  uploadFile
+} from '@rm/db'
+import type { SkillMaster} from '@rm/types'
+import { defaultSkillMaster } from '@rm/types'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 import { parseCsv, readTextFile } from 'src/helpers/csv'
+import type {
+  SkillMasterImportChangeType,
+  SkillMasterImportPayload} from 'src/helpers/skillMasterCsv'
 import {
   getSkillMasterImportChangeType,
-  normalizeSkillMasterCsvRecords,
-  SkillMasterImportChangeType,
-  SkillMasterImportPayload,
+  normalizeSkillMasterCsvRecords
 } from 'src/helpers/skillMasterCsv'
 import {
   attackTypeOptions,
   buildSkillMasterSearchText,
+  createSkillMasterImageStoragePath,
+  createSkillMasterSourceFileName,
+  createSkillMasterThumbnailFileName,
   extractCharacterNameFromSkillName,
   normalizeSkillMasterRecord,
   skillElements,
   skillEquipmentTypes,
-  skillTypeOptions,
+  skillTypeOptions
 } from 'src/helpers/skillMasterSchema'
 
 type SelectOption<T extends string | number = string> = {
@@ -81,7 +91,7 @@ const requiredSkillMasterCsvHeaders = [
   'cooldown', // クールダウン数値
   'skillName', // 技名 (例: スターバースト・ストリーム)
   'effect', // 効果内容
-  'image', // スキル画像URL
+  'image' // スキル画像URL
 ]
 const skillMasterCsvHeaderText = requiredSkillMasterCsvHeaders.join(',')
 
@@ -90,24 +100,24 @@ const rarityOptions: SelectOption<number>[] = [1, 2, 3, 4, 5, 6, 7].map(
 )
 const elementOptions: SelectOption[] = skillElements.map((value) => ({
   label: value,
-  value,
+  value
 }))
 const equipmentTypeOptions: SelectOption[] = skillEquipmentTypes.map(
   (value) => ({
     label: value,
-    value,
+    value
   })
 )
 const skillTypeSelectOptions: SelectOption[] = skillTypeOptions.map(
   (value) => ({
     label: value,
-    value,
+    value
   })
 )
 const attackTypeSelectOptions: SelectOption[] = attackTypeOptions.map(
   (value) => ({
     label: value,
-    value,
+    value
   })
 )
 
@@ -135,11 +145,14 @@ const skillMasterSortOptions: Array<{
   { label: 'ブレイクゲージ増加量(昇順)', value: 'breakGaugeAsc' },
   { label: 'ブレイクゲージ増加量(降順)', value: 'breakGaugeDesc' },
   { label: 'スイッチゲージ増加量(昇順)', value: 'switchGaugeAsc' },
-  { label: 'スイッチゲージ増加量(降順)', value: 'switchGaugeDesc' },
+  { label: 'スイッチゲージ増加量(降順)', value: 'switchGaugeDesc' }
 ]
 const isEditMode = ref(false)
 const isEditorVisible = ref(false)
 const form = ref<SkillMaster>(defaultSkillMaster())
+const selectedSkillImageFile = ref<File | null>(null)
+const selectedSkillImagePreviewUrl = ref('')
+const skillImageUploadKey = ref(0)
 const errorMessage = ref('')
 const skillCsvUploadKey = ref(0)
 const skillCsvFileName = ref('')
@@ -163,7 +176,7 @@ const skillMasterSearchTextById = computed(
     new Map(
       skillMasterList.value.map((skill) => [
         skill.id,
-        buildSkillMasterSearchText(skill),
+        buildSkillMasterSearchText(skill)
       ])
     )
 )
@@ -175,7 +188,9 @@ const activeFilterCount = computed(
       selectedEquipmentType.value,
       selectedSkillType.value,
       selectedAttackType.value,
-      skillMasterSortOption.value === 'default' ? '' : skillMasterSortOption.value,
+      skillMasterSortOption.value === 'default'
+        ? ''
+        : skillMasterSortOption.value
     ].filter((value) => value !== '' && value !== null).length
 )
 const hasActiveFilters = computed(() => activeFilterCount.value > 0)
@@ -186,7 +201,7 @@ const skillCsvPreviewCounts = computed(() => {
   const counts = {
     insert: 0,
     update: 0,
-    unchanged: 0,
+    unchanged: 0
   }
 
   for (const row of skillCsvPreviewRows.value) {
@@ -282,11 +297,36 @@ const editorTitle = computed(() =>
   isEditingExisting.value ? 'スキルマスターを編集' : 'スキルマスターを新規登録'
 )
 const editorDescription = computed(() =>
-  isEditingExisting.value ? '必要な項目だけ更新できます。' : '必要な項目だけ入力して保存できます。'
+  isEditingExisting.value
+    ? '必要な項目だけ更新できます。'
+    : '必要な項目だけ入力して保存できます。'
+)
+const skillImagePreviewUrl = computed(
+  () => selectedSkillImagePreviewUrl.value || form.value.image
 )
 
+const cleanupSelectedSkillImagePreview = () => {
+  if (selectedSkillImagePreviewUrl.value) {
+    URL.revokeObjectURL(selectedSkillImagePreviewUrl.value)
+  }
+  selectedSkillImagePreviewUrl.value = ''
+}
+
+const onSkillImageSelect = (event: { files?: File[] }) => {
+  const file = event.files?.[0]
+  if (!file) return
+
+  cleanupSelectedSkillImagePreview()
+  selectedSkillImageFile.value = file
+  selectedSkillImagePreviewUrl.value = URL.createObjectURL(file)
+  skillImageUploadKey.value += 1
+}
+
 const resetForm = () => {
+  cleanupSelectedSkillImagePreview()
   form.value = defaultSkillMaster()
+  selectedSkillImageFile.value = null
+  skillImageUploadKey.value += 1
   isEditMode.value = false
   errorMessage.value = ''
 }
@@ -375,14 +415,17 @@ const startEdit = (skill: SkillMaster) => {
   if (skillMasterTableRef.value) {
     skillMasterPaginationState.value = {
       first: skillMasterTableRef.value.d_first,
-      rows: skillMasterTableRef.value.d_rows,
+      rows: skillMasterTableRef.value.d_rows
     }
   }
 
+  cleanupSelectedSkillImagePreview()
   form.value = {
     ...defaultSkillMaster(),
-    ...skill,
+    ...skill
   }
+  selectedSkillImageFile.value = null
+  skillImageUploadKey.value += 1
   isEditMode.value = true
   errorMessage.value = ''
   isEditorVisible.value = true
@@ -423,10 +466,12 @@ const saveSkillMaster = async () => {
     return
   }
 
+  const skillId = form.value.id.trim()
+
   const payload: SkillMaster = {
     ...defaultSkillMaster(),
     ...form.value,
-    id: form.value.id.trim(),
+    id: skillId,
     name: form.value.name.trim(),
     characterName:
       form.value.characterName.trim() ||
@@ -442,11 +487,38 @@ const saveSkillMaster = async () => {
     attackType: form.value.attackType.trim(),
     skillName: form.value.skillName.trim(),
     effect: form.value.effect.replace(/\r\n/g, '\n'),
-    image: form.value.image.trim(),
+    image: form.value.image.trim()
   }
 
   await useSpinner(async () => {
     try {
+      if (selectedSkillImageFile.value) {
+        const basePath = createSkillMasterImageStoragePath(
+          payload.equipmentType
+        )
+        const sourceFileName = createSkillMasterSourceFileName(
+          skillId,
+          selectedSkillImageFile.value
+        )
+        const thumbnailFileName = createSkillMasterThumbnailFileName(skillId)
+        const [imageUrl, imageThumbUrl] = await Promise.all([
+          uploadFile(
+            selectedSkillImageFile.value,
+            basePath,
+            sourceFileName,
+            SKILL_MASTER_IMAGE_RESIZE_OPTIONS
+          ),
+          uploadFile(
+            selectedSkillImageFile.value,
+            basePath,
+            thumbnailFileName,
+            SKILL_MASTER_THUMBNAIL_RESIZE_OPTIONS
+          )
+        ])
+        payload.image = imageUrl
+        payload.imageThumb = imageThumbUrl
+      }
+
       if (isEditingExisting.value) {
         await dbSkillMasterModule.doc(payload.id).merge(payload)
         notifySuccess('スキルマスターを更新しました。')
@@ -499,7 +571,7 @@ const onSkillCsvSelect = async (event: { files?: File[] }) => {
 
     if (missingHeaders.length > 0) {
       skillCsvParseErrors.value = [
-        `CSV ヘッダーが不足しています: ${missingHeaders.join(', ')}`,
+        `CSV ヘッダーが不足しています: ${missingHeaders.join(', ')}`
       ]
       return
     }
@@ -513,7 +585,7 @@ const onSkillCsvSelect = async (event: { files?: File[] }) => {
       changeType: getSkillMasterImportChangeType(
         payload,
         existingSkillMap.value
-      ),
+      )
     }))
   } catch (error) {
     skillCsvParseErrors.value = ['CSV の読み込みに失敗しました。']
@@ -558,6 +630,7 @@ const importSkillMasterCsv = async () => {
         skillName: row.skillName,
         effect: row.effect,
         image: row.image,
+        imageThumb: row.imageThumb
       }
 
       try {
@@ -575,7 +648,7 @@ const importSkillMasterCsv = async () => {
           name: row.name,
           action,
           status: 'success',
-          message: action === 'insert' ? '登録しました。' : '更新しました。',
+          message: action === 'insert' ? '登録しました。' : '更新しました。'
         })
       } catch (error) {
         const action: Exclude<SkillMasterImportChangeType, 'unchanged'> =
@@ -589,7 +662,7 @@ const importSkillMasterCsv = async () => {
           message:
             error instanceof Error && error.message
               ? error.message
-              : 'スキルマスターの保存に失敗しました。',
+              : 'スキルマスターの保存に失敗しました。'
         })
       }
     }
@@ -910,8 +983,8 @@ const importSkillMasterCsv = async () => {
             </div>
 
             <DataTable
-              ref="skillMasterTableRef"
               v-else
+              ref="skillMasterTableRef"
               :value="filteredSkillMasterList"
               paginator
               :rows="12"
@@ -931,7 +1004,7 @@ const importSkillMasterCsv = async () => {
                   <div class="skill-master-admin-skill-cell">
                     <img
                       v-if="data.image"
-                      :src="data.image"
+                      :src="data.imageThumb || data.image"
                       alt=""
                       loading="lazy"
                       class="skill-master-admin-skill-cell__image"
@@ -952,8 +1025,7 @@ const importSkillMasterCsv = async () => {
                       <div class="skill-master-admin-skill-cell__meta">
                         キャラ: {{ data.characterName || '未設定' }}
                         <span v-if="data.rarity !== null">
-                          / レア: {{ data.rarity }}</span
-                        >
+                          / レア: {{ data.rarity }}</span>
                       </div>
                     </div>
                   </div>
@@ -1207,14 +1279,19 @@ const importSkillMasterCsv = async () => {
 
             <div class="skill-master-admin-field">
               <label class="skill-master-admin-label">image</label>
-              <InputText
-                v-model="form.image"
-                placeholder="https://example.com/skill.png"
+              <FileUpload
+                :key="skillImageUploadKey"
+                mode="basic"
+                accept="image/*"
+                chooseLabel="画像を選択"
+                class="skill-master-admin-upload"
+                @select="onSkillImageSelect"
               />
               <img
-                v-if="form.image"
-                :src="form.image"
+                v-if="skillImagePreviewUrl"
+                :src="skillImagePreviewUrl"
                 alt="skill preview"
+                loading="lazy"
                 class="skill-master-admin-image"
               />
             </div>

@@ -19,7 +19,7 @@ const props = withDefaults(
     cancelLabel: 'キャンセル',
     saving: false,
     saveDisabled: false,
-    size: 'section',
+    size: 'section'
   }
 )
 

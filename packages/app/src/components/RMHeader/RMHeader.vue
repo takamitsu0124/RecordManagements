@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { computed, PropType } from 'vue'
+import type { PropType } from 'vue'
+import { computed } from 'vue'
 import Toolbar from 'primevue/toolbar'
 import RMHamburger from '../RMHamburger/RMHamburger.vue'
 import { useRoute } from 'vue-router'
@@ -7,8 +8,8 @@ import { useRoute } from 'vue-router'
 const props = defineProps({
   menu: {
     type: Object as PropType<{ name: string; url: string }[]>,
-    required: true,
-  },
+    required: true
+  }
 })
 
 const route = useRoute()
@@ -18,7 +19,7 @@ const pageDescriptionMap: Record<string, string> = {
   RMSkillPost: 'メンバーの所持スキルと画像順を更新',
   RMGuildDetail: '承認状況とメンバー運用を確認',
   RMSkillMasterAdmin: '検索・登録・更新をまとめて管理',
-  RMUserEdit: 'プロフィール・所持スキル・画像をまとめて確認',
+  RMUserEdit: 'プロフィール・所持スキル・画像をまとめて確認'
 }
 
 const currentPageTitle = computed(() => {
@@ -60,9 +61,9 @@ const logout = () => {
         <RMHamburger
           v-model:isOpen="hamOpen"
           :menu="props.menu"
+          class="_rm_hamburger"
           @logout="logout"
           @menuClick="menuClick"
-          class="_rm_hamburger"
         />
       </div>
     </template>

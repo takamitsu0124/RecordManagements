@@ -23,6 +23,7 @@
     "skill-master:annotate-regions": "python3 ./scripts/skill-master/annotate-ocr-regions.py",
     "skill-master:import": "node ./scripts/skill-master/import.mjs",
     "schema-migration:migrate": "node ./scripts/schema-migration/migrate.mjs",
+    "check:img-lazy-loading": "node ./scripts/check-img-lazy-loading.mjs",
     "dev:vapp": "npm run dev -w vite-project",
     "build:vapp": "npm run build -w vite-project"
   },
@@ -39,6 +40,7 @@
   "devDependencies": {
     "firebase-admin": "^13.8.0",
     "firebase-tools": "^15.14.0",
-    "lerna": "^8.1.7"
+    "lerna": "^8.1.7",
+    "sharp": "^0.35.3"
   }
 }

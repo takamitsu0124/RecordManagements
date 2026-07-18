@@ -1,4 +1,4 @@
-import { DateType } from './calendarDateType'
+import type { DateType } from './calendarDateType'
 
 /**
  
@@ -10,7 +10,7 @@ export const createCalendar = (yearValue: number, monthValue: number) => {
   const createBlankDate = (): DateType => ({
     year: ' ',
     month: ' ',
-    day: ' ',
+    day: ' '
   })
 
   // 月初の曜日番号を取得する
@@ -26,7 +26,7 @@ export const createCalendar = (yearValue: number, monthValue: number) => {
       weekOneDays.push({
         year: String(yearValue),
         month: String(monthValue),
-        day: String(i - (isMonthStartDayOfWeekNumber - 1)),
+        day: String(i - (isMonthStartDayOfWeekNumber - 1))
       })
     } else {
       weekOneDays.push(createBlankDate())
@@ -49,7 +49,7 @@ export const createCalendar = (yearValue: number, monthValue: number) => {
       lastWeekDays.unshift({
         year: String(yearValue),
         month: String(monthValue),
-        day: String(isMonthEndDate - i),
+        day: String(isMonthEndDate - i)
       })
     } else {
       lastWeekDays.push(createBlankDate())
@@ -65,13 +65,13 @@ export const createCalendar = (yearValue: number, monthValue: number) => {
     midWeekDays.push({
       year: String(yearValue),
       month: String(monthValue),
-      day: String(i),
+      day: String(i)
     })
   }
 
   return [
     ...weekOneDays,
     ...midWeekDays,
-    ...lastWeekDays,
+    ...lastWeekDays
   ]
 }

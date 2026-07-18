@@ -1,4 +1,4 @@
-import { AppRole } from '@rm/types'
+import type { AppRole } from '@rm/types'
 
 export type GuildUserRow = {
   uid: string
@@ -29,6 +29,7 @@ export type GuildSkillRow = {
   unlockRateText: string
   ownedCount: number
   image: string
+  imageThumb: string
   masterMissing: boolean
   normalizedSearchText: string
 }

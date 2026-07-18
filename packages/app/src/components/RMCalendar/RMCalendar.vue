@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, PropType } from 'vue'
+import type { PropType } from 'vue'
+import { ref, computed, watch } from 'vue'
 import RMCard from '../RMCard/RMCard.vue'
 import EMIcon from '../RMIcon/RMIcon.vue'
-import { DateType } from './calendarDateType'
+import type { DateType } from './calendarDateType'
 import { createCalendar } from './createCalendar'
 import { createPagenaviMonthYear } from './createPagenaviMonthYear'
 import { createDayOfTheWeek } from './createDayOfTheWeek'
@@ -19,7 +20,7 @@ const props = defineProps({
    * @example '5月1日（水）'
    * @type { 'en' | 'ja' }
    */
-  lang: { type: String as PropType<'ja' | 'en'>, default: 'ja' },
+  lang: { type: String as PropType<'ja' | 'en'>, default: 'ja' }
 })
 
 const emit = defineEmits<{
@@ -30,7 +31,7 @@ const model = computed({
   get: () => props.modelValue,
   set: (value) => {
     emit('update:modelValue', value)
-  },
+  }
 })
 
 const createWeekLabels = () =>
@@ -63,24 +64,24 @@ const headerYear = computed(
 const headerDate = computed(() => {
   if (props.lang === 'ja') {
     return model.value
-      ? isNewDate.value.getMonth() +
-          1 +
-          '月' +
-          isNewDate.value.getDate() +
-          '日' +
-          '（' +
-          byLangDayOfTheWeek.value +
-          '）'
+      ? `${isNewDate.value.getMonth() +
+          1 
+          }月${ 
+          isNewDate.value.getDate() 
+          }日` +
+          `（${ 
+          byLangDayOfTheWeek.value 
+          }）`
       : ''
   } else if (props.lang === 'en') {
     return (
-      isNewDate.value.getMonth() +
-      1 +
-      ',' +
-      ' ' +
-      isNewDate.value.getDate() +
-      ' ' +
-      byLangDayOfTheWeek.value
+      `${isNewDate.value.getMonth() +
+      1 
+      },` +
+      ` ${ 
+      isNewDate.value.getDate() 
+      } ${ 
+      byLangDayOfTheWeek.value}`
     )
   }
   return ''
@@ -155,7 +156,7 @@ const pageNaviCurrent = ref<number>(isMonth.value)
 const refCalendarDateSection = ref<HTMLElement>()
 
 const backCalendar = () => {
-  const elementCalendarDateSection = refCalendarDateSection.value!
+  const elementCalendarDateSection = refCalendarDateSection.value
   elementCalendarDateSection.style.marginLeft = '5px'
   elementCalendarDateSection.style.opacity = '0'
 
@@ -190,7 +191,7 @@ const backCalendar = () => {
 }
 
 const nextCalendar = () => {
-  const elementCalendarDateSection = refCalendarDateSection.value!
+  const elementCalendarDateSection = refCalendarDateSection.value
   elementCalendarDateSection.style.marginRight = '5px'
   elementCalendarDateSection.style.opacity = '0'
 
@@ -251,7 +252,7 @@ const selectDay = (dayObject: DateType) => {
     )
 
     model.value =
-      dayObject.year + '/' + (Number(dayObject.month) + 1) + '/' + dayObject.day
+      `${dayObject.year  }/${  Number(dayObject.month) + 1  }/${  dayObject.day}`
 
     // elementHeaderDateContainer.style.opacity = '1'
   }, 300)
@@ -319,8 +320,8 @@ const getCalendarDayKey = (dayObject: DateType, index: number) => {
 
         <div ref="refCalendarDateSection" class="_week_items_container">
           <div
-            ref="refThisMonthCalenderDays"
             v-for="(dayObject, index) in thisMonthCalenderDays"
+            ref="refThisMonthCalenderDays"
             :key="getCalendarDayKey(dayObject, index)"
             :class="{
               _this_month_day:

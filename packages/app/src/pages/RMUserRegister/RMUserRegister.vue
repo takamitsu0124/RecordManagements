@@ -7,7 +7,8 @@ import DataTable from 'primevue/datatable'
 import Dropdown from 'primevue/dropdown'
 import FileUpload from 'primevue/fileupload'
 import Tag from 'primevue/tag'
-import { AppRole, appRoles } from '@rm/types'
+import type { AppRole} from '@rm/types'
+import { appRoles } from '@rm/types'
 import { createUser, dbUserCreate } from '@rm/utils'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMInput from 'src/components/RMInput/RMInput.vue'
@@ -15,11 +16,12 @@ import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 import { normalizeCsvWhitespace, parseCsv, readTextFile } from 'src/helpers/csv'
+import type {
+  RegisterInfo} from './register'
 import {
   getRegisterErrorMessage,
   globalRegisterForm,
-  RegisterInfo,
-  roleLabels,
+  roleLabels
 } from './register'
 
 type UserImportPreviewRow = RegisterInfo & {
@@ -43,7 +45,7 @@ const requiredUserCsvHeaders = [
   'password', // 初回作成時に設定するログインパスワード
   'name', // users.displayName に保存する表示名
   'guildId', // users.guildId に保存する所属ギルドID
-  'role', // users.role に保存する権限 (admin / guild_admin / member)
+  'role' // users.role に保存する権限 (admin / guild_admin / member)
 ]
 const userCsvHeaderText = requiredUserCsvHeaders.join(',')
 const { registerInfo, defaultRegisterInfo, validateRegisterInfo } =
@@ -51,7 +53,7 @@ const { registerInfo, defaultRegisterInfo, validateRegisterInfo } =
 const router = useRouter()
 const errors = ref<{ field: string; message: string }>({
   field: '',
-  message: '',
+  message: ''
 })
 const onFocus = ref<number>(0)
 const userCsvUploadKey = ref(0)
@@ -62,7 +64,7 @@ const userCsvImportResults = ref<UserImportResultRow[]>([])
 const roleOptions: { label: string; value: AppRole }[] = [
   { label: 'General Member', value: 'member' },
   { label: 'Guild Admin', value: 'guild_admin' },
-  { label: 'Admin', value: 'admin' },
+  { label: 'Admin', value: 'admin' }
 ]
 
 const validUserCsvRows = computed(() =>
@@ -113,7 +115,7 @@ const normalizeCsvRole = (value: string): AppRole | '' => {
     ['member', 'member'],
     ['generalmember', 'member'],
     ['general-member', 'member'],
-    ['general member', 'member'],
+    ['general member', 'member']
   ])
 
   return roleAliasMap.get(normalized) ?? ''
@@ -146,7 +148,7 @@ const buildUserImportPreviewRows = (records: ReturnType<typeof parseCsv>) => {
       password: normalizeCsvWhitespace(record.password),
       name: normalizeCsvWhitespace(record.name),
       guildId: normalizeCsvWhitespace(record.guildId),
-      role: role || 'member',
+      role: role || 'member'
     }
 
     let message = ''
@@ -165,7 +167,7 @@ const buildUserImportPreviewRows = (records: ReturnType<typeof parseCsv>) => {
     if (
       !message &&
       emailCounts.get(nextRow.email.toLowerCase()) &&
-      emailCounts.get(nextRow.email.toLowerCase())! > 1
+      emailCounts.get(nextRow.email.toLowerCase()) > 1
     ) {
       message = '同じメールアドレスが CSV 内で重複しています。'
     }
@@ -174,7 +176,7 @@ const buildUserImportPreviewRows = (records: ReturnType<typeof parseCsv>) => {
       ...nextRow,
       rowNumber: record.__rowNumber,
       status: message ? 'error' : 'ready',
-      message,
+      message
     } satisfies UserImportPreviewRow
   })
 }
@@ -206,7 +208,7 @@ const onUserCsvSelect = async (event: { files?: File[] }) => {
 
     if (missingHeaders.length > 0) {
       userCsvParseErrors.value = [
-        `CSV ヘッダーが不足しています: ${missingHeaders.join(', ')}`,
+        `CSV ヘッダーが不足しています: ${missingHeaders.join(', ')}`
       ]
       return
     }
@@ -230,7 +232,7 @@ const importUsersFromCsv = async () => {
     password: row.password,
     name: row.name,
     guildId: row.guildId,
-    role: row.role,
+    role: row.role
   }))
   const results: UserImportResultRow[] = []
 
@@ -246,7 +248,7 @@ const importUsersFromCsv = async () => {
             email: row.email,
             name: row.name,
             status: 'success',
-            message: '登録しました。',
+            message: '登録しました。'
           })
         } catch (error) {
           const fallbackMessage =
@@ -259,7 +261,7 @@ const importUsersFromCsv = async () => {
             email: row.email,
             name: row.name,
             status: 'error',
-            message: fallbackMessage,
+            message: fallbackMessage
           })
         }
       } catch (error) {
@@ -268,7 +270,7 @@ const importUsersFromCsv = async () => {
           email: row.email,
           name: row.name,
           status: 'error',
-          message: getRegisterErrorMessage(error) || 'ユーザー登録に失敗しました。',
+          message: getRegisterErrorMessage(error) || 'ユーザー登録に失敗しました。'
         })
       }
     }
@@ -301,7 +303,7 @@ const resetRegisterForm = () => {
   registerInfo.value = defaultRegisterInfo()
   errors.value = {
     field: '',
-    message: '',
+    message: ''
   }
 }
 </script>
@@ -467,9 +469,9 @@ const resetRegisterForm = () => {
                 placeholder="sample@gmail.com"
                 autocomplete="email"
                 shadow
+                :error2="errors.field === 'email'"
                 @onFocus="onFocus = 1"
                 @onBlur="onFocus = 0"
-                :error2="errors.field === 'email'"
               />
               <RMInput
                 v-model="registerInfo.password"
@@ -480,9 +482,9 @@ const resetRegisterForm = () => {
                 placeholder="aa1234"
                 autocomplete="new-password"
                 shadow
+                :error2="errors.field === 'password'"
                 @onFocus="onFocus = 2"
                 @onBlur="onFocus = 0"
-                :error2="errors.field === 'password'"
               />
               <RMInput
                 v-model="registerInfo.name"
@@ -493,9 +495,9 @@ const resetRegisterForm = () => {
                 placeholder="displayName"
                 autocomplete="name"
                 shadow
+                :error2="errors.field === 'name'"
                 @onFocus="onFocus = 3"
                 @onBlur="onFocus = 0"
-                :error2="errors.field === 'name'"
               />
               <RMInput
                 v-model="registerInfo.guildId"

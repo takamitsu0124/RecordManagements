@@ -3,14 +3,14 @@ import type {
   AttendanceCandidate,
   AttendanceCandidateSummary,
   AttendanceEvent,
-  AttendanceStatus,
+  AttendanceStatus
 } from '@rm/types'
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ja-JP', {
   month: 'numeric',
   day: 'numeric',
   hour: '2-digit',
-  minute: '2-digit',
+  minute: '2-digit'
 })
 
 export const formatAttendanceDateTime = (value: Date | null) => {
@@ -52,7 +52,7 @@ export const buildAttendanceSummaryRows = (
     label: formatAttendanceCandidateLabel(candidate),
     availableCount: event.candidateSummaries[candidate.id]?.availableCount ?? 0,
     maybeCount: event.candidateSummaries[candidate.id]?.maybeCount ?? 0,
-    unavailableCount: event.candidateSummaries[candidate.id]?.unavailableCount ?? 0,
+    unavailableCount: event.candidateSummaries[candidate.id]?.unavailableCount ?? 0
   }))
 
 export const formatAttendanceAnswersForDisplay = (

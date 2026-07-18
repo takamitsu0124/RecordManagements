@@ -73,7 +73,7 @@ export function parseCsv(content: string): CsvRecord[] {
 
   return rows.slice(1).map((cells, rowIndex) => {
     const record = {
-      __rowNumber: rowIndex + 2,
+      __rowNumber: rowIndex + 2
     } as CsvRecord
 
     headers.forEach((header, index) => {

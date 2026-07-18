@@ -46,6 +46,7 @@ const signIn = async () => {
       <template #content>
         <form class="login-card__content" @submit.prevent="signIn">
           <div class="login-card__logo">
+            <!-- img-lazy-loading:allow -->
             <img src="~/assets/logo.png" alt="RecordManagement logo" />
           </div>
 
@@ -109,8 +110,9 @@ const signIn = async () => {
   min-height: var(--rm-viewport-height);
   display: grid;
   place-items: center;
-  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
-    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  padding: max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
   background: v-bind(bgImgPath);
   background-size: cover;
 }

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { PropType, computed } from 'vue'
+import type { PropType} from 'vue'
+import { computed } from 'vue'
 import Button from 'primevue/button'
 import RMIcon from '../RMIcon/RMIcon.vue'
 
@@ -8,7 +9,7 @@ const props = defineProps({
     type: String as PropType<
       'standard' | 'justIcon' | 'withIcon' | 'withImg' | 'delete' | 'medal'
     >,
-    default: 'standard',
+    default: 'standard'
   },
   buttonHeight: { type: String, default: '50px' },
   label: { type: String, default: 'ページ遷移します' },
@@ -27,7 +28,7 @@ const props = defineProps({
   contentPosition: { type: String as PropType<'center' | 'between'> },
   isShadow: { type: Boolean, default: false },
   isMedalAndGarbageColor: {
-    type: String as PropType<'grey' | 'blue' | 'white'>,
+    type: String as PropType<'grey' | 'blue' | 'white'>
   },
   isBorder: { type: Boolean, default: false },
   isDisable: { type: Boolean, default: false },
@@ -36,8 +37,8 @@ const props = defineProps({
   outline: { type: Boolean, default: false },
   type: {
     type: String as PropType<'button' | 'submit' | 'reset'>,
-    default: 'button',
-  },
+    default: 'button'
+  }
 })
 
 const buttonLabel = computed(() => props.label || props.letter)
@@ -51,7 +52,7 @@ const resolvedBackground = computed(() => {
     grey: 'linear-gradient(180deg, #d1d5db, #6b7280)',
     'grey-7': 'linear-gradient(180deg, #d1d5db, #6b7280)',
     negative: 'linear-gradient(180deg, #f87171, #dc2626)',
-    white: '#ffffff',
+    white: '#ffffff'
   }
 
   return colorMap[props.color] ?? 'linear-gradient(180deg, #7ca6cb, #4b6982)'
@@ -78,7 +79,7 @@ const buttonStyle = computed(() => ({
   '--rm-button-border':
     props.outline || props.isBorder
       ? '1px solid #4b6982'
-      : '1px solid transparent',
+      : '1px solid transparent'
 }))
 
 const buttonClass = computed(() => ({
@@ -94,7 +95,7 @@ const buttonClass = computed(() => ({
   _button_content_center: props.contentPosition === 'center',
   _button_content_between: props.contentPosition === 'between',
   _button_flat: props.flat,
-  _button_outline: props.outline,
+  _button_outline: props.outline
 }))
 
 const medalGarbageColor = computed(() => {
@@ -119,6 +120,7 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
       src="~/assets/garbage.svg"
       :class="['_garbage_and_medal_icon', medalGarbageColor]"
       alt="delete"
+      loading="lazy"
     />
     <img
       v-else-if="buttonType === 'medal'"
@@ -129,6 +131,7 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
         medalGarbageColor,
       ]"
       alt="medal"
+      loading="lazy"
     />
     <div
       v-else-if="buttonType === 'justIcon' && specialIcon"
@@ -148,6 +151,7 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
           src="~/assets/medal.svg"
           class="_modal_icon"
           alt="medal"
+          loading="lazy"
         />
         <div v-else-if="specialIcon" class="_btn_icon _special_icon">
           <span class="material-symbols-outlined">{{
@@ -162,6 +166,7 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
             :src="imageUrlOrIconName"
             class="_icon_size _img_size"
             alt="button"
+            loading="lazy"
           />
         </div>
       </div>
@@ -173,7 +178,7 @@ const iconName = computed(() => props.icon || props.imageUrlOrIconName)
         "
         class="_just_letter"
         v-html="buttonLabel"
-      ></span>
+      />
     </div>
   </Button>
 </template>

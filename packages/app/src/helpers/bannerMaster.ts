@@ -1,4 +1,5 @@
-import { BannerMaster, defaultBannerMaster } from '@rm/types'
+import type { BannerMaster} from '@rm/types'
+import { defaultBannerMaster } from '@rm/types'
 
 const toValidDate = (value: Date | string | number | null | undefined) => {
   if (!value) return null
@@ -30,7 +31,7 @@ export const normalizeBannerMasterRecord = (
     isActive: typeof payload?.isActive === 'boolean' ? payload.isActive : true,
     startAt: toValidDate(payload?.startAt),
     endAt: toValidDate(payload?.endAt),
-    imageUrl: typeof payload?.imageUrl === 'string' ? payload.imageUrl : '',
+    imageUrl: typeof payload?.imageUrl === 'string' ? payload.imageUrl : ''
   }
 }
 

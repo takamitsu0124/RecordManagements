@@ -4,7 +4,7 @@ import {
   globalLoginUserData,
   hasAdmin,
   hasGuildId,
-  lacksGuildId,
+  lacksGuildId
 } from 'src/boot/main'
 
 export const menu = computed<{ name: string; url: string; isShow?: boolean }[]>(
@@ -15,44 +15,44 @@ export const menu = computed<{ name: string; url: string; isShow?: boolean }[]>(
       url: globalLoginUserData.value.id
         ? `/user/${globalLoginUserData.value.id}/edit`
         : '',
-      isShow: globalLoginUserData.value.id !== '',
+      isShow: globalLoginUserData.value.id !== ''
     },
     {
       name: 'ギルドダッシュボード',
       url: globalLoginUserData.value.guildId
         ? `/RMGuildDetail/${globalLoginUserData.value.guildId}`
         : '',
-      isShow: hasGuildId.value,
+      isShow: hasGuildId.value
     },
     {
       name: 'ギルド日程調整',
       url: globalLoginUserData.value.guildId
         ? `/guild/${globalLoginUserData.value.guildId}/schedule`
         : '',
-      isShow: hasGuildId.value,
+      isShow: hasGuildId.value
     },
     {
       name: '出欠確認',
       url: '/RMAttendance',
-      isShow: globalLoginUserData.value.id !== '' && canUseAttendance.value,
+      isShow: globalLoginUserData.value.id !== '' && canUseAttendance.value
     },
     {
       name: 'イベントカレンダー',
       url: '/RMCalendar',
-      isShow: hasGuildId.value,
+      isShow: hasGuildId.value
     },
     { name: 'ユーザー登録', url: '/RMUserRegister', isShow: hasAdmin.value },
     {
       name: 'スキルマスター管理',
       url: '/RMSkillMasterAdmin',
-      isShow: hasAdmin.value,
+      isShow: hasAdmin.value
     },
     {
       name: 'バナーマスター管理',
       url: '/RMBannerMasterAdmin',
-      isShow: hasAdmin.value,
+      isShow: hasAdmin.value
     },
     { name: 'ギルド登録', url: '/RMGuildRegister', isShow: lacksGuildId.value },
-    { name: 'ログアウト', url: '', isShow: true },
+    { name: 'ログアウト', url: '', isShow: true }
   ]
 )

@@ -18,6 +18,7 @@ const router = useRouter()
       <template #content>
         <div class="pre-login-card__content">
           <div class="pre-login-card__logo">
+            <!-- img-lazy-loading:allow -->
             <img src="~/assets/logo.png" alt="RecordManagement logo" />
           </div>
 
@@ -35,11 +36,11 @@ const router = useRouter()
 
           <RMButton
             class="pre-login-card__button"
-            @click="router.push('/RMMailLogin')"
             label="メールでログインする"
             :buttonShape="'ellipse'"
             :buttonType="'standard'"
             bgColor="linear-gradient(180deg, #A1C2E1, #4B6982)"
+            @click="router.push('/RMMailLogin')"
           />
         </div>
       </template>
@@ -53,8 +54,9 @@ const router = useRouter()
   min-height: var(--rm-viewport-height);
   display: grid;
   place-items: center;
-  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
-    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  padding: max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
   background: v-bind(bgImgPath);
   background-size: cover;
 }

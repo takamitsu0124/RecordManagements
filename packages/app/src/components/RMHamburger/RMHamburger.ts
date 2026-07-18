@@ -1,3 +1,3 @@
-import { ref } from 'vue';
+import { ref } from 'vue'
 
-export const activeMenu = ref<string | null>(null);
+export const activeMenu = ref<string | null>(null)

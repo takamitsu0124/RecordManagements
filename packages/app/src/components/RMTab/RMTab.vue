@@ -1,27 +1,28 @@
 <script lang="ts" setup>
-import { PropType, computed } from 'vue'
+import type { PropType} from 'vue'
+import { computed } from 'vue'
 import SelectButton from 'primevue/selectbutton'
 
 const props = defineProps({
   modelValue: {
     type: String,
-    required: true,
+    required: true
   },
   kind: {
     type: String as PropType<'slider'>,
-    default: 'slider',
+    default: 'slider'
   },
   tabLabels: {
     type: Array as PropType<string[]>,
-    default: () => ['テスト①', 'テスト②', 'テスト③'],
-  },
+    default: () => ['テスト①', 'テスト②', 'テスト③']
+  }
 })
 
 const emit = defineEmits(['update:modelValue'])
 
 const model = computed({
   get: () => props.modelValue,
-  set: (val: string) => emit('update:modelValue', val),
+  set: (val: string) => emit('update:modelValue', val)
 })
 </script>
 

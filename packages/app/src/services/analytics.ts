@@ -25,7 +25,7 @@ const getAnalyticsContext = async (): Promise<AnalyticsContext | null> => {
 
       return {
         analytics: analyticsModule.getAnalytics(firebaseApp),
-        logEvent: analyticsModule.logEvent,
+        logEvent: analyticsModule.logEvent
       }
     })()
   }
@@ -36,7 +36,7 @@ const getAnalyticsContext = async (): Promise<AnalyticsContext | null> => {
 const getPageViewParams = (route: RouteLocationNormalizedLoaded) => ({
   page_title: document.title || String(route.name ?? route.path),
   page_location: window.location.href,
-  page_path: route.fullPath,
+  page_path: route.fullPath
 })
 
 export const setupAnalytics = async (router: Router) => {

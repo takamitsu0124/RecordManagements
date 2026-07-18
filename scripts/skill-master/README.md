@@ -46,7 +46,7 @@ id,name,characterName,rarity,cost,equipmentType,sp,element,skillType,attackType,
 - `rarity`: レアリティ
 - `cost`: コスト
 - `equipmentType`: 装備種別
-- `sp`: 消費SP
+- `sp`: 消費 SP
 - `element`: 自然属性 (`火` / `水` / `土` / `聖` / `闇` / `風` / `無`)
 - `skillType`: スキル種別 (`通常` / `コネクト` / `チェイン` / `MOD` / `覚醒` / `アクセル` / `バースト` など)
 - `attackType`: 攻撃属性 (`斬` / `突` / `打`)
@@ -180,3 +180,4 @@ npm run skill-master:annotate-regions -- --folder sword-test
 - `--upload-images` は内部的に一時 CSV を作ってから `upload-images.mjs` を実行します。
 - upload に失敗した場合、古い出力 CSV が残って誤認されないよう既存出力は先に削除されます。
 - Storage 上の保存先は `skill_master_images/{prefix}/{skillId}/source.{ext}` です。
+- アップロード先は Firebase Storage の既定バケットではなく、Cloud CDN 配信用の公開専用バケット `skill-master-images-public` です（Issue #91/#92）。生成される URL は `https://136-69-19-129.sslip.io/skill_master_images/...` の形式になります。

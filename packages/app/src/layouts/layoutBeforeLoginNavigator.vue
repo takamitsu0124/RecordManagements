@@ -10,7 +10,7 @@
       </Transition>
     </router-view>
   </div>
-  <div id="recaptcha-container" v-show="false" />
+  <div v-show="false" id="recaptcha-container" />
 </template>
 
 <style lang="sass" scoped>

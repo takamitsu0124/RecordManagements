@@ -2,17 +2,18 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
-import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction'
+import type { DateClickArg } from '@fullcalendar/interaction'
+import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import jaLocale from '@fullcalendar/core/locales/ja'
-import {
+import type {
   CalendarOptions,
   DatesSetArg,
   EventClickArg,
-  EventInput,
+  EventInput
 } from '@fullcalendar/core'
 import { useDialog } from 'primevue/usedialog'
-import { Guild, GuildCalendarEvent } from '@rm/types'
+import type { Guild, GuildCalendarEvent } from '@rm/types'
 import Card from 'primevue/card'
 import ProgressSpinner from 'primevue/progressspinner'
 import { globalLoginUserData } from 'src/boot/main'
@@ -24,14 +25,14 @@ import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import RMCalendarEventDialogContent from 'src/pages/RMCalendarPage/components/RMCalendarEventDialogContent.vue'
 import {
   notifyError,
-  notifySuccess,
+  notifySuccess
 } from 'src/composables/useAppNotifications'
 import {
   createGuildCalendarEvent,
   deleteGuildCalendarEvent,
   fetchGuild,
   fetchGuildCalendarEvents,
-  updateGuildCalendarEvent,
+  updateGuildCalendarEvent
 } from 'src/services/guildData'
 
 type CalendarEventForm = {
@@ -145,7 +146,7 @@ const createNewEventForm = (options?: { date?: Date; allDay?: boolean }) => {
       location: '',
       start: value,
       end: value,
-      allDay: true,
+      allDay: true
     }
   }
 
@@ -157,7 +158,7 @@ const createNewEventForm = (options?: { date?: Date; allDay?: boolean }) => {
     location: '',
     start: formatDateTimeLocal(start),
     end: formatDateTimeLocal(end),
-    allDay: false,
+    allDay: false
   }
 }
 
@@ -170,7 +171,7 @@ const toEventForm = (entry: GuildCalendarEvent): CalendarEventForm => {
       location: entry.location,
       start: formatLocalDate(entry.startAt),
       end: toInclusiveAllDayEnd(entry.endAt),
-      allDay: true,
+      allDay: true
     }
   }
 
@@ -181,7 +182,7 @@ const toEventForm = (entry: GuildCalendarEvent): CalendarEventForm => {
     location: entry.location,
     start: formatDateTimeLocal(entry.startAt),
     end: formatDateTimeLocal(entry.endAt),
-    allDay: false,
+    allDay: false
   }
 }
 
@@ -198,14 +199,14 @@ const calendarGuideItems = computed(() => {
       title: '表示期間を切り替える',
       description:
         '月表示と週リストを切り替えながら、ギルドの共有予定を見たい粒度で確認できます。',
-      targetId: 'calendar-board',
+      targetId: 'calendar-board'
     },
     {
       title: '予定を開いて更新する',
       description:
         '予定を押すと詳細が開き、権限があればそのまま更新・削除できます。',
-      targetId: 'calendar-board',
-    },
+      targetId: 'calendar-board'
+    }
   ]
 
   if (canEditCalendar.value) {
@@ -213,7 +214,7 @@ const calendarGuideItems = computed(() => {
       title: '予定を追加する',
       description:
         'Guild Admin / Admin は右上の「予定を追加」から新しい共有予定を登録できます。',
-      targetId: 'calendar-actions',
+      targetId: 'calendar-actions'
     })
   }
 
@@ -225,7 +226,7 @@ const calendarBlocker = computed(() => {
     return {
       title: '所属ギルドが未設定です',
       message:
-        'イベントカレンダーは所属ギルドの共有予定を表示します。ギルド参加後に利用してください。',
+        'イベントカレンダーは所属ギルドの共有予定を表示します。ギルド参加後に利用してください。'
     }
   }
 
@@ -246,7 +247,7 @@ const currentRangeText = computed(() => {
   const formatter = new Intl.DateTimeFormat('ja-JP', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
+    day: '2-digit'
   })
 
   return `${formatter.format(currentRange.value.start)} 〜 ${formatter.format(
@@ -257,16 +258,16 @@ const currentRangeText = computed(() => {
 const statusPills = computed(() => [
   {
     label: guildName.value,
-    tone: 'info',
+    tone: 'info'
   },
   {
     label: canEditCalendar.value ? '編集可' : '閲覧専用',
-    tone: canEditCalendar.value ? 'success' : 'muted',
+    tone: canEditCalendar.value ? 'success' : 'muted'
   },
   {
     label: `予定 ${eventEntries.value.length} 件`,
-    tone: eventEntries.value.length > 0 ? 'warning' : 'muted',
-  },
+    tone: eventEntries.value.length > 0 ? 'warning' : 'muted'
+  }
 ])
 
 const calendarEvents = computed<EventInput[]>(() =>
@@ -278,8 +279,8 @@ const calendarEvents = computed<EventInput[]>(() =>
     allDay: entry.allDay,
     extendedProps: {
       description: entry.description,
-      location: entry.location,
-    },
+      location: entry.location
+    }
   }))
 )
 
@@ -302,7 +303,7 @@ const calendarHeaderToolbar = computed(() => {
     return {
       left: 'prev,next',
       center: 'title',
-      right: 'today dayGridMonth,listWeek',
+      right: 'today dayGridMonth,listWeek'
     }
   }
 
@@ -310,14 +311,14 @@ const calendarHeaderToolbar = computed(() => {
     return {
       left: 'prev,next',
       center: 'title',
-      right: 'today dayGridMonth,listWeek',
+      right: 'today dayGridMonth,listWeek'
     }
   }
 
   return {
     left: 'prev,next today',
     center: 'title',
-    right: 'dayGridMonth,listWeek',
+    right: 'dayGridMonth,listWeek'
   }
 })
 
@@ -326,14 +327,14 @@ const calendarTitleFormat = computed(() => {
     return {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: 'numeric'
     }
   }
 
   if (calendarViewport.value === 'tablet') {
     return {
       year: 'numeric',
-      month: 'long',
+      month: 'long'
     }
   }
 
@@ -397,8 +398,8 @@ const openEventDialog = (eventForm: CalendarEventForm, header: string) => {
       header,
       modal: true,
       style: {
-        width: 'min(96vw, 720px)',
-      },
+        width: 'min(96vw, 720px)'
+      }
     },
     data: {
       eventForm,
@@ -408,8 +409,8 @@ const openEventDialog = (eventForm: CalendarEventForm, header: string) => {
       onSave: (form: CalendarEventForm) => saveEventChanges(form),
       onDelete: eventForm.id
         ? (form: CalendarEventForm) => deleteEvent(form.id, form.title)
-        : undefined,
-    },
+        : undefined
+    }
   })
 }
 
@@ -504,7 +505,7 @@ const buildEventPayload = (form: CalendarEventForm) => {
       location: form.location.trim(),
       allDay: true,
       startAt: start,
-      endAt: addLocalDays(end, 1),
+      endAt: addLocalDays(end, 1)
     }
   }
 
@@ -521,7 +522,7 @@ const buildEventPayload = (form: CalendarEventForm) => {
     location: form.location.trim(),
     allDay: false,
     startAt: start,
-    endAt: end,
+    endAt: end
   }
 }
 
@@ -551,7 +552,7 @@ const saveEventChanges = async (form: CalendarEventForm) => {
     } else {
       await createGuildCalendarEvent({
         guildId: guildId.value,
-        ...payload,
+        ...payload
       })
       notifySuccess('予定を作成しました。')
     }
@@ -616,7 +617,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   buttonText: {
     today: '今日',
     dayGridMonth: '月',
-    listWeek: '週リスト',
+    listWeek: '週リスト'
   },
   titleFormat: calendarTitleFormat.value,
   events: calendarEvents.value,
@@ -635,8 +636,8 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   eventTimeFormat: {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
-  },
+    hour12: false
+  }
 }))
 </script>
 

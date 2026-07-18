@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AppRole, AppUser } from '@rm/types'
+import type { AppRole, AppUser } from '@rm/types'
 import RMUserWorkspace from 'src/components/RMUserWorkspace/RMUserWorkspace.vue'
 
 const route = useRoute()
@@ -24,14 +24,14 @@ const fallbackAppUser = computed<Partial<AppUser>>(() => ({
   displayName:
     typeof route.query.displayName === 'string' ? route.query.displayName : '',
   guildId: typeof route.params.guildId === 'string' ? route.params.guildId : '',
-  role: fallbackRole.value,
+  role: fallbackRole.value
 }))
 
 const onBack = () => {
   if (typeof route.params.guildId === 'string' && route.params.guildId) {
     router.push({
       name: 'RMGuildDetail',
-      params: { guildId: route.params.guildId },
+      params: { guildId: route.params.guildId }
     })
     return
   }
@@ -42,13 +42,13 @@ const onBack = () => {
 
 <template>
   <RMUserWorkspace
-    :user-id="userId"
-    :include-profile="false"
-    :compact-mode="true"
-    :fallback-app-user="fallbackAppUser"
-    page-title="スキル・熟練度管理"
-    page-icon="pi pi-star"
-    back-label="ギルド詳細へ"
+    :userId="userId"
+    :includeProfile="false"
+    :compactMode="true"
+    :fallbackAppUser="fallbackAppUser"
+    pageTitle="スキル・熟練度管理"
+    pageIcon="pi pi-star"
+    backLabel="ギルド詳細へ"
     @back="onBack"
   />
 </template>

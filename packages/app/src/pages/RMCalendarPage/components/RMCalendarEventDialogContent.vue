@@ -38,7 +38,7 @@ const eventForm = ref<CalendarEventForm>({
   location: initialData?.eventForm.location || '',
   start: initialData?.eventForm.start || '',
   end: initialData?.eventForm.end || '',
-  allDay: initialData?.eventForm.allDay || false,
+  allDay: initialData?.eventForm.allDay || false
 })
 
 const isSaving = ref(false)

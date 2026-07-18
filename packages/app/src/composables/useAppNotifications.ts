@@ -5,7 +5,7 @@ export const notifySuccess = (message: string) =>
     toastTitle: message,
     toastMovingTime: 3,
     toastColor: '#3bd4f0',
-    isCheckCircle: true,
+    isCheckCircle: true
   })
 
 export const notifyError = (message: string) =>
@@ -13,7 +13,7 @@ export const notifyError = (message: string) =>
     toastTitle: message,
     toastMovingTime: 4,
     toastColor: '#ef4444',
-    isCheckCircle: false,
+    isCheckCircle: false
   })
 
 export const notifyInfo = (message: string) =>
@@ -21,5 +21,5 @@ export const notifyInfo = (message: string) =>
     toastTitle: message,
     toastMovingTime: 3,
     toastColor: '#64748b',
-    isCheckCircle: true,
+    isCheckCircle: true
   })

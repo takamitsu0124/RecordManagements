@@ -12,13 +12,14 @@ import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
 import { dbGuildScheduleResponsesModule } from '@rm/db'
-import {
+import type {
   AppRole,
   AppUser,
   Guild,
   GuildScheduleResponse,
-  GuildScheduleStatus,
-  defaultGuildScheduleResponse,
+  GuildScheduleStatus} from '@rm/types'
+import {
+  defaultGuildScheduleResponse
 } from '@rm/types'
 import { globalLoginUserData, hasAdmin, hasGuildAdmin } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
@@ -28,12 +29,12 @@ import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import {
   notifyError,
   notifyInfo,
-  notifySuccess,
+  notifySuccess
 } from 'src/composables/useAppNotifications'
 import {
   fetchGuild,
   fetchGuildScheduleResponses,
-  fetchGuildUsers,
+  fetchGuildUsers
 } from 'src/services/guildData'
 import {
   addMonths,
@@ -41,7 +42,7 @@ import {
   formatDateKey,
   formatFullDateLabel,
   formatMonthLabel,
-  getMonthDays,
+  getMonthDays
 } from './date'
 
 type ApprovedMember = {
@@ -102,19 +103,19 @@ let viewportFrameId: number | null = null
 const roleLabels: Record<AppRole, string> = {
   admin: 'Admin',
   guild_admin: 'Guild Admin',
-  member: 'Member',
+  member: 'Member'
 }
 
 const statusLabels: Record<GuildScheduleStatus, string> = {
   available: '参加可',
   maybe: '未定',
-  unavailable: '参加不可',
+  unavailable: '参加不可'
 }
 
 const compactStatusLabels: Record<GuildScheduleStatus, string> = {
   available: '可',
   maybe: '未',
-  unavailable: '不可',
+  unavailable: '不可'
 }
 
 const statusSeverity: Record<
@@ -123,20 +124,20 @@ const statusSeverity: Record<
 > = {
   available: 'success',
   maybe: 'warn',
-  unavailable: 'danger',
+  unavailable: 'danger'
 }
 
 const selectedDayGuideItems = [
   {
     title: '自分の回答を更新する',
     description: '参加可否とメモを選んで保存します。',
-    targetId: 'schedule-answer',
+    targetId: 'schedule-answer'
   },
   {
     title: '集計内訳を見る',
     description: 'メンバーごとの回答状況を確認します。',
-    targetId: 'schedule-breakdown',
-  },
+    targetId: 'schedule-breakdown'
+  }
 ]
 
 const updateViewportState = () => {
@@ -177,7 +178,7 @@ const approvedMembers = computed<ApprovedMember[]>(() => {
       return {
         uid,
         displayName: appUser?.displayName || member.name || '未設定',
-        role: appUser?.role || 'member',
+        role: appUser?.role || 'member'
       }
     })
     .sort((left, right) =>
@@ -230,7 +231,7 @@ const monthDays = computed(() => getMonthDays(currentMonth.value))
 const approvedMembersForBreakdown = computed(() =>
   approvedMembers.value.map((member) => ({
     ...member,
-    isCurrentUser: member.uid === currentUserId.value,
+    isCurrentUser: member.uid === currentUserId.value
   }))
 )
 
@@ -253,7 +254,7 @@ const dayBreakdowns = computed(() => {
           displayName: member.displayName,
           role: member.role,
           note: entry?.note || '',
-          isCurrentUser: member.isCurrentUser,
+          isCurrentUser: member.isCurrentUser
         }
 
         if (!entry) {
@@ -286,8 +287,8 @@ const dayBreakdowns = computed(() => {
           unavailable,
           unanswered,
           respondedCount,
-          totalMembers: members.length,
-        } satisfies DayBreakdown,
+          totalMembers: members.length
+        } satisfies DayBreakdown
       ] as const
     })
   )
@@ -305,26 +306,26 @@ const selectedStatusGroups = computed(() => {
       key: 'available',
       label: '参加可',
       severity: 'success' as const,
-      members: breakdown?.available || [],
+      members: breakdown?.available || []
     },
     {
       key: 'maybe',
       label: '未定',
       severity: 'warn' as const,
-      members: breakdown?.maybe || [],
+      members: breakdown?.maybe || []
     },
     {
       key: 'unavailable',
       label: '参加不可',
       severity: 'danger' as const,
-      members: breakdown?.unavailable || [],
+      members: breakdown?.unavailable || []
     },
     {
       key: 'unanswered',
       label: '未回答',
       severity: 'secondary' as const,
-      members: breakdown?.unanswered || [],
-    },
+      members: breakdown?.unanswered || []
+    }
   ]
 })
 
@@ -347,7 +348,7 @@ const monthRows = computed<ScheduleTableRow[]>(() => {
           ? `${respondedCount}/${totalMembers}人`
           : '対象メンバーなし',
       myStatus: myEntry?.status || null,
-      myStatusLabel: myEntry ? statusLabels[myEntry.status] : '未回答',
+      myStatusLabel: myEntry ? statusLabels[myEntry.status] : '未回答'
     }
   })
 })
@@ -392,27 +393,27 @@ const summaryItems = computed(() => [
   {
     label: '対象メンバー',
     value: `${approvedMembers.value.length}人`,
-    tone: 'members',
+    tone: 'members'
   },
   {
     label: '回答済みメンバー',
     value: `${respondedMemberCount.value}/${
       approvedMembers.value.length || 0
     }人`,
-    tone: 'progress',
+    tone: 'progress'
   },
   {
     label: '自分の回答日数',
     value: `${answeredDaysCount.value}日`,
-    tone: 'mine',
+    tone: 'mine'
   },
   {
     label: '参加可が多い日',
     value: bestAvailableDay.value
       ? `${bestAvailableDay.value.dateLabel} (${bestAvailableDay.value.availableCount}人)`
       : '未集計',
-    tone: 'available',
-  },
+    tone: 'available'
+  }
 ])
 
 const selectedResponseRateText = computed(() => {
@@ -437,32 +438,32 @@ const selectedDaySummaryItems = computed(() => {
       key: 'response',
       label: '回答状況',
       value: selectedResponseRateText.value,
-      tone: 'response',
+      tone: 'response'
     },
     {
       key: 'available',
       label: '参加可',
       value: `${breakdown?.available.length || 0}人`,
-      tone: 'available',
+      tone: 'available'
     },
     {
       key: 'maybe',
       label: '未定',
       value: `${breakdown?.maybe.length || 0}人`,
-      tone: 'maybe',
+      tone: 'maybe'
     },
     {
       key: 'unavailable',
       label: '参加不可',
       value: `${breakdown?.unavailable.length || 0}人`,
-      tone: 'unavailable',
+      tone: 'unavailable'
     },
     {
       key: 'unanswered',
       label: '未回答',
       value: `${breakdown?.unanswered.length || 0}人`,
-      tone: 'unanswered',
-    },
+      tone: 'unanswered'
+    }
   ]
 })
 
@@ -520,7 +521,7 @@ const upsertLocalScheduleResponse = (response: GuildScheduleResponse) => {
       (item) =>
         !(item.guildId === response.guildId && item.userId === response.userId)
     ),
-    response,
+    response
   ]
 }
 
@@ -556,7 +557,7 @@ const loadPageData = async (guildId: string) => {
     const [guild, nextGuildUsers, nextScheduleResponses] = await Promise.all([
       fetchGuild(guildId, { force: true }),
       fetchGuildUsers(guildId),
-      fetchGuildScheduleResponses(guildId),
+      fetchGuildScheduleResponses(guildId)
     ])
 
     if (!guild) {
@@ -601,7 +602,7 @@ const goToGuildDetail = () => {
 
   router.push({
     name: 'RMGuildDetail',
-    params: { guildId: currentGuildId.value },
+    params: { guildId: currentGuildId.value }
   })
 }
 
@@ -632,8 +633,8 @@ const saveOwnResponse = async () => {
       ...(currentUserResponse.value?.entries || {}),
       [selectedDateKey.value]: {
         status: draftStatus.value,
-        note: draftNote.value.trim(),
-      },
+        note: draftNote.value.trim()
+      }
     }
 
     const nextPayload: GuildScheduleResponse = currentUserResponse.value
@@ -641,7 +642,7 @@ const saveOwnResponse = async () => {
           ...currentUserResponse.value,
           entries: nextEntries,
           updatedAt: new Date(),
-          updatedBy: currentUserId.value,
+          updatedBy: currentUserId.value
         }
       : {
           ...defaultGuildScheduleResponse(),
@@ -652,14 +653,14 @@ const saveOwnResponse = async () => {
           createdAt: new Date(),
           updatedAt: new Date(),
           createdBy: currentUserId.value,
-          updatedBy: currentUserId.value,
+          updatedBy: currentUserId.value
         }
 
     if (currentUserResponse.value) {
       await dbGuildScheduleResponsesModule
         .doc(currentResponseDocId.value)
         .merge({
-          entries: nextEntries,
+          entries: nextEntries
         })
     } else {
       await dbGuildScheduleResponsesModule
@@ -700,14 +701,14 @@ const clearOwnResponse = async () => {
     delete nextEntries[selectedDateKey.value]
 
     await dbGuildScheduleResponsesModule.doc(currentResponseDocId.value).merge({
-      entries: nextEntries,
+      entries: nextEntries
     })
 
     upsertLocalScheduleResponse({
       ...currentUserResponse.value,
       entries: nextEntries,
       updatedAt: new Date(),
-      updatedBy: currentUserId.value,
+      updatedBy: currentUserId.value
     })
     notifyInfo('選択日の回答を削除しました。')
   } catch (error) {
@@ -736,7 +737,7 @@ watch(
 watch(monthDays, syncSelectedDateWithinMonth, { immediate: true })
 
 watch([selectedDateKey, currentUserResponse], syncDraftWithSelectedDate, {
-  immediate: true,
+  immediate: true
 })
 
 onMounted(() => {

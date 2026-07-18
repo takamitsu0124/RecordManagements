@@ -5,13 +5,14 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import ProgressSpinner from 'primevue/progressspinner'
 import { dbGuildModule, dbUsersModule } from '@rm/db'
-import {
+import type {
   AppRole,
   AppUser,
-  Guild,
+  Guild} from '@rm/types'
+import {
   summarizeWeaponProficiencyProgress,
   summarizeWeaponProficiencySkillUnlockRate,
-  weaponProficiencySkillWeaponDefinitions,
+  weaponProficiencySkillWeaponDefinitions
 } from '@rm/types'
 import RMGuildBannerPanel from './components/RMGuildBannerPanel.vue'
 import RMGuildDetailMembersSection from './components/RMGuildDetailMembersSection.vue'
@@ -21,12 +22,12 @@ import type {
   GuildMemberSkillSummary,
   GuildSkillRow,
   GuildSkillSortOption,
-  GuildUserRow,
+  GuildUserRow
 } from './types'
 import {
   canManageGuildMembers,
   globalLoginUserData,
-  hasAdmin,
+  hasAdmin
 } from 'src/boot/main'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
@@ -36,7 +37,7 @@ import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import {
   notifyError,
   notifyInfo,
-  notifySuccess,
+  notifySuccess
 } from 'src/composables/useAppNotifications'
 import { fetchGuild, fetchGuildUsers } from 'src/services/guildData'
 import { useSkillStore } from 'src/store'
@@ -57,9 +58,9 @@ const activeGuildTab = ref('skills')
 const roleDrafts = ref<Record<string, AppRole>>({})
 const skillTableFilters = ref({
   skillName: { value: '', matchMode: 'contains' },
-  member: { value: null as string | null, matchMode: 'equals' },
-  element: { value: null as string | null, matchMode: 'equals' },
-  equipmentType: { value: null as string | null, matchMode: 'equals' },
+  member: { value: null, matchMode: 'equals' },
+  element: { value: null, matchMode: 'equals' },
+  equipmentType: { value: null, matchMode: 'equals' }
 })
 const skillSortOption = ref<GuildSkillSortOption>('default')
 
@@ -76,22 +77,22 @@ const guildScopedUsers = computed(() =>
 const roleOptions = computed(() => {
   if (hasAdmin.value) {
     return [
-      { label: 'Admin', value: 'admin' as AppRole },
-      { label: 'Guild Admin', value: 'guild_admin' as AppRole },
-      { label: 'Member', value: 'member' as AppRole },
+      { label: 'Admin', value: 'admin' },
+      { label: 'Guild Admin', value: 'guild_admin' },
+      { label: 'Member', value: 'member' }
     ]
   }
 
   return [
-    { label: 'Guild Admin', value: 'guild_admin' as AppRole },
-    { label: 'Member', value: 'member' as AppRole },
+    { label: 'Guild Admin', value: 'guild_admin' },
+    { label: 'Member', value: 'member' }
   ]
 })
 
 const roleLabels: Record<AppRole, string> = {
   admin: 'Admin',
   guild_admin: 'Guild Admin',
-  member: 'Member',
+  member: 'Member'
 }
 
 const guildUsersByUid = computed(() => {
@@ -113,7 +114,7 @@ const approvedMembers = computed<GuildUserRow[]>(() => {
         uid,
         displayName: appUser?.displayName || member.name || '未設定',
         role: appUser?.role || 'member',
-        hasUserDocument: Boolean(appUser),
+        hasUserDocument: Boolean(appUser)
       }
     })
     .sort((a, b) => a.displayName.localeCompare(b.displayName, 'ja'))
@@ -133,7 +134,7 @@ const pendingMembers = computed<GuildUserRow[]>(() => {
       uid: user.uid,
       displayName: user.displayName || '未設定',
       role: user.role,
-      hasUserDocument: true,
+      hasUserDocument: true
     }))
     .sort((a, b) => a.displayName.localeCompare(b.displayName, 'ja'))
 })
@@ -148,7 +149,7 @@ const userSkillsByUserId = computed(() => {
   return new Map(
     skillStore.state.currentUserSkills.map((userSkill) => [
       userSkill.userId,
-      userSkill,
+      userSkill
     ])
   )
 })
@@ -172,7 +173,8 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
       weaponProficiencySkillWeaponDefinitions.reduce(
         (total, { key }) =>
           total +
-          (weaponProficiencySkillSummary.byWeapon[key]?.remainingBottleCount ?? 0),
+          (weaponProficiencySkillSummary.byWeapon[key]?.remainingBottleCount ??
+            0),
         0
       )
     const topSkills = ownedSkills
@@ -180,7 +182,7 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
         const master = skillStore.masterDataById.value.get(ownedSkill.skillId)
         return {
           name: master?.name || ownedSkill.skillId,
-          level: ownedSkill.level,
+          level: ownedSkill.level
         }
       })
       .sort((a, b) => b.level - a.level || a.name.localeCompare(b.name, 'ja'))
@@ -202,15 +204,15 @@ const memberSkillSummaries = computed<GuildMemberSkillSummary[]>(() => {
       )}%`,
       weaponProficiencySkillUnlockedCount:
         weaponProficiencySkillSummary.unlockedCount,
-      weaponProficiencySkillTotalCount: weaponProficiencySkillSummary.totalCount,
+      weaponProficiencySkillTotalCount:
+        weaponProficiencySkillSummary.totalCount,
       weaponProficiencySkillUnlockRate:
         weaponProficiencySkillSummary.unlockRate,
       weaponProficiencySkillUnlockRateText: `${weaponProficiencySkillSummary.unlockRate.toFixed(
         1
       )}%`,
-      weaponProficiencySkillRemainingBottleCount:
-        weaponProficiencySkillRemainingBottleCount,
-      topSkills,
+      weaponProficiencySkillRemainingBottleCount,
+      topSkills
     }
   })
 })
@@ -242,7 +244,7 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
   return skillStore.userSkillDetails.value
     .filter((detail) => memberMap.has(detail.userId))
     .map((detail) => {
-      const member = memberMap.get(detail.userId)!
+      const member = memberMap.get(detail.userId)
       const userName = member.displayName
       const name = detail.name || detail.skillId
       const characterName = detail.characterName || ''
@@ -275,6 +277,7 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
         unlockRateText: '0.0%',
         ownedCount: 0,
         image: detail.image,
+        imageThumb: detail.imageThumb || '',
         masterMissing: detail.masterMissing,
         normalizedSearchText: [
           userName,
@@ -286,10 +289,10 @@ const guildSkillRows = computed<GuildSkillRow[]>(() => {
           element,
           equipmentType,
           skillType,
-          attackType,
+          attackType
         ]
           .join(' ')
-          .toLowerCase(),
+          .toLowerCase()
       }
     })
     .sort(
@@ -381,7 +384,7 @@ const elementOptions = computed(() => {
   return [
     ...new Set(
       skillStore.state.masterData.map((skill) => skill.element).filter(Boolean)
-    ),
+    )
   ]
     .sort((a, b) => a.localeCompare(b, 'ja'))
     .map((element) => ({ label: element, value: element }))
@@ -393,7 +396,7 @@ const equipmentTypeOptions = computed(() => {
       skillStore.state.masterData
         .map((skill) => skill.equipmentType)
         .filter(Boolean)
-    ),
+    )
   ]
     .sort((a, b) => a.localeCompare(b, 'ja'))
     .map((equipmentType) => ({ label: equipmentType, value: equipmentType }))
@@ -405,7 +408,7 @@ const activeFilterCount = computed(() => {
     selectedMemberFilter.value !== '',
     selectedElementFilter.value !== '',
     selectedEquipmentTypeFilter.value !== '',
-    skillSortOption.value !== 'default',
+    skillSortOption.value !== 'default'
   ].filter(Boolean).length
 })
 
@@ -414,32 +417,32 @@ const summaryItems = computed(() => [
     label: '承認済みメンバー',
     value: `${approvedMembers.value.length}人`,
     icon: 'pi pi-check-circle',
-    tone: 'approved',
+    tone: 'approved'
   },
   {
     label: '承認待ち',
     value: `${pendingMembers.value.length}人`,
     icon: 'pi pi-clock',
-    tone: 'pending',
+    tone: 'pending'
   },
   {
     label: '検索対象スキル',
     value: `${guildSkillRows.value.length}件`,
     icon: 'pi pi-search',
-    tone: 'skills',
+    tone: 'skills'
   },
   {
     label: '平均解放率',
     value: `${averageUnlockRate.value.toFixed(1)}%`,
     icon: 'pi pi-chart-line',
-    tone: 'unlock',
+    tone: 'unlock'
   },
   {
     label: '平均熟練度進捗',
     value: `${averageWeaponProficiencyProgressRate.value.toFixed(1)}%`,
     icon: 'pi pi-chart-bar',
-    tone: 'progress',
-  },
+    tone: 'progress'
+  }
 ])
 
 const guildTabs = computed(() => [
@@ -449,9 +452,10 @@ const guildTabs = computed(() => [
     key: 'members',
     label: 'メンバー運用',
     icon: 'pi pi-users',
-    badge: pendingMembers.value.length > 0 ? pendingMembers.value.length : undefined,
+    badge:
+      pendingMembers.value.length > 0 ? pendingMembers.value.length : undefined
   },
-  { key: 'banners', label: 'バナー', icon: 'pi pi-image' },
+  { key: 'banners', label: 'バナー', icon: 'pi pi-image' }
 ])
 
 const managerGuide = computed(() =>
@@ -489,7 +493,7 @@ const updateLocalGuildMembers = (guildMember: Guild['guildMember']) => {
   guildDetail.value = {
     ...guildDetail.value,
     guildMember,
-    officialMembers: Object.keys(guildMember).length,
+    officialMembers: Object.keys(guildMember).length
   }
 }
 
@@ -540,7 +544,7 @@ onMounted(async () => {
     const fetchedGuild = await fetchGuild(guildId.value as string)
 
     if (fetchedGuild) {
-      guildDetail.value = fetchedGuild as Guild
+      guildDetail.value = fetchedGuild
       await loadGuildUsers()
       await loadGuildSkillSearch()
     } else {
@@ -568,7 +572,7 @@ const clearSkillFilters = () => {
     skillName: { value: '', matchMode: 'contains' },
     member: { value: null, matchMode: 'equals' },
     element: { value: null, matchMode: 'equals' },
-    equipmentType: { value: null, matchMode: 'equals' },
+    equipmentType: { value: null, matchMode: 'equals' }
   }
   skillSortOption.value = 'default'
 }
@@ -581,7 +585,7 @@ const goToGuildSchedule = () => {
 
   router.push({
     name: 'RMGuildSchedule',
-    params: { guildId: currentGuildId.value },
+    params: { guildId: currentGuildId.value }
   })
 }
 
@@ -594,7 +598,7 @@ const goToEditGuild = () => {
   if (guildId.value) {
     router.push({
       name: 'RMGuildEdit',
-      params: { guildId: guildId.value as string },
+      params: { guildId: guildId.value }
     })
   } else {
     notifyError('編集するギルドのIDが見つかりません。')
@@ -615,11 +619,11 @@ const goToPostSkill = (member: {
   if (guildId.value) {
     router.push({
       name: 'RMSkillPost',
-      params: { guildId: guildId.value as string, userId: member.uid },
+      params: { guildId: guildId.value, userId: member.uid },
       query: {
         displayName: member.displayName,
-        role: member.role,
-      },
+        role: member.role
+      }
     })
   }
 }
@@ -635,13 +639,13 @@ const approveMember = async (member: GuildUserRow) => {
       const guildMember = {
         ...guildDetail.value?.guildMember,
         [member.uid]: {
-          name: member.displayName,
-        },
+          name: member.displayName
+        }
       }
 
       await dbGuildModule.doc(currentGuildId.value).merge({
         guildMember,
-        officialMembers: Object.keys(guildMember).length,
+        officialMembers: Object.keys(guildMember).length
       })
 
       updateLocalGuildMembers(guildMember)
@@ -667,7 +671,7 @@ const revokeApproval = async (member: GuildUserRow) => {
 
       await dbGuildModule.doc(currentGuildId.value).merge({
         guildMember,
-        officialMembers: Object.keys(guildMember).length,
+        officialMembers: Object.keys(guildMember).length
       })
 
       updateLocalGuildMembers(guildMember)
@@ -696,7 +700,7 @@ const saveRole = async (member: GuildUserRow) => {
   await useSpinner(async () => {
     try {
       await dbUsersModule.doc(member.uid).merge({
-        role: nextRole,
+        role: nextRole
       })
 
       guildUsers.value = guildUsers.value.map((user) =>
@@ -705,7 +709,7 @@ const saveRole = async (member: GuildUserRow) => {
       if (globalLoginUserData.value.id === member.uid) {
         globalLoginUserData.value = {
           ...globalLoginUserData.value,
-          role: nextRole,
+          role: nextRole
         }
       }
       roleDrafts.value[member.uid] = nextRole
@@ -737,7 +741,6 @@ const attrSeverity = (attr: string) => {
   if (attr === '土') return 'warn'
   return 'secondary'
 }
-
 </script>
 
 <template>
@@ -785,6 +788,8 @@ const attrSeverity = (attr: string) => {
             <template #default="{ activeKey }">
               <RMGuildDetailSkillsSection
                 v-if="activeKey === 'skills'"
+                v-model:skillTableFilters="skillTableFilters"
+                v-model:skillSortOption="skillSortOption"
                 :approvedMembers="approvedMembers"
                 :memberSkillSummaries="memberSkillSummaries"
                 :isSkillLoading="isSkillLoading"
@@ -794,16 +799,14 @@ const attrSeverity = (attr: string) => {
                 :guildSkillRows="guildSkillRows"
                 :filteredGuildSkillRows="filteredGuildSkillRows"
                 :skillErrorMessage="skillErrorMessage"
-                v-model:skillTableFilters="skillTableFilters"
-                v-model:skillSortOption="skillSortOption"
                 :memberOptions="memberOptions"
                 :elementOptions="elementOptions"
                 :equipmentTypeOptions="equipmentTypeOptions"
                 :searchGuide="searchGuide"
                 :roleSeverity="roleSeverity"
                 :attrSeverity="attrSeverity"
-                @clear-filters="clearSkillFilters"
-                @edit-member="goToPostSkill"
+                @clearFilters="clearSkillFilters"
+                @editMember="goToPostSkill"
               />
 
               <RMGuildDetailOverviewSection
@@ -817,20 +820,20 @@ const attrSeverity = (attr: string) => {
 
               <RMGuildDetailMembersSection
                 v-else-if="activeKey === 'members'"
+                v-model:roleDrafts="roleDrafts"
                 :approvedMembers="approvedMembers"
                 :pendingMembers="pendingMembers"
                 :canManageGuildMembers="canManageGuildMembers"
                 :isMemberLoading="isMemberLoading"
                 :currentUserId="globalLoginUserData.id"
-                v-model:roleDrafts="roleDrafts"
                 :roleOptions="roleOptions"
                 :roleLabels="roleLabels"
                 :canChangeRole="canChangeRole"
                 :roleSeverity="roleSeverity"
-                @edit-member="goToPostSkill"
-                @save-role="saveRole"
-                @revoke-approval="revokeApproval"
-                @approve-member="approveMember"
+                @editMember="goToPostSkill"
+                @saveRole="saveRole"
+                @revokeApproval="revokeApproval"
+                @approveMember="approveMember"
               />
 
               <RMGuildBannerPanel v-else-if="activeKey === 'banners'" />

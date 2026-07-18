@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { onMounted, PropType, ref } from 'vue'
-import { PopupColorKinds } from './RMPopupFun'
+import type { PropType} from 'vue'
+import { onMounted, ref } from 'vue'
+import type { PopupColorKinds } from './RMPopupFun'
 
 /** props定義 */
 const props = defineProps({
@@ -20,7 +21,7 @@ const props = defineProps({
   /**ポップアップ右テキストカラー */
   rightColor: { type: String as PropType<PopupColorKinds>, default: 'primary' },
   /**件数 */
-  subjectNum: { type: Number, default: 1 },
+  subjectNum: { type: Number, default: 1 }
 })
 
 const emit = defineEmits<{
@@ -44,31 +45,31 @@ const handleRightButtonClick = () => {
 <template>
   <div>
     <Transition style="z-index: 1000000">
-      <div class="_AFC_outline" v-if="popupStatus">
+      <div v-if="popupStatus" class="_AFC_outline">
         <div class="_AFCButton_container">
           <div class="_popup_question">
-            <div class="_popup_sentence" v-html="props.question"></div>
+            <div class="_popup_sentence" v-html="props.question" />
             <div
               v-if="supplement"
               class="_question_notice"
               v-html="supplement"
-            ></div>
+            />
           </div>
           <div class="_AFC_buttons">
             <div
-              @click="handleLeftButtonClick()"
+              v-if="leftText"
               :class="[
                 '_popup_left_button',
                 '_popup_buttons',
                 `text-${leftColor}`,
               ]"
-              v-if="leftText"
+              @click="handleLeftButtonClick()"
             >
               {{ leftText }}
             </div>
             <div
-              @click="handleRightButtonClick()"
               :class="['_popup_buttons', `text-${rightColor}`]"
+              @click="handleRightButtonClick()"
             >
               {{ rightText }}
             </div>

@@ -6,7 +6,7 @@ defineProps({
   subtitle: { type: String, default: '' },
   description: { type: String, default: '' },
   icon: { type: String, default: '' },
-  centered: { type: Boolean, default: false },
+  centered: { type: Boolean, default: false }
 })
 </script>
 

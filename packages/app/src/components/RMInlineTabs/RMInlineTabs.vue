@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-export interface RMInlineTabItem {
+export type RMInlineTabItem = {
   key: string
   label: string
   icon?: string
@@ -18,7 +18,7 @@ const props = withDefaults(
   }>(),
   {
     scrollOnOverflow: true,
-    ariaLabel: 'セクション切り替え',
+    ariaLabel: 'セクション切り替え'
   }
 )
 
@@ -78,11 +78,11 @@ const onKeydown = (event: KeyboardEvent, index: number) => {
     >
       <button
         v-for="(tab, index) in tabs"
+        :id="`rm-inline-tab-${tab.key}`"
         :key="tab.key"
         :ref="(el) => setTabRef(el as HTMLElement | null, index)"
         type="button"
         role="tab"
-        :id="`rm-inline-tab-${tab.key}`"
         :aria-selected="modelValue === tab.key"
         :aria-controls="`rm-inline-tabpanel-${tab.key}`"
         :tabindex="modelValue === tab.key ? 0 : -1"
@@ -97,20 +97,19 @@ const onKeydown = (event: KeyboardEvent, index: number) => {
         <span
           v-if="tab.badge !== undefined && tab.badge !== null"
           class="rm-inline-tabs__badge"
-          >{{ tab.badge }}</span
-        >
+          >{{ tab.badge }}</span>
       </button>
     </div>
 
     <Transition name="rm-inline-tabs-fade" mode="out-in">
       <div
+        :id="`rm-inline-tabpanel-${modelValue}`"
         :key="modelValue"
         class="rm-inline-tabs__panel"
         role="tabpanel"
-        :id="`rm-inline-tabpanel-${modelValue}`"
         :aria-labelledby="`rm-inline-tab-${modelValue}`"
       >
-        <slot :active-key="modelValue" />
+        <slot :activeKey="modelValue" />
       </div>
     </Transition>
   </div>
