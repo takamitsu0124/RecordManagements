@@ -1,8 +1,6 @@
 import type { User as FirebaseAuthUser } from 'firebase/auth'
 import { onAuthStateChanged } from 'firebase/auth'
-import type {
-  AppRole,
-  AppUser} from '@rm/types'
+import type { AppRole, AppUser } from '@rm/types'
 import {
   defaultAppUser,
   normalizeAttendanceFeatureVisibilityStatus,
@@ -47,7 +45,9 @@ export const canManageGuildMembers = computed(() => {
 })
 
 export const canUseAttendance = computed(() => {
-  return globalLoginUserData.value.attendanceFeatureVisibilityStatus !== 'hidden'
+  return (
+    globalLoginUserData.value.attendanceFeatureVisibilityStatus !== 'hidden'
+  )
 })
 
 const guestOnlyRouteNames = new Set([
@@ -66,7 +66,8 @@ const isGuestOnlyRoute = (routeName: unknown) => {
 const isPublicRoute = (routeName: unknown) => {
   return (
     typeof routeName === 'string' &&
-    (guestOnlyRouteNames.has(routeName) || sharedPublicRouteNames.has(routeName))
+    (guestOnlyRouteNames.has(routeName) ||
+      sharedPublicRouteNames.has(routeName))
   )
 }
 
@@ -123,7 +124,7 @@ const ensureAppUserDocument = async (
         ),
         attendanceFeatureVisibilityStatus:
           normalizeAttendanceFeatureVisibilityStatus(
-          	existingAppUser.attendanceFeatureVisibilityStatus
+            existingAppUser.attendanceFeatureVisibilityStatus
           ),
         displayName:
           existingAppUser.displayName ||
@@ -155,7 +156,7 @@ const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
       ),
       attendanceFeatureVisibilityStatus:
         normalizeAttendanceFeatureVisibilityStatus(
-        	appUser.attendanceFeatureVisibilityStatus
+          appUser.attendanceFeatureVisibilityStatus
         ),
       displayName:
         appUser.displayName || authUser.displayName || authUser.email || ''
@@ -228,7 +229,7 @@ const checkRouter = (router: Router) => {
     }
 
     if (!allowedRoles.includes(globalLoginUserData.value.role)) {
-      notifyError('この画面にアクセスする権限がありません。')
+      void notifyError('この画面にアクセスする権限がありません。')
       await router.replace({ name: 'RMHome' })
     }
   }
@@ -249,37 +250,39 @@ const checkRouter = (router: Router) => {
     await router.replace(landingRoute)
   }
 
-  onAuthStateChanged(auth, async (user) => {
-    currentAuthUser = user
-    console.log('genFirebaseRandomId:', genFirebaseRandomId())
+  onAuthStateChanged(auth, (user) => {
+    void (async () => {
+      currentAuthUser = user
+      console.log('genFirebaseRandomId:', genFirebaseRandomId())
 
-    if (user) {
-      await useSpinner(async () => {
+      if (user) {
+        await useSpinner(async () => {
+          skillStore.clearCurrentUserSkills()
+          globalLoginUserData.value = await loadAppUser(user)
+          try {
+            await skillStore.fetchMasterData()
+          } catch (error) {
+            console.error('Failed to preload skill master data:', error)
+          }
+        })
+      } else {
         skillStore.clearCurrentUserSkills()
-        globalLoginUserData.value = await loadAppUser(user)
-        try {
-          await skillStore.fetchMasterData()
-        } catch (error) {
-          console.error('Failed to preload skill master data:', error)
-        }
-      })
-    } else {
-      skillStore.clearCurrentUserSkills()
-      globalLoginUserData.value = defaultAppUser()
-    }
+        globalLoginUserData.value = defaultAppUser()
+      }
 
-    if (hasResolvedInitialAuthState === false) {
-      hasResolvedInitialAuthState = true
-      resolveInitialAuthState()
-    }
+      if (hasResolvedInitialAuthState === false) {
+        hasResolvedInitialAuthState = true
+        resolveInitialAuthState()
+      }
 
-    // router.currentRoute は初回ナビゲーションが確定するまで "/" のプレースホルダーの
-    // ままなので、先に isReady() を待ってから読まないと、ログイン中に /a/:publicToken
-    // のような深いリンクへ直接アクセスした際に "/" 宛の着地判定が誤発火してしまう。
-    await router.isReady()
+      // router.currentRoute は初回ナビゲーションが確定するまで "/" のプレースホルダーの
+      // ままなので、先に isReady() を待ってから読まないと、ログイン中に /a/:publicToken
+      // のような深いリンクへ直接アクセスした際に "/" 宛の着地判定が誤発火してしまう。
+      await router.isReady()
 
-    await syncRouteWithAuthState(user)
-    await ensureRouteRoleAccess(router.currentRoute.value.name)
+      await syncRouteWithAuthState(user)
+      await ensureRouteRoleAccess(router.currentRoute.value.name)
+    })()
   })
 
   return {
@@ -288,7 +291,7 @@ const checkRouter = (router: Router) => {
   }
 }
 
-export default boot(async ({ app, router }) => {
+export default boot(({ app, router }) => {
   app.use(PrimeVue, {
     ripple: true,
     theme: {
@@ -338,7 +341,7 @@ export default boot(async ({ app, router }) => {
       isAttendancePrivateRoute(to.name) &&
       !canUseAttendance.value
     ) {
-      notifyError('このアカウントでは出欠確認を利用できません。')
+      void notifyError('このアカウントでは出欠確認を利用できません。')
       next({ name: 'RMHome', replace: true })
       return
     }
@@ -348,7 +351,7 @@ export default boot(async ({ app, router }) => {
       allowedRoles?.length &&
       !allowedRoles.includes(globalLoginUserData.value.role)
     ) {
-      notifyError('この画面にアクセスする権限がありません。')
+      void notifyError('この画面にアクセスする権限がありません。')
       next({ name: 'RMHome', replace: true })
       return
     }
@@ -357,7 +360,7 @@ export default boot(async ({ app, router }) => {
       authUser &&
       isDeniedGuildScope(to.params.guildId, globalLoginUserData.value)
     ) {
-      notifyError('他ギルドの画面にはアクセスできません。')
+      void notifyError('他ギルドの画面にはアクセスできません。')
       next({ name: 'RMHome', replace: true })
       return
     }
@@ -372,7 +375,7 @@ export default boot(async ({ app, router }) => {
       isDeniedUserScope(to.params.userId, globalLoginUserData.value) &&
       !isGuildAdminManagingOwnGuildMember
     ) {
-      notifyError('他ユーザーの画面にはアクセスできません。')
+      void notifyError('他ユーザーの画面にはアクセスできません。')
       next({ name: 'RMHome', replace: true })
       return
     }

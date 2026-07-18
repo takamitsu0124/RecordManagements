@@ -10,11 +10,11 @@ import {
 import { genFirebaseRandomId } from '@codelic/datagen'
 import { auth, db, dbAttendanceEventsModule } from '@rm/db'
 import type {
-  AttendanceAnswers,
   AttendanceCandidate,
   AttendanceCandidateSummaries,
   AttendanceEvent,
-  AttendanceResponse} from '@rm/types'
+  AttendanceResponse
+} from '@rm/types'
 import {
   applyAttendanceAnswersToSummaries,
   createAttendanceCandidateSummaries,
@@ -53,8 +53,7 @@ type AttendanceResponseWritePayload = Pick<
 >
 
 const createPublicToken = () => {
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   const values = new Uint8Array(24)
 
   if (globalThis.crypto?.getRandomValues) {
@@ -64,10 +63,9 @@ const createPublicToken = () => {
       .join('')
   }
 
-  return `${genFirebaseRandomId()}${genFirebaseRandomId()}`.replace(/-/g, '').slice(
-    0,
-    24
-  )
+  return `${genFirebaseRandomId()}${genFirebaseRandomId()}`
+    .replace(/-/g, '')
+    .slice(0, 24)
 }
 
 const attendanceEventCollection = collection(db, 'attendance_events')

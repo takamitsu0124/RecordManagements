@@ -1,4 +1,4 @@
-import type { SkillMaster} from '@rm/types'
+import type { SkillMaster } from '@rm/types'
 import { defaultSkillMaster } from '@rm/types'
 
 type SkillTypeOption = SkillMaster['skillType']
@@ -174,6 +174,7 @@ const rarityAliasMap = new Map<string, number>([
 ])
 
 export function normalizeSkillMasterWhitespace(value: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- CSVの生セル値(文字列/数値想定)を意図的に文字列化する汎用ヘルパー
   return String(value ?? '')
     .replace(/\u3000/g, ' ')
     .replace(/\s+/g, ' ')
@@ -181,6 +182,7 @@ export function normalizeSkillMasterWhitespace(value: unknown) {
 }
 
 export function normalizeSkillMasterEffect(value: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- CSVの生セル値(文字列/数値想定)を意図的に文字列化する汎用ヘルパー
   return String(value ?? '')
     .replace(/\u3000/g, ' ') // 全角スペース → 半角スペース
     .split('\n')
@@ -191,7 +193,7 @@ export function normalizeSkillMasterEffect(value: unknown) {
 function normalizeLookupKey(value: unknown) {
   return normalizeSkillMasterWhitespace(value)
     .toLowerCase()
-    .replace(/[\s_()\-]/g, '')
+    .replace(/[\s_()-]/g, '')
 }
 
 function resolveAlias<T extends string>(
@@ -246,7 +248,7 @@ export function normalizeSkillMasterSkillType(
 
 export function inferAttackTypeFromEquipmentType(
   equipmentType: string
-): AttackTypeOption | '' {
+): AttackTypeOption {
   if (['片手直剣', '短剣', '斧'].includes(equipmentType)) return '斬'
   if (['細剣', '槍', '弓'].includes(equipmentType)) return '突'
   if (['棍棒', '盾'].includes(equipmentType)) return '打'

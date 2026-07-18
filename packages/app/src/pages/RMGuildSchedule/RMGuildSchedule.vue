@@ -575,7 +575,7 @@ const loadPageData = async (guildId: string) => {
       error instanceof Error
         ? error.message
         : '日程調整データの取得に失敗しました。'
-    notifyError(errorMessage.value)
+    void notifyError(errorMessage.value)
   } finally {
     isLoading.value = false
   }
@@ -596,11 +596,11 @@ const openDate = (dateKey: string) => {
 
 const goToGuildDetail = () => {
   if (!currentGuildId.value) {
-    notifyError('ギルド情報が見つかりません。')
+    void notifyError('ギルド情報が見つかりません。')
     return
   }
 
-  router.push({
+  void router.push({
     name: 'RMGuildDetail',
     params: { guildId: currentGuildId.value }
   })
@@ -608,12 +608,12 @@ const goToGuildDetail = () => {
 
 const saveOwnResponse = async () => {
   if (!canEditOwnResponse.value) {
-    notifyError('自分の回答を更新できるのは承認済みメンバー本人だけです。')
+    void notifyError('自分の回答を更新できるのは承認済みメンバー本人だけです。')
     return
   }
 
   if (!draftStatus.value) {
-    notifyError('参加可・未定・参加不可のいずれかを選択してください。')
+    void notifyError('参加可・未定・参加不可のいずれかを選択してください。')
     return
   }
 
@@ -622,7 +622,7 @@ const saveOwnResponse = async () => {
     !currentUserId.value ||
     !currentResponseDocId.value
   ) {
-    notifyError('保存に必要なユーザー情報が不足しています。')
+    void notifyError('保存に必要なユーザー情報が不足しています。')
     return
   }
 
@@ -669,9 +669,9 @@ const saveOwnResponse = async () => {
     }
 
     upsertLocalScheduleResponse(nextPayload)
-    notifySuccess('自分の日程回答を保存しました。')
+    void notifySuccess('自分の日程回答を保存しました。')
   } catch (error) {
-    notifyError('日程回答の保存に失敗しました。')
+    void notifyError('日程回答の保存に失敗しました。')
     console.error('Save guild schedule response failed:', error)
   } finally {
     isSaving.value = false
@@ -680,17 +680,17 @@ const saveOwnResponse = async () => {
 
 const clearOwnResponse = async () => {
   if (!canEditOwnResponse.value) {
-    notifyError('自分の回答だけ削除できます。')
+    void notifyError('自分の回答だけ削除できます。')
     return
   }
 
   if (!currentUserResponse.value?.entries?.[selectedDateKey.value]) {
-    notifyInfo('この日の回答はまだ登録されていません。')
+    void notifyInfo('この日の回答はまだ登録されていません。')
     return
   }
 
   if (!currentResponseDocId.value || !currentUserId.value) {
-    notifyError('削除に必要な情報が不足しています。')
+    void notifyError('削除に必要な情報が不足しています。')
     return
   }
 
@@ -710,9 +710,9 @@ const clearOwnResponse = async () => {
       updatedAt: new Date(),
       updatedBy: currentUserId.value
     })
-    notifyInfo('選択日の回答を削除しました。')
+    void notifyInfo('選択日の回答を削除しました。')
   } catch (error) {
-    notifyError('回答の削除に失敗しました。')
+    void notifyError('回答の削除に失敗しました。')
     console.error('Clear guild schedule response failed:', error)
   } finally {
     isSaving.value = false
@@ -725,7 +725,7 @@ watch(
     if (typeof value !== 'string' || value === '') {
       errorMessage.value = 'ギルドIDが指定されていません。'
       isLoading.value = false
-      notifyError(errorMessage.value)
+      void notifyError(errorMessage.value)
       return
     }
 

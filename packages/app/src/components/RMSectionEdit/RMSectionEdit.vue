@@ -63,9 +63,9 @@ watch(
   () => props.editing,
   (next) => {
     if (next) {
-      focusFirstEditableField()
+      void focusFirstEditableField()
     } else {
-      focusEditTrigger()
+      void focusEditTrigger()
     }
   }
 )

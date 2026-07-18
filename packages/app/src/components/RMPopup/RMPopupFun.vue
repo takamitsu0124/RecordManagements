@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { PropType} from 'vue'
+import type { PropType } from 'vue'
 import { onMounted, ref } from 'vue'
 import type { PopupColorKinds } from './RMPopupFun'
 
@@ -13,7 +13,7 @@ const props = defineProps({
    * ポップアップ左テキスト
    * ボタン自体が不要であればpropsで未記入で自動非表示
    *  */
-  leftText: { type: String },
+  leftText: { type: String, default: '' },
   /**ポップアップ右テキスト */
   rightText: { type: String, default: '閉じる' },
   /**ポップアップ左テキストカラー */

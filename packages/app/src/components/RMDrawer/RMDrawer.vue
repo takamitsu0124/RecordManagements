@@ -36,7 +36,7 @@ const scrollTarget = ref<HTMLDivElement | null>(null)
 let isBodyScrollLocked = false
 
 const scrollToTop = () => {
-  nextTick(() => {
+  void nextTick(() => {
     scrollTarget.value?.scrollTo({ top: 0 })
   })
 }

@@ -1,7 +1,8 @@
 import { firebaseApp } from '@rm/db'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
+import type * as FirebaseAnalyticsModule from 'firebase/analytics'
 
-type AnalyticsModule = typeof import('firebase/analytics')
+type AnalyticsModule = typeof FirebaseAnalyticsModule
 
 type AnalyticsContext = {
   analytics: ReturnType<AnalyticsModule['getAnalytics']>
@@ -15,6 +16,7 @@ const getAnalyticsContext = async (): Promise<AnalyticsContext | null> => {
     return null
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- Promiseのキャッシュ未作成(null)判定であり、解決値のboolean判定ではない
   if (!analyticsContextPromise) {
     analyticsContextPromise = (async () => {
       const analyticsModule = await import('firebase/analytics')

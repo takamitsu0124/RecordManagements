@@ -506,7 +506,7 @@ const loadGuildUsers = async () => {
     guildUsers.value = await fetchGuildUsers(currentGuildId.value)
     syncRoleDrafts()
   } catch (error) {
-    notifyError('ギルドメンバー管理情報の取得に失敗しました。')
+    void notifyError('ギルドメンバー管理情報の取得に失敗しました。')
     console.error('Error fetching guild users:', error)
   } finally {
     isMemberLoading.value = false
@@ -522,7 +522,7 @@ const loadGuildSkillSearch = async () => {
     await skillStore.fetchUsersSkills(approvedMemberIds.value)
   } catch (error) {
     skillErrorMessage.value = 'スキル検索用データの取得に失敗しました。'
-    notifyError(skillErrorMessage.value)
+    void notifyError(skillErrorMessage.value)
     console.error('Error fetching guild skill search data:', error)
   } finally {
     isSkillLoading.value = false
@@ -534,8 +534,8 @@ onMounted(async () => {
   if (!guildId.value) {
     errorMessage.value = 'ギルドIDが指定されていません。'
     isLoading.value = false
-    notifyError(errorMessage.value)
-    router.push('/')
+    void notifyError(errorMessage.value)
+    void router.push('/')
     return
   }
 
@@ -549,14 +549,14 @@ onMounted(async () => {
       await loadGuildSkillSearch()
     } else {
       errorMessage.value = '指定されたギルドが見つかりませんでした。'
-      notifyError(errorMessage.value)
-      router.push('/')
+      void notifyError(errorMessage.value)
+      void router.push('/')
     }
   } catch (error) {
     errorMessage.value = 'ギルド情報の取得中にエラーが発生しました。'
-    notifyError(errorMessage.value)
+    void notifyError(errorMessage.value)
     console.error('Error fetching guild detail:', error)
-    router.push('/')
+    void router.push('/')
   } finally {
     isLoading.value = false
   }
@@ -579,11 +579,11 @@ const clearSkillFilters = () => {
 
 const goToGuildSchedule = () => {
   if (!currentGuildId.value) {
-    notifyError('ギルド日程調整を開くための guildId が見つかりません。')
+    void notifyError('ギルド日程調整を開くための guildId が見つかりません。')
     return
   }
 
-  router.push({
+  void router.push({
     name: 'RMGuildSchedule',
     params: { guildId: currentGuildId.value }
   })
@@ -591,17 +591,17 @@ const goToGuildSchedule = () => {
 
 const goToEditGuild = () => {
   if (!canEditGuild.value) {
-    notifyError('ギルド情報を編集する権限がありません。')
+    void notifyError('ギルド情報を編集する権限がありません。')
     return
   }
 
   if (guildId.value) {
-    router.push({
+    void router.push({
       name: 'RMGuildEdit',
       params: { guildId: guildId.value }
     })
   } else {
-    notifyError('編集するギルドのIDが見つかりません。')
+    void notifyError('編集するギルドのIDが見つかりません。')
   }
 }
 
@@ -617,7 +617,7 @@ const goToPostSkill = (member: {
   if (!canManageGuildMembers.value) return
 
   if (guildId.value) {
-    router.push({
+    void router.push({
       name: 'RMSkillPost',
       params: { guildId: guildId.value, userId: member.uid },
       query: {
@@ -630,7 +630,7 @@ const goToPostSkill = (member: {
 
 const approveMember = async (member: GuildUserRow) => {
   if (!guildDetail.value || !currentGuildId.value) {
-    notifyError('承認対象のギルド情報が見つかりません。')
+    void notifyError('承認対象のギルド情報が見つかりません。')
     return
   }
 
@@ -650,9 +650,9 @@ const approveMember = async (member: GuildUserRow) => {
 
       updateLocalGuildMembers(guildMember)
       await loadGuildSkillSearch()
-      notifySuccess(`${member.displayName} さんを承認しました。`)
+      void notifySuccess(`${member.displayName} さんを承認しました。`)
     } catch (error) {
-      notifyError('メンバー承認に失敗しました。')
+      void notifyError('メンバー承認に失敗しました。')
       console.error('Approve member failed:', error)
     }
   })
@@ -660,7 +660,7 @@ const approveMember = async (member: GuildUserRow) => {
 
 const revokeApproval = async (member: GuildUserRow) => {
   if (!guildDetail.value || !currentGuildId.value) {
-    notifyError('更新対象のギルド情報が見つかりません。')
+    void notifyError('更新対象のギルド情報が見つかりません。')
     return
   }
 
@@ -676,9 +676,9 @@ const revokeApproval = async (member: GuildUserRow) => {
 
       updateLocalGuildMembers(guildMember)
       await loadGuildSkillSearch()
-      notifyInfo(`${member.displayName} さんを承認待ちに戻しました。`)
+      void notifyInfo(`${member.displayName} さんを承認待ちに戻しました。`)
     } catch (error) {
-      notifyError('承認状態の更新に失敗しました。')
+      void notifyError('承認状態の更新に失敗しました。')
       console.error('Revoke approval failed:', error)
     }
   })
@@ -687,12 +687,12 @@ const revokeApproval = async (member: GuildUserRow) => {
 const saveRole = async (member: GuildUserRow) => {
   const nextRole = roleDrafts.value[member.uid]
   if (!nextRole) {
-    notifyError('更新するロールが選択されていません。')
+    void notifyError('更新するロールが選択されていません。')
     return
   }
 
   if (!hasAdmin.value && nextRole === 'admin') {
-    notifyError('Guild Admin は Admin 権限を付与できません。')
+    void notifyError('Guild Admin は Admin 権限を付与できません。')
     roleDrafts.value[member.uid] = member.role
     return
   }
@@ -713,10 +713,10 @@ const saveRole = async (member: GuildUserRow) => {
         }
       }
       roleDrafts.value[member.uid] = nextRole
-      notifySuccess(`${member.displayName} さんの権限を更新しました。`)
+      void notifySuccess(`${member.displayName} さんの権限を更新しました。`)
     } catch (error) {
       roleDrafts.value[member.uid] = member.role
-      notifyError('権限の更新に失敗しました。')
+      void notifyError('権限の更新に失敗しました。')
       console.error('Update role failed:', error)
     }
   })

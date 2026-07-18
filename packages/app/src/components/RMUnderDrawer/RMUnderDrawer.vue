@@ -44,7 +44,7 @@ let isBodyScrollLocked = false
 watch(
   () => props.toTopKey,
   () => {
-    nextTick(() => {
+    void nextTick(() => {
       area.value?.scrollTo({
         top: 0,
         behavior: 'smooth'

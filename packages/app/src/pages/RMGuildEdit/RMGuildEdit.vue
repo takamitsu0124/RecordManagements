@@ -40,8 +40,8 @@ const logoPreviewUrl = computed(() => {
 onMounted(async () => {
   guildId.value = route.params.guildId
   if (!guildId.value) {
-    notifyError('編集対象のギルドIDが指定されていません。')
-    router.push('/')
+    void notifyError('編集対象のギルドIDが指定されていません。')
+    void router.push('/')
     return
   }
 
@@ -60,13 +60,13 @@ onMounted(async () => {
           : ''
         guildLogoUrl.value = fetchedGuild.guildLogo || ''
       } else {
-        notifyError('指定されたギルドが見つかりませんでした。')
-        router.push('/')
+        void notifyError('指定されたギルドが見つかりませんでした。')
+        void router.push('/')
       }
     } catch (error) {
-      notifyError('ギルド情報の取得中にエラーが発生しました。')
+      void notifyError('ギルド情報の取得中にエラーが発生しました。')
       console.error('Error fetching guild for edit:', error)
-      router.push('/')
+      void router.push('/')
     }
   })
 })
@@ -83,9 +83,9 @@ const removeCurrentLogo = async () => {
       await deleteFileByUrl(guildLogoUrl.value)
       await dbGuildModule.doc(guildId.value as string).merge({ guildLogo: '' })
       guildLogoUrl.value = ''
-      notifySuccess('ギルドロゴを削除しました。')
+      void notifySuccess('ギルドロゴを削除しました。')
     } catch (error) {
-      notifyError('ギルドロゴの削除に失敗しました。')
+      void notifyError('ギルドロゴの削除に失敗しました。')
       console.error('Error deleting guild logo:', error)
     }
   })
@@ -93,7 +93,7 @@ const removeCurrentLogo = async () => {
 
 const onSubmit = async () => {
   if (!guildName.value.trim()) {
-    notifyError('ギルド名を入力してください。')
+    void notifyError('ギルド名を入力してください。')
     return
   }
 
@@ -105,7 +105,10 @@ const onSubmit = async () => {
 
       let updatedLogoUrl = guildLogoUrl.value
       if (newGuildLogoFile.value) {
-        const uploadDirPath = `guild_logos/${guildId.value}`
+        const guildIdValue = Array.isArray(guildId.value)
+          ? guildId.value[0] ?? ''
+          : guildId.value
+        const uploadDirPath = `guild_logos/${guildIdValue}`
         updatedLogoUrl = await uploadFile(
           newGuildLogoFile.value,
           uploadDirPath,
@@ -126,13 +129,13 @@ const onSubmit = async () => {
 
       await dbGuildModule.doc(guildId.value as string).merge(updatedData)
 
-      notifySuccess('ギルド情報が正常に更新されました。')
-      router.push({
+      void notifySuccess('ギルド情報が正常に更新されました。')
+      void router.push({
         name: 'RMGuildDetail',
         params: { guildId: guildId.value }
       })
     } catch (error) {
-      notifyError('ギルド情報の更新に失敗しました。')
+      void notifyError('ギルド情報の更新に失敗しました。')
       console.error('Guild update failed:', error)
     }
   })
@@ -140,12 +143,12 @@ const onSubmit = async () => {
 
 const onCancel = () => {
   if (guildId.value) {
-    router.push({
+    void router.push({
       name: 'RMGuildDetail',
       params: { guildId: guildId.value }
     })
   } else {
-    router.push('/')
+    void router.push('/')
   }
 }
 </script>

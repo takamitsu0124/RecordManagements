@@ -111,12 +111,12 @@ const onSubmit = async () => {
   if (!event.value) return
 
   if (isClosed.value) {
-    notifyError('この出欠確認は締切済みです。')
+    void notifyError('この出欠確認は締切済みです。')
     return
   }
 
   if (!displayName.value.trim()) {
-    notifyError('名前を入力してください。')
+    void notifyError('名前を入力してください。')
     return
   }
 
@@ -125,7 +125,7 @@ const onSubmit = async () => {
   )
 
   if (hasUnansweredCandidate) {
-    notifyError('すべての候補に回答してください。')
+    void notifyError('すべての候補に回答してください。')
     return
   }
 
@@ -147,12 +147,12 @@ const onSubmit = async () => {
       )
     })
 
-    notifySuccess('回答を送信しました。')
+    void notifySuccess('回答を送信しました。')
     displayName.value = ''
     comment.value = ''
     await loadPage()
   } catch (error) {
-    notifyError('回答の送信に失敗しました。')
+    void notifyError('回答の送信に失敗しました。')
     console.error('Failed to submit attendance response:', error)
   } finally {
     isSubmitting.value = false

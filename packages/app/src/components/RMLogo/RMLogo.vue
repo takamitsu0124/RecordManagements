@@ -2,11 +2,11 @@
 import { computed, ref } from 'vue'
 
 const props = defineProps({
-  margin_top: {
+  marginTop: {
     type: String,
     default: '0px'
   },
-  margin_bottom: {
+  marginBottom: {
     type: String,
     default: '0px'
   },
@@ -20,8 +20,8 @@ const props = defineProps({
   }
 })
 
-const marginTop = computed(() => `${props.margin_top}`)
-const marginBottom = computed(() => `${props.margin_bottom}`)
+const marginTop = computed(() => `${props.marginTop}`)
+const marginBottom = computed(() => `${props.marginBottom}`)
 const serviceBottom = computed(() => `${props.serviceBottom}`)
 
 const appLogo = ref(

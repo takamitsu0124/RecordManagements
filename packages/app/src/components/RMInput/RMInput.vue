@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PropType} from 'vue'
+import type { PropType } from 'vue'
 import { computed, ref } from 'vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
@@ -10,7 +10,7 @@ import type { IconTypes } from '../iconType'
 import RMIcon from '../RMIcon/RMIcon.vue'
 
 const props = defineProps({
-  modelValue: { type: [String, Number, File] },
+  modelValue: { type: [String, Number, File], default: undefined },
   outline: { type: Boolean, default: false },
   shadow: { type: Boolean, default: false },
   square: { type: Boolean, default: false },

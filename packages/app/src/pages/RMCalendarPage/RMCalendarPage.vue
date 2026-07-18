@@ -23,10 +23,7 @@ import RMFlowGuide from 'src/components/RMFlowGuide/RMFlowGuide.vue'
 import RMFloatingGuideButton from 'src/components/RMFloatingGuideButton/RMFloatingGuideButton.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import RMCalendarEventDialogContent from 'src/pages/RMCalendarPage/components/RMCalendarEventDialogContent.vue'
-import {
-  notifyError,
-  notifySuccess
-} from 'src/composables/useAppNotifications'
+import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 import {
   createGuildCalendarEvent,
   deleteGuildCalendarEvent,
@@ -365,7 +362,7 @@ const loadGuildDetail = async () => {
     guildDetail.value = await fetchGuild(guildId.value, { force: true })
   } catch (error) {
     guildDetail.value = null
-    notifyError('ギルド情報の取得に失敗しました。')
+    void notifyError('ギルド情報の取得に失敗しました。')
     console.error('Failed to load guild detail for calendar:', error)
   } finally {
     isLoadingGuild.value = false
@@ -385,7 +382,7 @@ const reloadEvents = async () => {
     eventEntries.value = sortEventEntries(events)
   } catch (error) {
     eventEntries.value = []
-    notifyError('共有予定の取得に失敗しました。')
+    void notifyError('共有予定の取得に失敗しました。')
     console.error('Failed to load guild calendar events:', error)
   } finally {
     isLoadingEvents.value = false
@@ -416,14 +413,14 @@ const openEventDialog = (eventForm: CalendarEventForm, header: string) => {
 
 const openCreateDialog = (options?: { date?: Date; allDay?: boolean }) => {
   if (!canEditCalendar.value) {
-    notifyError('このカレンダーを編集する権限がありません。')
+    void notifyError('このカレンダーを編集する権限がありません。')
     return
   }
 
   openEventDialog(createNewEventForm(options), '予定を追加')
 }
 
-const onDatesSet = async (arg: DatesSetArg) => {
+const onDatesSet = (arg: DatesSetArg) => {
   currentRange.value = { start: arg.start, end: arg.end }
 }
 
@@ -436,10 +433,12 @@ const onDateClick = (arg: DateClickArg) => {
 }
 
 const onEventClick = (arg: EventClickArg) => {
-  const entry = eventEntries.value.find((eventEntry) => eventEntry.id === arg.event.id)
+  const entry = eventEntries.value.find(
+    (eventEntry) => eventEntry.id === arg.event.id
+  )
 
   if (!entry) {
-    notifyError('選択した予定の詳細を取得できませんでした。')
+    void notifyError('選択した予定の詳細を取得できませんでした。')
     return
   }
 
@@ -448,12 +447,12 @@ const onEventClick = (arg: EventClickArg) => {
 
 const validateEventForm = (form: CalendarEventForm) => {
   if (!form.title.trim()) {
-    notifyError('タイトルを入力してください。')
+    void notifyError('タイトルを入力してください。')
     return false
   }
 
   if (!form.start || !form.end) {
-    notifyError('開始日時と終了日時を入力してください。')
+    void notifyError('開始日時と終了日時を入力してください。')
     return false
   }
 
@@ -462,12 +461,12 @@ const validateEventForm = (form: CalendarEventForm) => {
     const end = parseLocalDate(form.end)
 
     if (!start || !end) {
-      notifyError('日付の形式が正しくありません。')
+      void notifyError('日付の形式が正しくありません。')
       return false
     }
 
     if (end.getTime() < start.getTime()) {
-      notifyError('終了日は開始日以降を指定してください。')
+      void notifyError('終了日は開始日以降を指定してください。')
       return false
     }
 
@@ -478,12 +477,12 @@ const validateEventForm = (form: CalendarEventForm) => {
   const end = new Date(form.end)
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    notifyError('日時の形式が正しくありません。')
+    void notifyError('日時の形式が正しくありません。')
     return false
   }
 
   if (end.getTime() < start.getTime()) {
-    notifyError('終了日時は開始日時以降を指定してください。')
+    void notifyError('終了日時は開始日時以降を指定してください。')
     return false
   }
 
@@ -528,12 +527,12 @@ const buildEventPayload = (form: CalendarEventForm) => {
 
 const saveEventChanges = async (form: CalendarEventForm) => {
   if (!canEditCalendar.value) {
-    notifyError('このカレンダーを編集する権限がありません。')
+    void notifyError('このカレンダーを編集する権限がありません。')
     return false
   }
 
   if (!guildId.value) {
-    notifyError('所属ギルド情報が見つかりません。')
+    void notifyError('所属ギルド情報が見つかりません。')
     return false
   }
 
@@ -548,19 +547,19 @@ const saveEventChanges = async (form: CalendarEventForm) => {
 
     if (form.id) {
       await updateGuildCalendarEvent(form.id, payload)
-      notifySuccess('予定を更新しました。')
+      void notifySuccess('予定を更新しました。')
     } else {
       await createGuildCalendarEvent({
         guildId: guildId.value,
         ...payload
       })
-      notifySuccess('予定を作成しました。')
+      void notifySuccess('予定を作成しました。')
     }
 
     await reloadEvents()
     return true
   } catch (error) {
-    notifyError('予定の保存に失敗しました。')
+    void notifyError('予定の保存に失敗しました。')
     console.error('Failed to save guild calendar event:', error)
     return false
   } finally {
@@ -570,7 +569,7 @@ const saveEventChanges = async (form: CalendarEventForm) => {
 
 const deleteEvent = async (eventId: string, eventTitle: string) => {
   if (!canEditCalendar.value) {
-    notifyError('このカレンダーを編集する権限がありません。')
+    void notifyError('このカレンダーを編集する権限がありません。')
     return false
   }
 
@@ -579,12 +578,10 @@ const deleteEvent = async (eventId: string, eventTitle: string) => {
   try {
     await deleteGuildCalendarEvent(eventId)
     await reloadEvents()
-    notifySuccess(
-      `${eventTitle?.trim() || '選択した予定'}を削除しました。`
-    )
+    void notifySuccess(`${eventTitle?.trim() || '選択した予定'}を削除しました。`)
     return true
   } catch (error) {
-    notifyError('予定の削除に失敗しました。')
+    void notifyError('予定の削除に失敗しました。')
     console.error('Failed to delete guild calendar event:', error)
     return false
   } finally {
@@ -685,7 +682,10 @@ const calendarOptions = computed<CalendarOptions>(() => ({
         <template #content>
           <div class="calendar-main-card__content">
             <div
-              v-if="isLoadingGuild || (isLoadingEvents && calendarEvents.length === 0)"
+              v-if="
+                isLoadingGuild ||
+                (isLoadingEvents && calendarEvents.length === 0)
+              "
               class="rm-state-card"
             >
               <ProgressSpinner strokeWidth="5" />

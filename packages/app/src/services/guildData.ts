@@ -1,10 +1,23 @@
-import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore'
-import { db, dbGuildCalendarEventsModule, dbGuildModule, writeDocWithRandomId } from '@rm/db'
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  where
+} from 'firebase/firestore'
+import {
+  db,
+  dbGuildCalendarEventsModule,
+  dbGuildModule,
+  writeDocWithRandomId
+} from '@rm/db'
 import type {
   AppUser,
   Guild,
   GuildCalendarEvent,
-  GuildScheduleResponse} from '@rm/types'
+  GuildScheduleResponse
+} from '@rm/types'
 import {
   defaultAppUser,
   defaultGuildCalendarEvent,
@@ -24,10 +37,9 @@ const normalizeAppUser = (docId: string, data: AppUser): AppUser => ({
   weaponProficiencySkillProgress: normalizeWeaponProficiencySkillProgress(
     data.weaponProficiencySkillProgress
   ),
-  attendanceFeatureVisibilityStatus:
-    normalizeAttendanceFeatureVisibilityStatus(
-      data.attendanceFeatureVisibilityStatus
-    )
+  attendanceFeatureVisibilityStatus: normalizeAttendanceFeatureVisibilityStatus(
+    data.attendanceFeatureVisibilityStatus
+  )
 })
 
 const normalizeGuildScheduleResponse = (
@@ -52,6 +64,7 @@ const toDate = (value: unknown) => {
     return value.toDate()
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Firestore Timestamp以外の任意値を日付文字列化するフォールバック
   const parsed = new Date(String(value ?? ''))
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed
 }
@@ -131,7 +144,13 @@ export const fetchGuildCalendarEvents = async (
 
 type GuildCalendarEventWritePayload = Pick<
   GuildCalendarEvent,
-  'guildId' | 'title' | 'description' | 'location' | 'startAt' | 'endAt' | 'allDay'
+  | 'guildId'
+  | 'title'
+  | 'description'
+  | 'location'
+  | 'startAt'
+  | 'endAt'
+  | 'allDay'
 >
 
 export const createGuildCalendarEvent = async (

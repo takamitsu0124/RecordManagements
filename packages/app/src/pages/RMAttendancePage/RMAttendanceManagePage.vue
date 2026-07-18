@@ -78,7 +78,7 @@ const loadPage = async () => {
     }
 
     if (attendanceEvent.ownerUid !== (globalLoginUserData.value.uid || globalLoginUserData.value.id)) {
-      notifyError('このイベントを管理する権限がありません。')
+      void notifyError('このイベントを管理する権限がありません。')
       await router.replace({ name: 'RMAttendance' })
       return
     }
@@ -98,9 +98,9 @@ const copyPublicUrl = async () => {
 
   try {
     await copyTextWithFallback(publicUrl.value)
-    notifySuccess('公開URLをコピーしました。')
+    void notifySuccess('公開URLをコピーしました。')
   } catch (error) {
-    notifyError('公開URLのコピーに失敗しました。')
+    void notifyError('公開URLのコピーに失敗しました。')
     console.error('Failed to copy attendance public url:', error)
   }
 }
@@ -112,10 +112,10 @@ const onCloseEvent = async () => {
 
   try {
     await closeAttendanceEvent(event.value.id)
-    notifySuccess('出欠確認を締め切りました。')
+    void notifySuccess('出欠確認を締め切りました。')
     await loadPage()
   } catch (error) {
-    notifyError('締切処理に失敗しました。')
+    void notifyError('締切処理に失敗しました。')
     console.error('Failed to close attendance event:', error)
   } finally {
     isClosing.value = false
@@ -129,10 +129,10 @@ const onDeleteEvent = async () => {
 
   try {
     await softDeleteAttendanceEvent(event.value.id)
-    notifySuccess('出欠確認を削除しました。')
+    void notifySuccess('出欠確認を削除しました。')
     await router.replace({ name: 'RMAttendance' })
   } catch (error) {
-    notifyError('削除に失敗しました。')
+    void notifyError('削除に失敗しました。')
     console.error('Failed to delete attendance event:', error)
   } finally {
     isDeleting.value = false

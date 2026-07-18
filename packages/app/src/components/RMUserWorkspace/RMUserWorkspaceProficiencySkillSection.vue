@@ -149,7 +149,7 @@ const openConfirmDialog = (
 
 const unlockStep = (row: WeaponProficiencySkillMasterRow, index: number) => {
   if (!canToggleStep(row.id, index)) {
-    notifyError('前の段階から順番に登録してください。')
+    void notifyError('前の段階から順番に登録してください。')
     return
   }
 

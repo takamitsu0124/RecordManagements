@@ -222,7 +222,7 @@ const onUserCsvSelect = async (event: { files?: File[] }) => {
 
 const importUsersFromCsv = async () => {
   if (!canImportUserCsv.value) {
-    notifyError('CSV の内容を修正してから実行してください。')
+    void notifyError('CSV の内容を修正してから実行してください。')
     return
   }
 
@@ -282,10 +282,10 @@ const importUsersFromCsv = async () => {
   const errorCount = results.length - successCount
 
   if (successCount > 0) {
-    notifySuccess(`${successCount} 件のユーザーを登録しました。`)
+    void notifySuccess(`${successCount} 件のユーザーを登録しました。`)
   }
   if (errorCount > 0) {
-    notifyError(`${errorCount} 件のユーザー登録に失敗しました。`)
+    void notifyError(`${errorCount} 件のユーザー登録に失敗しました。`)
   }
 
   clearUserCsvSelection(true)
@@ -295,7 +295,7 @@ const registerConfirm = () => {
   errors.value.message = validateRegisterInfo(registerInfo.value)?.message ?? ''
   errors.value.field = validateRegisterInfo(registerInfo.value)?.field ?? ''
   if (errors.value.message === '') {
-    router.push({ name: 'RMUserRegisterConfirm' })
+    void router.push({ name: 'RMUserRegisterConfirm' })
   }
 }
 

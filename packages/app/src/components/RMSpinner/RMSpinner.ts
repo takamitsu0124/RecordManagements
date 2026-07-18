@@ -11,8 +11,6 @@ export const useSpinner = async <T>(f: () => Promise<T>) => {
   try {
     const result = await f()
     return result
-  } catch (e) {
-    throw e
   } finally {
     app.unmount()
   }
