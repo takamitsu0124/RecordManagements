@@ -1,4 +1,4 @@
-import { SizeTypes } from './size'
+import type { SizeTypes } from './size'
 /**
  * カレンダーの展開位置を取得する
  */
@@ -8,7 +8,7 @@ export const calendarPosition = (
   labelFlag: boolean
 ) => {
   // インプットトップ
-  const elementInput = refInput!
+  const elementInput = refInput
   const inputCoordinateTop = elementInput.getBoundingClientRect().top
 
   // ブラウザ中心値

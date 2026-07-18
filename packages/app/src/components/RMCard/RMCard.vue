@@ -1,18 +1,19 @@
 <script lang="ts" setup>
-import { computed, PropType } from 'vue'
+import type { PropType } from 'vue'
+import { computed } from 'vue'
 import Card from 'primevue/card'
 
 const props = defineProps({
   cardShape: {
     type: String as PropType<'roundS' | 'roundM' | 'square'>,
-    default: 'square',
+    default: 'square'
   },
   isBorder: { type: Boolean, default: false },
   shadowDirection: {
     type: String as PropType<'allSide' | 'toBottom' | 'none'>,
-    default: 'none',
+    default: 'none'
   },
-  bgColor: { type: String, default: 'white' },
+  bgColor: { type: String, default: 'white' }
 })
 
 const cardClass = computed(() => ({
@@ -21,7 +22,7 @@ const cardClass = computed(() => ({
   '_set_toBottomShadow': props.shadowDirection === 'toBottom',
   '_set_round_small': props.cardShape === 'roundS',
   '_set_round_middle': props.cardShape === 'roundM',
-  '_set_round_square': props.cardShape === 'square',
+  '_set_round_square': props.cardShape === 'square'
 }))
 </script>
 
@@ -29,7 +30,7 @@ const cardClass = computed(() => ({
   <Card class="rm-card" :class="cardClass" :style="{ background: bgColor }">
     <template #content>
       <div class="rm-card__content">
-        <slot></slot>
+        <slot />
       </div>
     </template>
   </Card>

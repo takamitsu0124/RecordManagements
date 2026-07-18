@@ -135,6 +135,15 @@ service firebase.storage {
 			allow write: if isSignedIn() && isAdmin();
 		}
 
+		// skill-master/source-images/ は機密性のない公開アセット(スキルアイコン)のため、
+		// banner_master/ と同様にCloud Functions(mirrorSkillMasterImageToCdnBucket)
+		// が完了時に公開CDN専用バケットへミラーリングする。
+		// 実体のパスは skill-master/source-images/{equipmentType}/{fileName}。
+		match /skill-master/source-images/{allPaths=**} {
+			allow read: if isSignedIn();
+			allow write: if isSignedIn() && isAdmin();
+		}
+
 		match /{allPaths=**} {
 			allow read, write: if false;
 		}

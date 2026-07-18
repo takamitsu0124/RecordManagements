@@ -1,3 +1,23 @@
+<script setup lang="ts">
+import Button from 'primevue/button'
+import { useRouter } from 'vue-router'
+
+defineOptions({
+  name: 'ErrorNotFound'
+})
+
+const router = useRouter()
+
+const goBack = () => {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  router.push('/')
+}
+</script>
+
 <template>
   <div class="error-page">
     <div class="error-card">
@@ -25,26 +45,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import Button from 'primevue/button'
-import { useRouter } from 'vue-router'
-
-defineOptions({
-  name: 'ErrorNotFound',
-})
-
-const router = useRouter()
-
-const goBack = () => {
-  if (window.history.length > 1) {
-    router.back()
-    return
-  }
-
-  router.push('/')
-}
-</script>
 
 <style scoped>
 .error-page {

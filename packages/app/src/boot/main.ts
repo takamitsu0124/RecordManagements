@@ -1,14 +1,16 @@
-import { onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth'
-import {
+import type { User as FirebaseAuthUser } from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
+import type {
   AppRole,
-  AppUser,
+  AppUser} from '@rm/types'
+import {
   defaultAppUser,
   normalizeAttendanceFeatureVisibilityStatus,
   normalizeWeaponProficiencyLevels,
-  normalizeWeaponProficiencySkillProgress,
+  normalizeWeaponProficiencySkillProgress
 } from '@rm/types'
 import { auth, dbUsersModule } from '@rm/db'
-import { Router } from 'vue-router'
+import type { Router } from 'vue-router'
 import { boot } from 'quasar/wrappers'
 import { computed, ref } from 'vue'
 import PrimeVue from 'primevue/config'
@@ -52,7 +54,7 @@ const guestOnlyRouteNames = new Set([
   'RMPreLogin',
   'RMMailLogin',
   'RMPhoneLogin',
-  'RMLoginSmsCode',
+  'RMLoginSmsCode'
 ])
 
 const sharedPublicRouteNames = new Set(['RMAttendancePublic'])
@@ -75,7 +77,7 @@ const getLandingRoute = (user: FirebaseAuthUser | null) => {
 const attendancePrivateRouteNames = new Set([
   'RMAttendance',
   'RMAttendanceNew',
-  'RMAttendanceManage',
+  'RMAttendanceManage'
 ])
 
 const isAttendancePrivateRoute = (routeName: unknown) => {
@@ -90,7 +92,7 @@ const createFallbackAppUser = (authUser: FirebaseAuthUser | null): AppUser => {
     id: authUser?.uid ?? '',
     uid: authUser?.uid ?? '',
     email: authUser?.email ?? '',
-    displayName: authUser?.displayName ?? authUser?.email ?? '',
+    displayName: authUser?.displayName ?? authUser?.email ?? ''
   }
 }
 
@@ -127,7 +129,7 @@ const ensureAppUserDocument = async (
           existingAppUser.displayName ||
           authUser.displayName ||
           authUser.email ||
-          '',
+          ''
       }
     }
 
@@ -156,7 +158,7 @@ const loadAppUser = async (authUser: FirebaseAuthUser): Promise<AppUser> => {
         	appUser.attendanceFeatureVisibilityStatus
         ),
       displayName:
-        appUser.displayName || authUser.displayName || authUser.email || '',
+        appUser.displayName || authUser.displayName || authUser.email || ''
     }
   }
 
@@ -282,7 +284,7 @@ const checkRouter = (router: Router) => {
 
   return {
     initialAuthStateResolved,
-    getCurrentAuthUser: () => currentAuthUser,
+    getCurrentAuthUser: () => currentAuthUser
   }
 }
 
@@ -293,9 +295,9 @@ export default boot(async ({ app, router }) => {
       preset: Aura,
       options: {
         darkModeSelector: false,
-        cssLayer: false,
-      },
-    },
+        cssLayer: false
+      }
+    }
   })
   app.use(DialogService)
   app.use(ToastService)

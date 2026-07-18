@@ -1,4 +1,4 @@
-import { RouteRecordRaw } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -10,23 +10,23 @@ const routes: RouteRecordRaw[] = [
         path: '/RMAttendance',
         component: () =>
           import('src/pages/RMAttendancePage/RMAttendanceListPage.vue'),
-        meta: { pageTitle: '出欠確認' },
+        meta: { pageTitle: '出欠確認' }
       },
       {
         name: 'RMAttendanceNew',
         path: '/RMAttendance/new',
         component: () =>
           import('src/pages/RMAttendancePage/RMAttendanceCreatePage.vue'),
-        meta: { pageTitle: '出欠確認を作成' },
+        meta: { pageTitle: '出欠確認を作成' }
       },
       {
         name: 'RMAttendanceManage',
         path: '/RMAttendance/manage/:eventId',
         component: () =>
           import('src/pages/RMAttendancePage/RMAttendanceManagePage.vue'),
-        meta: { pageTitle: '出欠確認の管理' },
-      },
-    ],
+        meta: { pageTitle: '出欠確認の管理' }
+      }
+    ]
   },
   {
     path: '/',
@@ -37,10 +37,10 @@ const routes: RouteRecordRaw[] = [
         path: '/a/:publicToken',
         component: () =>
           import('src/pages/RMAttendancePublicPage/RMAttendancePublicPage.vue'),
-        meta: { pageTitle: '出欠回答' },
-      },
-    ],
-  },
+        meta: { pageTitle: '出欠回答' }
+      }
+    ]
+  }
 ]
 
 export default routes

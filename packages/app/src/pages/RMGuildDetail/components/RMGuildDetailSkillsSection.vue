@@ -9,17 +9,18 @@ import InputText from 'primevue/inputtext'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
+import type {
+  AppRole} from '@rm/types'
 import {
-  AppRole,
   weaponProficiencyDefinitions,
-  weaponProficiencyMaxTotalLevel,
+  weaponProficiencyMaxTotalLevel
 } from '@rm/types'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import type {
   GuildMemberSkillSummary,
   GuildSkillRow,
   GuildSkillSortOption,
-  GuildUserRow,
+  GuildUserRow
 } from '../types'
 
 const props = defineProps<{
@@ -67,7 +68,7 @@ const updateSkillTableFilters = (
 ) => {
   emit('update:skillTableFilters', {
     ...props.skillTableFilters,
-    ...patch,
+    ...patch
   })
 }
 
@@ -75,43 +76,44 @@ const updateSkillNameFilter = (value: string) =>
   updateSkillTableFilters({
     skillName: {
       ...props.skillTableFilters.skillName,
-      value,
-    },
+      value
+    }
   })
 
 const updateMemberFilter = (value: string | null) =>
   updateSkillTableFilters({
     member: {
       ...props.skillTableFilters.member,
-      value,
-    },
+      value
+    }
   })
 
 const updateElementFilter = (value: string | null) =>
   updateSkillTableFilters({
     element: {
       ...props.skillTableFilters.element,
-      value,
-    },
+      value
+    }
   })
 
 const updateEquipmentTypeFilter = (value: string | null) =>
   updateSkillTableFilters({
     equipmentType: {
       ...props.skillTableFilters.equipmentType,
-      value,
-    },
+      value
+    }
   })
 
 const setSkillSortOption = (value: GuildSkillSortOption | null) =>
   emit('update:skillSortOption', value ?? 'default')
 
-const skillSortOptions: Array<{ label: string; value: GuildSkillSortOption }> = [
-  { label: 'ブレイクゲージ増加量(昇順)', value: 'breakGaugeAsc' },
-  { label: 'ブレイクゲージ増加量(降順)', value: 'breakGaugeDesc' },
-  { label: 'スイッチゲージ増加量(昇順)', value: 'switchGaugeAsc' },
-  { label: 'スイッチゲージ増加量(降順)', value: 'switchGaugeDesc' },
-]
+const skillSortOptions: Array<{ label: string; value: GuildSkillSortOption }> =
+  [
+    { label: 'ブレイクゲージ増加量(昇順)', value: 'breakGaugeAsc' },
+    { label: 'ブレイクゲージ増加量(降順)', value: 'breakGaugeDesc' },
+    { label: 'スイッチゲージ増加量(昇順)', value: 'switchGaugeAsc' },
+    { label: 'スイッチゲージ増加量(降順)', value: 'switchGaugeDesc' }
+  ]
 
 const isMemberSkillDialogVisible = ref(false)
 
@@ -321,7 +323,7 @@ watch(
                 <div class="guild-search-table__skill">
                   <img
                     v-if="data.image"
-                    :src="data.image"
+                    :src="data.imageThumb || data.image"
                     alt="skill"
                     loading="lazy"
                     class="guild-search-table__skill-image"
@@ -356,11 +358,7 @@ watch(
               header="スキル種別"
               style="width: 120px"
             />
-            <Column
-              field="attackType"
-              header="攻撃属性"
-              style="width: 110px"
-            />
+            <Column field="attackType" header="攻撃属性" style="width: 110px" />
           </DataTable>
         </div>
 
@@ -375,13 +373,15 @@ watch(
                 <div class="guild-skill-mobile-item__skill-row">
                   <img
                     v-if="row.image"
-                    :src="row.image"
+                    :src="row.imageThumb || row.image"
                     alt="skill"
                     loading="lazy"
                     class="guild-skill-mobile-item__image"
                   />
                   <div>
-                    <div class="guild-skill-mobile-item__skill">{{ row.name }}</div>
+                    <div class="guild-skill-mobile-item__skill">
+                      {{ row.name }}
+                    </div>
                     <div class="guild-skill-mobile-item__meta">
                       {{ row.userName }} / {{ row.skillName || '技名未設定' }}
                     </div>
@@ -426,7 +426,9 @@ watch(
               @click="mobileSkillListPage--"
             />
             <Tag
-              :value="`${mobileSkillListPage + 1} / ${mobileSkillListTotalPages}`"
+              :value="`${
+                mobileSkillListPage + 1
+              } / ${mobileSkillListTotalPages}`"
               severity="secondary"
             />
             <Button
@@ -459,7 +461,8 @@ watch(
           <div>
             <div class="guild-panel-header__title">メンバー別スキル状況</div>
             <div class="guild-panel-header__subtitle">
-              PC/TAB はポップアップ、SP は全画面表示で、メンバーごとの所持状況を確認できます。
+              PC/TAB はポップアップ、SP
+              は全画面表示で、メンバーごとの所持状況を確認できます。
             </div>
           </div>
           <Tag
@@ -570,7 +573,9 @@ watch(
             >
               <div
                 class="guild-skill-overview-item__progress-bar"
-                :style="{ width: `${member.weaponProficiencySkillUnlockRate}%` }"
+                :style="{
+                  width: `${member.weaponProficiencySkillUnlockRate}%`,
+                }"
               />
             </div>
             <div class="guild-skill-overview-item__progress-note">
@@ -584,9 +589,7 @@ watch(
                   member.weaponProficiencySkillRemainingBottleCount.toLocaleString()
                 }}個
               </span>
-              <span v-else>
-                熟練度スキル定義が未設定です
-              </span>
+              <span v-else> 熟練度スキル定義が未設定です </span>
             </div>
           </div>
           <div class="guild-skill-overview-item__skills">

@@ -7,7 +7,7 @@ import {
   hasAdmin,
   hasGuildId,
   globalLoginUserData,
-  lacksGuildId,
+  lacksGuildId
 } from 'src/boot/main'
 import RMIcon from 'src/components/RMIcon/RMIcon.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
@@ -36,7 +36,7 @@ const selectGuild = () => {
 
   router.push({
     name: 'RMGuildDetail',
-    params: { guildId: globalLoginUserData.value.guildId },
+    params: { guildId: globalLoginUserData.value.guildId }
   })
 }
 
@@ -48,7 +48,7 @@ const goToUserEdit = () => {
 
   router.push({
     name: 'RMUserEdit',
-    params: { userId: globalLoginUserData.value.id },
+    params: { userId: globalLoginUserData.value.id }
   })
 }
 
@@ -64,7 +64,7 @@ const goToGuildSchedule = () => {
 
   router.push({
     name: 'RMGuildSchedule',
-    params: { guildId: globalLoginUserData.value.guildId },
+    params: { guildId: globalLoginUserData.value.guildId }
   })
 }
 
@@ -80,8 +80,8 @@ const homeActions = computed(() => {
       description: 'スキル・熟練度の管理はこちらから。',
       icon: 'edit',
       label: '開く',
-      onClick: goToUserEdit,
-    },
+      onClick: goToUserEdit
+    }
   ]
 
   if (canUseAttendance.value) {
@@ -92,7 +92,7 @@ const homeActions = computed(() => {
         '個人で公開URL付きの出欠確認を作成し、回答と候補ごとの集計を確認できます。',
       icon: 'groups',
       label: '開く',
-      onClick: goToAttendance,
+      onClick: goToAttendance
     })
   }
 
@@ -104,7 +104,7 @@ const homeActions = computed(() => {
         'ギルドの共有予定を一覧表示し、権限があればアプリ内でそのまま更新できます。',
       icon: 'calendar_month',
       label: '表示する',
-      onClick: goToCalendar,
+      onClick: goToCalendar
     })
   }
 
@@ -116,7 +116,7 @@ const homeActions = computed(() => {
         description: 'Admin 権限で新規ユーザーを招待・作成します。',
         icon: 'person_add',
         label: '登録する',
-        onClick: registerUser,
+        onClick: registerUser
       },
       {
         key: 'skill-master-admin',
@@ -124,7 +124,7 @@ const homeActions = computed(() => {
         description: 'skill_master の登録・更新と検索条件の整備を行います。',
         icon: 'edit_note',
         label: '管理する',
-        onClick: goToSkillMasterAdmin,
+        onClick: goToSkillMasterAdmin
       }
     )
   }
@@ -136,7 +136,7 @@ const homeActions = computed(() => {
       description: '所属ギルドが未登録の場合はこちらから作成します。',
       icon: 'add_home',
       label: '作成する',
-      onClick: registerGuild,
+      onClick: registerGuild
     })
   }
 
@@ -147,7 +147,7 @@ const homeActions = computed(() => {
       description: 'ギルド情報の確認とメンバー管理を行います。',
       icon: 'touch_app',
       label: '表示する',
-      onClick: selectGuild,
+      onClick: selectGuild
     })
     actions.push({
       key: 'guild-schedule',
@@ -155,7 +155,7 @@ const homeActions = computed(() => {
       description: '日ごとの参加可・未定・参加不可を入力し、集計と内訳を確認します。',
       icon: 'event_available',
       label: '開く',
-      onClick: goToGuildSchedule,
+      onClick: goToGuildSchedule
     })
   }
 

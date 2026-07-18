@@ -17,7 +17,7 @@ const props = withDefaults(
     disabled: false,
     placeholder: '日付を選択',
     minYear: undefined,
-    maxYear: undefined,
+    maxYear: undefined
   }
 )
 
@@ -86,7 +86,7 @@ const openPicker = () => {
   const parsed = parseValue(props.modelValue) ?? {
     year: now.getFullYear(),
     month: now.getMonth() + 1,
-    day: now.getDate(),
+    day: now.getDate()
   }
   draftYear.value = parsed.year
   draftMonth.value = parsed.month
@@ -182,7 +182,7 @@ const onClear = () => {
     <Dialog
       v-model:visible="isOpen"
       modal
-      dismissable-mask
+      dismissableMask
       :draggable="false"
       header="日付を選択"
       :style="{ width: 'min(92vw, 22rem)' }"

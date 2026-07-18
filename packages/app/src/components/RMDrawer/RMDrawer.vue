@@ -4,7 +4,7 @@ import RMIcon from '../RMIcon/RMIcon.vue'
 import { lockBodyScroll, unlockBodyScroll } from 'src/helpers/bodyScrollLock'
 
 defineOptions({
-  inheritAttrs: false,
+  inheritAttrs: false
 })
 
 const props = defineProps({
@@ -17,7 +17,7 @@ const props = defineProps({
   isIcon: { type: Boolean, default: false },
   bottomHeight: { type: String, default: '100px' },
   drawerTitle: { type: String, default: '' },
-  isForciblyScrollToTop: { type: Boolean, default: false },
+  isForciblyScrollToTop: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
@@ -29,7 +29,7 @@ const drawer = computed({
   get: () => props.modelValue,
   set: (value) => {
     emit('update:modelValue', value)
-  },
+  }
 })
 
 const scrollTarget = ref<HTMLDivElement | null>(null)
@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
         class="_drawer_bg_color"
         :style="{ '--drawer-bg': bgColor, '--drawer-opacity': String(bgOpacity), '--drawer-z': String(zIndex) }"
         @click="drawer = false"
-      ></div>
+      />
     </transition>
     <transition name="slide-up">
       <div
@@ -90,8 +90,8 @@ onBeforeUnmount(() => {
             <span v-else>完了</span>
           </button>
         </div>
-        <div :class="['_slot_container', { _set_scroll: isScroll }]" ref="scrollTarget">
-          <slot></slot>
+        <div ref="scrollTarget" :class="['_slot_container', { _set_scroll: isScroll }]">
+          <slot />
         </div>
       </div>
     </transition>

@@ -17,14 +17,14 @@ import {
   closeAttendanceEvent,
   fetchAttendanceEvent,
   fetchAttendanceResponses,
-  softDeleteAttendanceEvent,
+  softDeleteAttendanceEvent
 } from 'src/services/attendanceData'
 import AttendanceSummaryTable from './components/AttendanceSummaryTable.vue'
 import {
   buildAttendanceSummaryRows,
   copyTextWithFallback,
   formatAttendanceAnswersForDisplay,
-  formatAttendanceDateTime,
+  formatAttendanceDateTime
 } from './helpers'
 
 const route = useRoute()
@@ -150,7 +150,7 @@ const confirmDialogConfig = computed(() => {
         'この出欠確認を締め切りますか？締切後は新しい回答を受け付けなくなります。',
       confirmLabel: '締め切る',
       severity: 'warn' as const,
-      loading: isClosing.value,
+      loading: isClosing.value
     }
   }
   if (pendingConfirmAction.value === 'delete') {
@@ -159,7 +159,7 @@ const confirmDialogConfig = computed(() => {
       message: 'この出欠確認を削除しますか？この操作は取り消せません。',
       confirmLabel: '削除する',
       severity: 'danger' as const,
-      loading: isDeleting.value,
+      loading: isDeleting.value
     }
   }
   return null
@@ -335,7 +335,7 @@ onMounted(() => {
         :visible="!!confirmDialogConfig"
         :title="confirmDialogConfig?.title"
         :message="confirmDialogConfig?.message ?? ''"
-        :confirm-label="confirmDialogConfig?.confirmLabel"
+        :confirmLabel="confirmDialogConfig?.confirmLabel"
         :severity="confirmDialogConfig?.severity"
         :loading="confirmDialogConfig?.loading"
         @update:visible="(value) => { if (!value) pendingConfirmAction = null }"

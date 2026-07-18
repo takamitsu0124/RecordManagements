@@ -1,4 +1,4 @@
-import { RouteRecordRaw } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -9,10 +9,10 @@ const routes: RouteRecordRaw[] = [
         name: 'RMCalendar',
         path: '/RMCalendar',
         component: () => import('src/pages/RMCalendarPage/RMCalendarPage.vue'),
-        meta: { pageTitle: 'イベントカレンダー' },
-      },
-    ],
-  },
+        meta: { pageTitle: 'イベントカレンダー' }
+      }
+    ]
+  }
 ]
 
 export default routes

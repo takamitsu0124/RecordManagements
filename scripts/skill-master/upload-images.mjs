@@ -3,6 +3,7 @@ import path from 'node:path'
 import process from 'node:process'
 import crypto from 'node:crypto'
 import admin from 'firebase-admin'
+import sharp from 'sharp'
 
 /*
  * 画像ファイルの事前準備
@@ -43,7 +44,13 @@ import admin from 'firebase-admin'
  */
 
 const STORAGE_BUCKET = 'recordmanagements-756bf.appspot.com'
+// skill_master_images/ は機密性のない公開アセットのため、Cloud CDN + Backend Bucket
+// 構成の専用公開バケットに直接アップロードする（Issue #91/#92 参照）。
+const PUBLIC_BUCKET_NAME = 'skill-master-images-public'
+const PUBLIC_CDN_ORIGIN = 'https://136-69-19-129.sslip.io'
 const DEFAULT_CACHE_CONTROL = 'public,max-age=31536000,immutable'
+const THUMBNAIL_MAX_DIMENSION = 320
+const THUMBNAIL_WEBP_QUALITY = 80
 
 const usage = `Usage:
   npm run skill-master:upload-images -- --file ./path/to/skill-master.csv --validate-only
@@ -68,11 +75,19 @@ Workflow:
 
 Storage layout:
   skill_master_images/{prefix}/{skillId}/source.{ext}
+  skill_master_images/{prefix}/{skillId}/thumb.webp
 
 Why this layout:
   - based on immutable skillId, so attr/type changes do not force re-upload
   - one directory per skill leaves room for future variants like thumb.webp
   - a 2-char prefix shard prevents one large flat directory
+
+Thumbnails:
+  - a ${THUMBNAIL_MAX_DIMENSION}px (max dimension) WebP thumbnail is generated
+    from the source image on every run and written to thumb.webp
+  - its download URL is written to the output file's imageThumb column,
+    which flows into skill-master:import as SkillMaster.imageThumb
+  - thumbnail generation failures are logged but do not fail the whole run
 `
 
 function parseArgs(argv) {
@@ -83,7 +98,7 @@ function parseArgs(argv) {
     concurrency: 8,
     validateOnly: false,
     dryRun: false,
-    help: false,
+    help: false
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -224,8 +239,8 @@ async function loadSource(filePath) {
         rootObject: null,
         records: parsed.map((record, index) => ({
           ...record,
-          __rowNumber: index + 1,
-        })),
+          __rowNumber: index + 1
+        }))
       }
     }
 
@@ -238,12 +253,14 @@ async function loadSource(filePath) {
         rootObject: parsed,
         records: parsed.skills.map((record, index) => ({
           ...record,
-          __rowNumber: index + 1,
-        })),
+          __rowNumber: index + 1
+        }))
       }
     }
 
-    throw new Error('JSON input must be an array or an object with a "skills" array.')
+    throw new Error(
+      'JSON input must be an array or an object with a "skills" array.'
+    )
   }
 
   if (extension === '.csv') {
@@ -254,7 +271,7 @@ async function loadSource(filePath) {
       format: 'csv',
       headers,
       rootObject: null,
-      records,
+      records
     }
   }
 
@@ -318,7 +335,9 @@ function resolveLocalImagePath(imageValue, sourceFilePath, imageBaseDir) {
 function createStorageObjectPath(skillId, localImagePath) {
   const safeSkillId = sanitizeSkillId(skillId)
   if (!safeSkillId) {
-    throw new Error(`Cannot build Storage path from empty skill id "${skillId}".`)
+    throw new Error(
+      `Cannot build Storage path from empty skill id "${skillId}".`
+    )
   }
 
   const prefix = safeSkillId.slice(0, 2) || 'misc'
@@ -326,20 +345,40 @@ function createStorageObjectPath(skillId, localImagePath) {
   return `skill_master_images/${prefix}/${safeSkillId}/source${extension}`
 }
 
-function createDownloadUrl(bucketName, objectPath, token) {
-  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(objectPath)}?alt=media&token=${token}`
+function createThumbnailObjectPath(skillId) {
+  const safeSkillId = sanitizeSkillId(skillId)
+  if (!safeSkillId) {
+    throw new Error(
+      `Cannot build Storage path from empty skill id "${skillId}".`
+    )
+  }
+
+  const prefix = safeSkillId.slice(0, 2) || 'misc'
+  return `skill_master_images/${prefix}/${safeSkillId}/thumb.webp`
 }
 
-function readExistingToken(metadata) {
-  const raw = metadata?.metadata?.firebaseStorageDownloadTokens || ''
-  return normalizeWhitespace(String(raw).split(',')[0] || '')
+async function createThumbnailBuffer(sourceBuffer) {
+  return sharp(sourceBuffer)
+    .rotate()
+    .resize({
+      width: THUMBNAIL_MAX_DIMENSION,
+      height: THUMBNAIL_MAX_DIMENSION,
+      fit: 'inside',
+      withoutEnlargement: true
+    })
+    .webp({ quality: THUMBNAIL_WEBP_QUALITY })
+    .toBuffer()
+}
+
+function createCdnUrl(objectPath) {
+  return `${PUBLIC_CDN_ORIGIN}/${objectPath}`
 }
 
 async function ensureAdminApp() {
   if (admin.apps.length === 0) {
     admin.initializeApp({
       credential: admin.credential.applicationDefault(),
-      storageBucket: STORAGE_BUCKET,
+      storageBucket: STORAGE_BUCKET
     })
   }
 }
@@ -362,7 +401,11 @@ async function createUploadTasks(records, sourceFilePath, imageBaseDir) {
       continue
     }
 
-    const localImagePath = resolveLocalImagePath(imageValue, sourceFilePath, imageBaseDir)
+    const localImagePath = resolveLocalImagePath(
+      imageValue,
+      sourceFilePath,
+      imageBaseDir
+    )
     if (!localImagePath) {
       continue
     }
@@ -379,7 +422,8 @@ async function createUploadTasks(records, sourceFilePath, imageBaseDir) {
       rowNumber,
       localImagePath,
       objectPath: createStorageObjectPath(skillId, localImagePath),
-      contentType: inferContentType(localImagePath),
+      thumbObjectPath: createThumbnailObjectPath(skillId),
+      contentType: inferContentType(localImagePath)
     })
   }
 
@@ -391,16 +435,61 @@ async function runWithConcurrency(items, concurrency, worker) {
   const results = new Array(items.length)
   let nextIndex = 0
 
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex
-      nextIndex += 1
-      results[currentIndex] = await worker(items[currentIndex], currentIndex)
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex
+        nextIndex += 1
+        results[currentIndex] = await worker(items[currentIndex], currentIndex)
+      }
     }
-  })
+  )
 
   await Promise.all(runners)
   return results
+}
+
+async function syncThumbnailTask(bucket, task, fileBuffer, dryRun) {
+  if (dryRun) {
+    return {
+      thumbStatus: 'would-upload-thumb',
+      imageThumb: createCdnUrl(task.thumbObjectPath)
+    }
+  }
+
+  let thumbBuffer
+
+  try {
+    thumbBuffer = await createThumbnailBuffer(fileBuffer)
+  } catch (error) {
+    console.error(
+      `Row ${task.rowNumber}: failed to generate thumbnail for ${task.skillId}: ${error.message}`
+    )
+    return { thumbStatus: 'thumb-failed', imageThumb: '' }
+  }
+
+  try {
+    const thumbFile = bucket.file(task.thumbObjectPath)
+
+    await thumbFile.save(thumbBuffer, {
+      resumable: false,
+      metadata: {
+        cacheControl: DEFAULT_CACHE_CONTROL,
+        contentType: 'image/webp'
+      }
+    })
+
+    return {
+      thumbStatus: 'thumb-uploaded',
+      imageThumb: createCdnUrl(task.thumbObjectPath)
+    }
+  } catch (error) {
+    console.error(
+      `Row ${task.rowNumber}: failed to upload thumbnail for ${task.skillId}: ${error.message}`
+    )
+    return { thumbStatus: 'thumb-failed', imageThumb: '' }
+  }
 }
 
 async function syncImageTask(bucket, task, dryRun) {
@@ -408,83 +497,65 @@ async function syncImageTask(bucket, task, dryRun) {
   const localMd5 = crypto.createHash('md5').update(fileBuffer).digest('base64')
   const file = bucket.file(task.objectPath)
   const [exists] = await file.exists()
-  let token = ''
+  let result
 
   if (exists) {
     const [metadata] = await file.getMetadata()
-    token = readExistingToken(metadata)
     const remoteMd5 = normalizeWhitespace(metadata.md5Hash)
 
     if (remoteMd5 && remoteMd5 === localMd5) {
-      if (token) {
-        return {
-          status: 'skipped',
-          ...task,
-          downloadUrl: createDownloadUrl(bucket.name, task.objectPath, token),
-        }
+      result = {
+        status: 'skipped',
+        ...task,
+        downloadUrl: createCdnUrl(task.objectPath)
       }
+    }
+  }
 
-      token = crypto.randomUUID()
-      if (dryRun) {
-        return {
-          status: 'would-update-metadata',
-          ...task,
-          downloadUrl: createDownloadUrl(bucket.name, task.objectPath, token),
-        }
+  if (!result) {
+    if (dryRun) {
+      result = {
+        status: exists ? 'would-overwrite' : 'would-upload',
+        ...task,
+        downloadUrl: createCdnUrl(task.objectPath)
       }
-
-      await file.setMetadata({
-        cacheControl: metadata.cacheControl || DEFAULT_CACHE_CONTROL,
-        contentType: metadata.contentType || task.contentType,
+    } else {
+      await file.save(fileBuffer, {
+        resumable: false,
         metadata: {
-          ...(metadata.metadata || {}),
-          firebaseStorageDownloadTokens: token,
-          sourceMd5: localMd5,
-        },
+          cacheControl: DEFAULT_CACHE_CONTROL,
+          contentType: task.contentType,
+          metadata: {
+            sourceMd5: localMd5
+          }
+        }
       })
 
-      return {
-        status: 'metadata-updated',
+      result = {
+        status: exists ? 'overwritten' : 'uploaded',
         ...task,
-        downloadUrl: createDownloadUrl(bucket.name, task.objectPath, token),
+        downloadUrl: createCdnUrl(task.objectPath)
       }
     }
   }
 
-  token = token || crypto.randomUUID()
-  if (dryRun) {
-    return {
-      status: exists ? 'would-overwrite' : 'would-upload',
-      ...task,
-      downloadUrl: createDownloadUrl(bucket.name, task.objectPath, token),
-    }
-  }
+  const thumbResult = await syncThumbnailTask(bucket, task, fileBuffer, dryRun)
+  result.imageThumb = thumbResult.imageThumb
+  result.thumbStatus = thumbResult.thumbStatus
 
-  await file.save(fileBuffer, {
-    resumable: false,
-    metadata: {
-      cacheControl: DEFAULT_CACHE_CONTROL,
-      contentType: task.contentType,
-      metadata: {
-        firebaseStorageDownloadTokens: token,
-        sourceMd5: localMd5,
-      },
-    },
-  })
-
-  return {
-    status: exists ? 'overwritten' : 'uploaded',
-    ...task,
-    downloadUrl: createDownloadUrl(bucket.name, task.objectPath, token),
-  }
+  return result
 }
 
 function buildUpdatedRecords(records, uploadResultsByRowNumber) {
   return records.map((record) => {
-    const updatedImage = uploadResultsByRowNumber.get(record.__rowNumber)?.downloadUrl
+    const uploadResult = uploadResultsByRowNumber.get(record.__rowNumber)
+    const updatedImage = uploadResult?.downloadUrl
     return {
       ...record,
       ...(updatedImage ? { image: updatedImage } : {}),
+      ...(uploadResult?.imageThumb
+        ? { imageThumb: uploadResult.imageThumb }
+        : {})
     }
   })
 }
@@ -498,7 +569,7 @@ async function writeOutputFile({
   format,
   headers,
   rootObject,
-  records,
+  records
 }) {
   const sanitizedRecords = records.map((record) => {
     const nextRecord = { ...record }
@@ -507,26 +578,40 @@ async function writeOutputFile({
   })
 
   if (format === 'json-array') {
-    await fs.writeFile(outputPath, `${JSON.stringify(sanitizedRecords, null, 2)}\n`, 'utf8')
+    await fs.writeFile(
+      outputPath,
+      `${JSON.stringify(sanitizedRecords, null, 2)}\n`,
+      'utf8'
+    )
     return
   }
 
   if (format === 'json-object') {
     await fs.writeFile(
       outputPath,
-      `${JSON.stringify({ ...rootObject, skills: sanitizedRecords }, null, 2)}\n`,
+      `${JSON.stringify(
+        { ...rootObject, skills: sanitizedRecords },
+        null,
+        2
+      )}\n`,
       'utf8'
     )
     return
   }
 
-  const outputHeaders = headers.length
-    ? headers
-    : [...new Set(sanitizedRecords.flatMap((record) => Object.keys(record)))]
+  const derivedHeaders = [
+    ...new Set(sanitizedRecords.flatMap((record) => Object.keys(record)))
+  ]
+  const baseHeaders = headers.length ? headers : derivedHeaders
+  const outputHeaders = baseHeaders.includes('imageThumb')
+    ? baseHeaders
+    : [...baseHeaders, 'imageThumb']
   const rows = [outputHeaders.join(',')]
 
   sanitizedRecords.forEach((record) => {
-    rows.push(outputHeaders.map((header) => escapeCsv(record[header] ?? '')).join(','))
+    rows.push(
+      outputHeaders.map((header) => escapeCsv(record[header] ?? '')).join(',')
+    )
   })
 
   await fs.writeFile(outputPath, `${rows.join('\n')}\n`, 'utf8')
@@ -539,7 +624,7 @@ function printSummary({
   uploadTaskCount,
   statusCounts,
   validateOnly,
-  dryRun,
+  dryRun
 }) {
   console.log(`Input file: ${sourceFile}`)
   console.log(`Output file: ${outputFile}`)
@@ -570,7 +655,9 @@ async function main() {
   }
 
   if (!Number.isInteger(args.concurrency) || args.concurrency <= 0) {
-    throw new Error(`Invalid --concurrency value "${args.concurrency}". Use a positive integer.`)
+    throw new Error(
+      `Invalid --concurrency value "${args.concurrency}". Use a positive integer.`
+    )
   }
 
   const source = await loadSource(args.file)
@@ -593,7 +680,7 @@ async function main() {
 
   if (!args.validateOnly && tasks.length > 0) {
     await ensureAdminApp()
-    const bucket = admin.storage().bucket()
+    const bucket = admin.storage().bucket(PUBLIC_BUCKET_NAME)
     uploadResults = await runWithConcurrency(tasks, args.concurrency, (task) =>
       syncImageTask(bucket, task, args.dryRun)
     )
@@ -602,7 +689,10 @@ async function main() {
   const uploadResultsByRowNumber = new Map(
     uploadResults.map((result) => [result.rowNumber, result])
   )
-  const updatedRecords = buildUpdatedRecords(source.records, uploadResultsByRowNumber)
+  const updatedRecords = buildUpdatedRecords(
+    source.records,
+    uploadResultsByRowNumber
+  )
   const shouldWriteOutput = args.validateOnly || !args.dryRun
 
   if (shouldWriteOutput) {
@@ -611,13 +701,16 @@ async function main() {
       format: source.format,
       headers: source.headers,
       rootObject: source.rootObject,
-      records: updatedRecords,
+      records: updatedRecords
     })
   }
 
   const statusCounts = uploadResults.reduce(
     (summary, result) => {
       summary[result.status] = (summary[result.status] || 0) + 1
+      if (result.thumbStatus) {
+        summary[result.thumbStatus] = (summary[result.thumbStatus] || 0) + 1
+      }
       return summary
     },
     {
@@ -628,27 +721,38 @@ async function main() {
       'would-upload': 0,
       'would-overwrite': 0,
       'would-update-metadata': 0,
+      'thumb-uploaded': 0,
+      'thumb-failed': 0,
+      'would-upload-thumb': 0
     }
   )
 
   printSummary({
     sourceFile: source.absolutePath,
-    outputFile: shouldWriteOutput ? outputPath : `${outputPath} (not written in dry-run)`,
+    outputFile: shouldWriteOutput
+      ? outputPath
+      : `${outputPath} (not written in dry-run)`,
     totalRows: source.records.length,
     uploadTaskCount: tasks.length,
     statusCounts,
     validateOnly: args.validateOnly,
-    dryRun: args.dryRun,
+    dryRun: args.dryRun
   })
 
   if (tasks.length > 0) {
     if (args.dryRun) {
       console.log(
-        `Next step: rerun without --dry-run to emit ${JSON.stringify(outputPath)}, then run npm run skill-master:import -- --file ${JSON.stringify(outputPath)} --dry-run`
+        `Next step: rerun without --dry-run to emit ${JSON.stringify(
+          outputPath
+        )}, then run npm run skill-master:import -- --file ${JSON.stringify(
+          outputPath
+        )} --dry-run`
       )
     } else {
       console.log(
-        `Next step: npm run skill-master:import -- --file ${JSON.stringify(outputPath)} --dry-run`
+        `Next step: npm run skill-master:import -- --file ${JSON.stringify(
+          outputPath
+        )} --dry-run`
       )
     }
   }

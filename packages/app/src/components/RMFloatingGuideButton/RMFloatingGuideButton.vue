@@ -16,7 +16,7 @@ withDefaults(
     buttonAriaLabel: '画面ガイドを開く',
     drawerHeader: '画面ガイド',
     drawerPosition: 'right',
-    drawerStyle: () => ({ width: 'min(96vw, 32rem)' }),
+    drawerStyle: () => ({ width: 'min(96vw, 32rem)' })
   }
 )
 

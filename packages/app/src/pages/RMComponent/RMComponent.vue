@@ -32,7 +32,7 @@ const spinnerStart = () => {
         resolve('')
         useToast({
           toastTitle: 'テスト',
-          toastMovingTime: 3,
+          toastMovingTime: 3
         })
       }, 1500)
     )
@@ -51,7 +51,7 @@ const popupStart = () => {
     },
     onRightButtonClick: () => {
       console.log('完了')
-    },
+    }
   })
 }
 </script>

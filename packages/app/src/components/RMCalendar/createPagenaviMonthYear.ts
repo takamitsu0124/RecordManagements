@@ -11,7 +11,7 @@ class CreatePagenaviMonthYear {
     'September',
     'October',
     'November',
-    'December',
+    'December'
   ]
 
   /**

@@ -5,16 +5,17 @@ import {
   getDocs,
   query,
   runTransaction,
-  where,
+  where
 } from 'firebase/firestore'
 import { genFirebaseRandomId } from '@codelic/datagen'
 import { auth, db, dbAttendanceEventsModule } from '@rm/db'
-import {
+import type {
   AttendanceAnswers,
   AttendanceCandidate,
   AttendanceCandidateSummaries,
   AttendanceEvent,
-  AttendanceResponse,
+  AttendanceResponse} from '@rm/types'
+import {
   applyAttendanceAnswersToSummaries,
   createAttendanceCandidateSummaries,
   defaultAttendanceEvent,
@@ -23,7 +24,7 @@ import {
   normalizeAttendanceAnswers,
   normalizeAttendanceDate,
   normalizeAttendanceEvent,
-  normalizeAttendanceResponse,
+  normalizeAttendanceResponse
 } from '@rm/types'
 
 type AttendanceEventWritePayload = Pick<
@@ -81,7 +82,7 @@ const formatCandidateLabel = (startAt: Date | null, fallbackIndex: number) => {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit',
+    minute: '2-digit'
   })
 
   return `${formatter.format(startAt)}〜`
@@ -99,7 +100,7 @@ const normalizeCandidatesForSave = (candidates: AttendanceCandidate[]) =>
           ? candidate.label.trim()
           : formatCandidateLabel(startAt, index),
       startAt,
-      endAt,
+      endAt
     }
   })
 
@@ -115,7 +116,7 @@ const reconcileCandidateSummaries = (
       ...nextSummaries[candidateId],
       availableCount: summary.availableCount,
       maybeCount: summary.maybeCount,
-      unavailableCount: summary.unavailableCount,
+      unavailableCount: summary.unavailableCount
     }
   })
 
@@ -130,7 +131,7 @@ const normalizeAttendanceEventSnapshot = (
     ...defaultAttendanceEvent(),
     ...data,
     id: data.id || docId,
-    publicToken: data.publicToken || docId,
+    publicToken: data.publicToken || docId
   })
 
 const normalizeAttendanceResponseSnapshot = (
@@ -140,7 +141,7 @@ const normalizeAttendanceResponseSnapshot = (
   normalizeAttendanceResponse({
     ...defaultAttendanceResponse(),
     ...data,
-    id: data.id || docId,
+    id: data.id || docId
   })
 
 export const createAttendanceEvent = async (
@@ -164,7 +165,7 @@ export const createAttendanceEvent = async (
     isClosed: false,
     isDeleted: false,
     createdAt: now,
-    updatedAt: now,
+    updatedAt: now
   })
 
   await dbAttendanceEventsModule.doc(publicToken).insert(eventPayload)
@@ -242,19 +243,19 @@ export const updateAttendanceEvent = async (
         ? normalizeAttendanceDate(payload.answerDeadlineAt)
         : current.answerDeadlineAt,
     isClosed: payload.isClosed ?? current.isClosed,
-    isDeleted: payload.isDeleted ?? current.isDeleted,
+    isDeleted: payload.isDeleted ?? current.isDeleted
   })
 }
 
 export const closeAttendanceEvent = async (eventId: string) => {
   await dbAttendanceEventsModule.doc(eventId).merge({
-    isClosed: true,
+    isClosed: true
   })
 }
 
 export const softDeleteAttendanceEvent = async (eventId: string) => {
   await dbAttendanceEventsModule.doc(eventId).merge({
-    isDeleted: true,
+    isDeleted: true
   })
 }
 
@@ -314,7 +315,7 @@ export const submitAttendanceResponse = async (
     const nextCandidateSummaries = applyAttendanceAnswersToSummaries(
       event.candidates,
       event.candidateSummaries,
-      normalizedAnswers as AttendanceAnswers
+      normalizedAnswers
     )
 
     transaction.set(responseRef, {
@@ -327,14 +328,14 @@ export const submitAttendanceResponse = async (
       createdAt: now,
       createdBy: auth.currentUser?.uid || '',
       updatedAt: now,
-      updatedBy: auth.currentUser?.uid || '',
+      updatedBy: auth.currentUser?.uid || ''
     })
 
     transaction.update(eventRef, {
       candidateSummaries: nextCandidateSummaries,
       responseCount: event.responseCount + 1,
       updatedAt: now,
-      updatedBy: auth.currentUser?.uid || '',
+      updatedBy: auth.currentUser?.uid || ''
     })
   })
 

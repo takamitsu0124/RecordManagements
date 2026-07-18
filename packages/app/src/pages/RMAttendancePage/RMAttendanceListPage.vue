@@ -13,7 +13,7 @@ import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 import { fetchMyAttendanceEvents } from 'src/services/attendanceData'
 import {
   copyTextWithFallback,
-  formatAttendanceDateTime,
+  formatAttendanceDateTime
 } from './helpers'
 
 const router = useRouter()

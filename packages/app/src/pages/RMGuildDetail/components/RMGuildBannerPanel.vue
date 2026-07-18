@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { dbBannerMasterModule } from '@rm/db'
-import { BannerMaster } from '@rm/types'
+import type { BannerMaster } from '@rm/types'
 import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
@@ -11,7 +11,7 @@ import { notifyError } from 'src/composables/useAppNotifications'
 import {
   formatBannerDateRange,
   isBannerVisibleOnDate,
-  normalizeBannerMasterRecord,
+  normalizeBannerMasterRecord
 } from 'src/helpers/bannerMaster'
 
 const banners = ref<BannerMaster[]>([])

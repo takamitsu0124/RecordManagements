@@ -10,12 +10,12 @@ import {
   normalizeWeaponProficiencySkillProgress,
   summarizeWeaponProficiencySkillUnlockRate,
   weaponProficiencySkillMasterRows,
-  weaponProficiencySkillWeaponDefinitions,
+  weaponProficiencySkillWeaponDefinitions
 } from '@rm/types'
 import type {
   WeaponProficiencySkillMasterRow,
   WeaponProficiencySkillProgress,
-  WeaponProficiencySkillWeaponKey,
+  WeaponProficiencySkillWeaponKey
 } from '@rm/types'
 import { notifyError } from 'src/composables/useAppNotifications'
 import RMSectionEdit from 'src/components/RMSectionEdit/RMSectionEdit.vue'
@@ -43,7 +43,7 @@ const pendingAction = ref<{
 const weaponOptions = weaponProficiencySkillWeaponDefinitions.map(
   ({ key, label }) => ({
     label,
-    value: key,
+    value: key
   })
 )
 
@@ -93,9 +93,9 @@ const cloneProgress = (
       Object.fromEntries(
         Object.entries(normalized[key]).map(([rowId, values]) => [
           rowId,
-          [...values],
+          [...values]
         ])
-      ),
+      )
     ])
   ) as WeaponProficiencySkillProgress
 }
@@ -378,9 +378,7 @@ watch(
 
             <div class="proficiency-skill__summary-card">
               <span>{{ selectedWeaponDefinition.label }}</span>
-              <strong
-                >{{ selectedWeaponSummary.unlockRate.toFixed(1) }}%</strong
-              >
+              <strong>{{ selectedWeaponSummary.unlockRate.toFixed(1) }}%</strong>
               <div class="proficiency-skill__summary-note">
                 登録済み {{ selectedWeaponSummary.unlockedCount }} /
                 {{ selectedWeaponSummary.totalCount }}
@@ -411,7 +409,7 @@ watch(
         <RMSectionEdit
           v-else
           :editing="editing"
-          :can-edit="true"
+          :canEdit="true"
           title="段階登録"
           @update:editing="(value) => emit('update:editing', value)"
           @cancel="emit('cancel')"
@@ -672,7 +670,7 @@ watch(
     :visible="isBulkConfirmVisible"
     title="一括登録の確認"
     :message="bulkConfirmMessage"
-    confirm-label="登録する"
+    confirmLabel="登録する"
     @update:visible="(value) => (isBulkConfirmVisible = value)"
     @cancel="isBulkConfirmVisible = false"
     @confirm="applyBulkSelection"

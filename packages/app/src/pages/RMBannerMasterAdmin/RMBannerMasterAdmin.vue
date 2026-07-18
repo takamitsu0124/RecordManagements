@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 import { genFirebaseRandomId } from '@codelic/datagen'
-import { dbBannerMasterModule, uploadFile } from '@rm/db'
-import { BannerMaster, defaultBannerMaster } from '@rm/types'
+import {
+  BANNER_IMAGE_RESIZE_OPTIONS,
+  dbBannerMasterModule,
+  uploadFile
+} from '@rm/db'
+import type { BannerMaster} from '@rm/types'
+import { defaultBannerMaster } from '@rm/types'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -26,7 +31,7 @@ import {
   isBannerVisibleOnDate,
   normalizeBannerMasterRecord,
   normalizeEndOfDay,
-  normalizeStartOfDay,
+  normalizeStartOfDay
 } from 'src/helpers/bannerMaster'
 
 type BannerStatusFilter = 'all' | 'active' | 'inactive'
@@ -39,12 +44,12 @@ type SelectOption<T extends string = string> = {
 const statusOptions: SelectOption<BannerStatusFilter>[] = [
   { label: '全て', value: 'all' },
   { label: '表示', value: 'active' },
-  { label: '非表示', value: 'inactive' },
+  { label: '非表示', value: 'inactive' }
 ]
 
 const createNewBannerForm = (): BannerMaster => ({
   ...defaultBannerMaster(),
-  id: genFirebaseRandomId(),
+  id: genFirebaseRandomId()
 })
 
 const bannerList = ref<BannerMaster[]>([])
@@ -64,9 +69,7 @@ const editorTitle = computed(() =>
   isEditingExisting.value ? 'バナーマスターを編集' : 'バナーマスターを新規登録'
 )
 const editorDescription = computed(() =>
-  isEditingExisting.value
-    ? '公開状態、掲載期間、画像を更新できます。'
-    : ''
+  isEditingExisting.value ? '公開状態、掲載期間、画像を更新できます。' : ''
 )
 const filteredBannerList = computed(() => {
   return bannerList.value.filter((banner) => {
@@ -152,7 +155,7 @@ const startEdit = (banner: BannerMaster) => {
   cleanupSelectedImagePreview()
   form.value = {
     ...defaultBannerMaster(),
-    ...banner,
+    ...banner
   }
   selectedImageFile.value = null
   imageUploadKey.value += 1
@@ -219,7 +222,8 @@ const saveBannerMaster = async () => {
         imageUrl = await uploadFile(
           selectedImageFile.value,
           `banner_master/${bannerId}`,
-          createBannerUploadFileName(selectedImageFile.value)
+          createBannerUploadFileName(selectedImageFile.value),
+          BANNER_IMAGE_RESIZE_OPTIONS
         )
       }
 
@@ -230,7 +234,7 @@ const saveBannerMaster = async () => {
         isActive: Boolean(form.value.isActive),
         startAt: normalizeStartOfDay(form.value.startAt),
         endAt: normalizeEndOfDay(form.value.endAt),
-        imageUrl,
+        imageUrl
       }
 
       if (isEditMode.value) {
@@ -488,6 +492,7 @@ onBeforeUnmount(() => {
                 v-if="previewImageUrl"
                 :src="previewImageUrl"
                 alt="banner preview"
+                loading="lazy"
                 class="banner-master-admin-preview-image"
               />
               <div

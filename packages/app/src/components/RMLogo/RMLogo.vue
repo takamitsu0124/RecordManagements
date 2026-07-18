@@ -4,20 +4,20 @@ import { computed, ref } from 'vue'
 const props = defineProps({
   margin_top: {
     type: String,
-    default: '0px',
+    default: '0px'
   },
   margin_bottom: {
     type: String,
-    default: '0px',
+    default: '0px'
   },
   serviceName: {
     type: String,
-    default: '',
+    default: ''
   },
   serviceBottom: {
     type: String,
-    default: '0px',
-  },
+    default: '0px'
+  }
 })
 
 const marginTop = computed(() => `${props.margin_top}`)
@@ -30,8 +30,9 @@ const appLogo = ref(
 </script>
 
 <template>
+  <!-- img-lazy-loading:allow -->
   <img :src="appLogo" alt="RecordManagement" class="_logo" />
-  <div class="_service_name" v-if="props.serviceName">
+  <div v-if="props.serviceName" class="_service_name">
     {{ props.serviceName }}
   </div>
 </template>

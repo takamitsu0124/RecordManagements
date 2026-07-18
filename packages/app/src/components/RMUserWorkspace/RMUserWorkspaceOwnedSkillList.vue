@@ -14,7 +14,7 @@ const props = withDefaults(
   {
     showHeader: false,
     showSkillActions: true,
-    showActionHint: true,
+    showActionHint: true
   }
 )
 
@@ -46,7 +46,7 @@ const shouldShowActionHint = computed(
       <div class="owned-skill-item__media">
         <img
           v-if="skill.image"
-          :src="skill.image"
+          :src="skill.imageThumb || skill.image"
           alt=""
           loading="lazy"
           class="owned-skill-item__image"

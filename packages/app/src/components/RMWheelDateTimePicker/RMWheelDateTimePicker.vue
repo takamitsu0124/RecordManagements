@@ -17,7 +17,7 @@ const props = withDefaults(
     disabled: false,
     placeholder: '日時を選択',
     minYear: undefined,
-    maxYear: undefined,
+    maxYear: undefined
   }
 )
 
@@ -204,7 +204,7 @@ const onClear = () => {
     <Dialog
       v-model:visible="isOpen"
       modal
-      dismissable-mask
+      dismissableMask
       :draggable="false"
       header="日時を選択"
       :style="{ width: 'min(96vw, 34rem)' }"

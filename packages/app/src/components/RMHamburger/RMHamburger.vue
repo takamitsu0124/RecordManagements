@@ -1,16 +1,17 @@
 <script lang="ts" setup>
-import { computed, PropType, useAttrs, watch } from 'vue'
+import type { PropType} from 'vue'
+import { computed, useAttrs, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { activeMenu } from './RMHamburger'
 
 defineOptions({
-  inheritAttrs: false,
+  inheritAttrs: false
 })
 
 type Menu = { name: string; url: string; isShow: boolean }[]
 
 const props = defineProps({
-  menu: { type: Object as PropType<Menu>, required: true },
+  menu: { type: Object as PropType<Menu>, required: true }
 })
 
 const route = useRoute()
@@ -70,8 +71,8 @@ const closeMenu = () => {
     :class="['_hamburger_menu_btn', attrs.class, { active: isOpen }]"
     @click="isOpen = !isOpen"
   >
-    <span></span>
-    <span></span>
+    <span />
+    <span />
     <div class="_open_text">{{ isOpen ? '' : 'MENU' }}</div>
   </div>
 
@@ -83,7 +84,6 @@ const closeMenu = () => {
           v-for="menu in visibleMenus"
           :key="menu.name"
           type="button"
-          @click="spHandleClick(menu)"
           :class="[
             '_menu_item',
             {
@@ -91,9 +91,10 @@ const closeMenu = () => {
               logout: menu.name === 'ログアウト',
             },
           ]"
+          @click="spHandleClick(menu)"
         >
           <span>{{ menu.name }}</span>
-          <i v-if="menu.name !== 'ログアウト'" class="pi pi-chevron-right"></i>
+          <i v-if="menu.name !== 'ログアウト'" class="pi pi-chevron-right" />
         </button>
       </div>
     </div>

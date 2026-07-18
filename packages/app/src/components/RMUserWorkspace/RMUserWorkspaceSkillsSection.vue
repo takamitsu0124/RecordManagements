@@ -13,7 +13,7 @@ import type {
   OwnedSkillRow,
   SkillCatalogRow,
   SkillCatalogSortOption,
-  SkillCatalogStatus,
+  SkillCatalogStatus
 } from './types'
 
 const props = defineProps<{
@@ -49,7 +49,7 @@ const emit = defineEmits<{
 
 const skillCatalogQueryModel = computed({
   get: () => props.skillCatalogQuery,
-  set: (value: string) => emit('update:skillCatalogQuery', value),
+  set: (value: string) => emit('update:skillCatalogQuery', value)
 })
 
 const setSkillCatalogElement = (value: string) =>
@@ -68,7 +68,7 @@ const skillCatalogSortOptions: Array<{
   { value: 'breakGaugeAsc', label: 'ブレイクゲージ増加量(昇順)' },
   { value: 'breakGaugeDesc', label: 'ブレイクゲージ増加量(降順)' },
   { value: 'switchGaugeAsc', label: 'スイッチゲージ増加量(昇順)' },
-  { value: 'switchGaugeDesc', label: 'スイッチゲージ増加量(降順)' },
+  { value: 'switchGaugeDesc', label: 'スイッチゲージ増加量(降順)' }
 ]
 const setSkillCatalogPage = (event: { page: number }) =>
   emit('update:skillCatalogPage', event.page)
@@ -90,7 +90,7 @@ const scrollSkillCatalogGridIntoView = () => {
 
   skillCatalogGridRef.value.scrollIntoView({
     behavior,
-    block: 'start',
+    block: 'start'
   })
 }
 
@@ -112,7 +112,7 @@ const equipmentTypeToneMap: Record<string, string> = {
   槍: 'spear',
   斧: 'axe',
   棍棒: 'club',
-  盾: 'shield',
+  盾: 'shield'
 }
 
 const elementToneMap: Record<string, string> = {
@@ -123,7 +123,7 @@ const elementToneMap: Record<string, string> = {
   光: 'light',
   聖: 'light',
   闇: 'dark',
-  無: 'none',
+  無: 'none'
 }
 
 const getEquipmentTypeClass = (value: string) => {
@@ -163,7 +163,7 @@ watch(
       <div class="user-workspace-section">
         <RMSectionEdit
           :editing="editing"
-          :can-edit="true"
+          :canEdit="true"
           @update:editing="(value) => emit('update:editing', value)"
           @cancel="emit('cancel')"
           @save="emit('save')"
@@ -176,329 +176,345 @@ watch(
           </template>
 
           <template #view>
-            <div v-if="ownedSkillRows.length === 0" class="user-workspace-empty">
+            <div
+              v-if="ownedSkillRows.length === 0"
+              class="user-workspace-empty"
+            >
               まだ所持スキルは登録されていません。
             </div>
             <div v-else class="owned-skill-list">
               <RMUserWorkspaceOwnedSkillList
                 :ownedSkillRows="ownedSkillRows"
-                :show-skill-actions="false"
-                :show-action-hint="false"
+                :showSkillActions="false"
+                :showActionHint="false"
               />
             </div>
           </template>
 
           <template #edit>
-        <div class="skill-checker">
-          <div class="skill-checker__intro">
-            <i class="pi pi-chevron-right" aria-hidden="true" />
-            <span>タップしてチェック、もう一度タップで解除できます。</span>
-          </div>
-
-          <RMInput
-            v-model="skillCatalogQueryModel"
-            search
-            shadow
-            class="skill-checker__search"
-            placeholder="名称・技名・ID・キャラ名で検索"
-          />
-
-          <div class="skill-checker__filter-group">
-            <div class="skill-checker__filter-label">表示</div>
-            <div class="skill-checker__filter-actions">
-              <Button
-                type="button"
-                label="未チェック"
-                size="small"
-                :severity="
-                  skillCatalogStatus === 'unowned' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogStatus !== 'unowned'"
-                @click="setSkillCatalogStatus('unowned')"
-              />
-              <Button
-                type="button"
-                label="チェック済み"
-                size="small"
-                :severity="
-                  skillCatalogStatus === 'owned' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogStatus !== 'owned'"
-                @click="setSkillCatalogStatus('owned')"
-              />
-              <Button
-                type="button"
-                label="すべて"
-                size="small"
-                :severity="
-                  skillCatalogStatus === 'all' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogStatus !== 'all'"
-                @click="setSkillCatalogStatus('all')"
-              />
-            </div>
-          </div>
-
-          <div class="skill-checker__filter-group">
-            <div class="skill-checker__filter-label">自然属性</div>
-            <div class="skill-checker__filter-actions">
-              <Button
-                type="button"
-                label="すべて"
-                size="small"
-                :severity="
-                  skillCatalogElement === 'all' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogElement !== 'all'"
-                @click="setSkillCatalogElement('all')"
-              />
-              <Button
-                v-for="element in skillCatalogElementOptions"
-                :key="element"
-                type="button"
-                :label="element"
-                size="small"
-                :severity="
-                  skillCatalogElement === element ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogElement !== element"
-                @click="setSkillCatalogElement(element)"
-              />
-            </div>
-          </div>
-
-          <div class="skill-checker__filter-group">
-            <div class="skill-checker__filter-label">装備種別</div>
-            <div class="skill-checker__filter-actions">
-              <Button
-                type="button"
-                label="すべて"
-                size="small"
-                :severity="
-                  skillCatalogEquipmentType === 'all' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogEquipmentType !== 'all'"
-                @click="setSkillCatalogEquipmentType('all')"
-              />
-              <Button
-                v-for="equipmentType in skillCatalogEquipmentTypeOptions"
-                :key="equipmentType"
-                type="button"
-                :label="equipmentType"
-                size="small"
-                :severity="
-                  skillCatalogEquipmentType === equipmentType
-                    ? 'contrast'
-                    : 'secondary'
-                "
-                :outlined="skillCatalogEquipmentType !== equipmentType"
-                @click="setSkillCatalogEquipmentType(equipmentType)"
-              />
-            </div>
-          </div>
-
-          <div class="skill-checker__filter-group">
-            <div class="skill-checker__filter-label">並び替え</div>
-            <div class="skill-checker__filter-actions">
-              <Button
-                type="button"
-                label="すべて"
-                size="small"
-                :severity="
-                  skillCatalogSortOption === 'default' ? 'contrast' : 'secondary'
-                "
-                :outlined="skillCatalogSortOption !== 'default'"
-                @click="setSkillCatalogSortOption('default')"
-              />
-              <Button
-                v-for="sortOption in skillCatalogSortOptions"
-                :key="sortOption.value"
-                type="button"
-                :label="sortOption.label"
-                size="small"
-                :severity="
-                  skillCatalogSortOption === sortOption.value
-                    ? 'contrast'
-                    : 'secondary'
-                "
-                :outlined="skillCatalogSortOption !== sortOption.value"
-                @click="setSkillCatalogSortOption(sortOption.value)"
-              />
-            </div>
-          </div>
-
-          <div class="skill-checker__summary">
-            <div class="skill-checker__summary-tags">
-              <Tag
-                :value="`候補 ${filteredSkillCatalogRows.length}件`"
-                severity="secondary"
-              />
-              <Tag
-                :value="`チェック済み ${ownedSkillRows.length}件`"
-                severity="success"
-              />
-            </div>
-            <Button
-              type="button"
-              label="絞り込みをクリア"
-              text
-              size="small"
-              @click="emit('reset-filters')"
-            />
-          </div>
-
-          <div
-            v-if="visibleSkillCatalogRows.length === 0"
-            class="user-workspace-empty"
-          >
-            条件に合うスキルがありません。検索条件をゆるめてください。
-          </div>
-
-          <div v-else ref="skillCatalogGridRef" class="skill-catalog-grid">
-            <button
-              v-for="skill in visibleSkillCatalogRows"
-              :key="skill.id"
-              type="button"
-              class="skill-catalog-card"
-              :class="{ 'skill-catalog-card--owned': skill.isOwned }"
-              :aria-pressed="skill.isOwned"
-              @click="emit('toggle-skill', skill)"
-            >
-              <div class="skill-catalog-card__media">
-                <div class="skill-catalog-card__status">
-                  <i
-                    :class="[
-                      'pi',
-                      skill.isOwned ? 'pi-check-circle' : 'pi-circle',
-                    ]"
-                  />
-                  <span>{{
-                    skill.isOwned ? 'チェック済み' : '未チェック'
-                  }}</span>
-                </div>
-                <img
-                  v-if="skill.image"
-                  :src="skill.image"
-                  alt=""
-                  loading="lazy"
-                  class="skill-catalog-card__image"
-                />
-                <div v-else class="skill-catalog-card__placeholder">
-                  No image
-                </div>
+            <div class="skill-checker">
+              <div class="skill-checker__intro">
+                <i class="pi pi-chevron-right" aria-hidden="true" />
+                <span>タップしてチェック、もう一度タップで解除できます。</span>
               </div>
-              <div class="skill-catalog-card__body">
-                <div class="skill-catalog-card__name">
-                  {{ skill.name }}
-                </div>
-                <div class="skill-catalog-card__attributes">
-                  <span
-                    v-tooltip.bottom="
-                      `装備種別: ${skill.equipmentType || '未設定'}`
+
+              <RMInput
+                v-model="skillCatalogQueryModel"
+                search
+                shadow
+                class="skill-checker__search"
+                placeholder="名称・技名・ID・キャラ名で検索"
+              />
+
+              <div class="skill-checker__filter-group">
+                <div class="skill-checker__filter-label">表示</div>
+                <div class="skill-checker__filter-actions">
+                  <Button
+                    type="button"
+                    label="未チェック"
+                    size="small"
+                    :severity="
+                      skillCatalogStatus === 'unowned'
+                        ? 'contrast'
+                        : 'secondary'
                     "
-                    class="skill-catalog-card__attribute"
-                    :class="getEquipmentTypeClass(skill.equipmentType)"
-                  >
-                    {{ skill.equipmentType || '未設定' }}
-                  </span>
-                  <span
-                    v-tooltip.bottom="`自然属性: ${skill.element || '未設定'}`"
-                    class="skill-catalog-card__attribute"
-                    :class="getElementClass(skill.element)"
-                  >
-                    {{ skill.element || '未設定' }}
-                  </span>
-                </div>
-                <div class="skill-catalog-card__skill-name">
-                  {{ skill.skillName || '未設定' }}
-                </div>
-                <div
-                  class="skill-catalog-card__tap-hint"
-                  :class="{
-                    'skill-catalog-card__tap-hint--owned': skill.isOwned,
-                  }"
-                >
-                  <i class="pi pi-chevron-right" aria-hidden="true" />
-                  <span>{{
-                    skill.isOwned ? 'もう一度タップで解除' : 'タップでチェック'
-                  }}</span>
+                    :outlined="skillCatalogStatus !== 'unowned'"
+                    @click="setSkillCatalogStatus('unowned')"
+                  />
+                  <Button
+                    type="button"
+                    label="チェック済み"
+                    size="small"
+                    :severity="
+                      skillCatalogStatus === 'owned' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogStatus !== 'owned'"
+                    @click="setSkillCatalogStatus('owned')"
+                  />
+                  <Button
+                    type="button"
+                    label="すべて"
+                    size="small"
+                    :severity="
+                      skillCatalogStatus === 'all' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogStatus !== 'all'"
+                    @click="setSkillCatalogStatus('all')"
+                  />
                 </div>
               </div>
-            </button>
-          </div>
 
-          <div
-            v-if="filteredSkillCatalogRows.length > skillCatalogPageSize"
-            class="skill-checker__pagination"
-          >
-            <p class="skill-checker__help">
-              {{ filteredSkillCatalogRows.length }} 件を
-              {{ skillCatalogPageSize }} 件ずつ表示しています。
-            </p>
-            <div class="skill-checker__pager-status">
-              {{ skillCatalogPage + 1 }} / {{ skillCatalogTotalPages }}
-            </div>
-            <div class="skill-checker__pager-mobile">
-              <button
-                type="button"
-                class="skill-checker__pager-button"
-                :disabled="skillCatalogPage === 0"
-                @click="updateSkillCatalogPage(0)"
-              >
-                &lt;&lt;
-              </button>
-              <button
-                type="button"
-                class="skill-checker__pager-button"
-                :disabled="skillCatalogPage === 0"
-                @click="updateSkillCatalogPage(skillCatalogPage - 1)"
-              >
-                &lt;
-              </button>
+              <div class="skill-checker__filter-group">
+                <div class="skill-checker__filter-label">自然属性</div>
+                <div class="skill-checker__filter-actions">
+                  <Button
+                    type="button"
+                    label="すべて"
+                    size="small"
+                    :severity="
+                      skillCatalogElement === 'all' ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogElement !== 'all'"
+                    @click="setSkillCatalogElement('all')"
+                  />
+                  <Button
+                    v-for="element in skillCatalogElementOptions"
+                    :key="element"
+                    type="button"
+                    :label="element"
+                    size="small"
+                    :severity="
+                      skillCatalogElement === element ? 'contrast' : 'secondary'
+                    "
+                    :outlined="skillCatalogElement !== element"
+                    @click="setSkillCatalogElement(element)"
+                  />
+                </div>
+              </div>
+
+              <div class="skill-checker__filter-group">
+                <div class="skill-checker__filter-label">装備種別</div>
+                <div class="skill-checker__filter-actions">
+                  <Button
+                    type="button"
+                    label="すべて"
+                    size="small"
+                    :severity="
+                      skillCatalogEquipmentType === 'all'
+                        ? 'contrast'
+                        : 'secondary'
+                    "
+                    :outlined="skillCatalogEquipmentType !== 'all'"
+                    @click="setSkillCatalogEquipmentType('all')"
+                  />
+                  <Button
+                    v-for="equipmentType in skillCatalogEquipmentTypeOptions"
+                    :key="equipmentType"
+                    type="button"
+                    :label="equipmentType"
+                    size="small"
+                    :severity="
+                      skillCatalogEquipmentType === equipmentType
+                        ? 'contrast'
+                        : 'secondary'
+                    "
+                    :outlined="skillCatalogEquipmentType !== equipmentType"
+                    @click="setSkillCatalogEquipmentType(equipmentType)"
+                  />
+                </div>
+              </div>
+
+              <div class="skill-checker__filter-group">
+                <div class="skill-checker__filter-label">並び替え</div>
+                <div class="skill-checker__filter-actions">
+                  <Button
+                    type="button"
+                    label="すべて"
+                    size="small"
+                    :severity="
+                      skillCatalogSortOption === 'default'
+                        ? 'contrast'
+                        : 'secondary'
+                    "
+                    :outlined="skillCatalogSortOption !== 'default'"
+                    @click="setSkillCatalogSortOption('default')"
+                  />
+                  <Button
+                    v-for="sortOption in skillCatalogSortOptions"
+                    :key="sortOption.value"
+                    type="button"
+                    :label="sortOption.label"
+                    size="small"
+                    :severity="
+                      skillCatalogSortOption === sortOption.value
+                        ? 'contrast'
+                        : 'secondary'
+                    "
+                    :outlined="skillCatalogSortOption !== sortOption.value"
+                    @click="setSkillCatalogSortOption(sortOption.value)"
+                  />
+                </div>
+              </div>
+
+              <div class="skill-checker__summary">
+                <div class="skill-checker__summary-tags">
+                  <Tag
+                    :value="`候補 ${filteredSkillCatalogRows.length}件`"
+                    severity="secondary"
+                  />
+                  <Tag
+                    :value="`チェック済み ${ownedSkillRows.length}件`"
+                    severity="success"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  label="絞り込みをクリア"
+                  text
+                  size="small"
+                  @click="emit('reset-filters')"
+                />
+              </div>
+
               <div
-                class="skill-checker__pager-status skill-checker__pager-status--mobile"
+                v-if="visibleSkillCatalogRows.length === 0"
+                class="user-workspace-empty"
               >
-                {{ skillCatalogPage + 1 }} / {{ skillCatalogTotalPages }}
+                条件に合うスキルがありません。検索条件をゆるめてください。
               </div>
-              <button
-                type="button"
-                class="skill-checker__pager-button"
-                :disabled="skillCatalogPage >= skillCatalogTotalPages - 1"
-                @click="updateSkillCatalogPage(skillCatalogPage + 1)"
+
+              <div v-else ref="skillCatalogGridRef" class="skill-catalog-grid">
+                <button
+                  v-for="skill in visibleSkillCatalogRows"
+                  :key="skill.id"
+                  type="button"
+                  class="skill-catalog-card"
+                  :class="{ 'skill-catalog-card--owned': skill.isOwned }"
+                  :aria-pressed="skill.isOwned"
+                  @click="emit('toggle-skill', skill)"
+                >
+                  <div class="skill-catalog-card__media">
+                    <div class="skill-catalog-card__status">
+                      <i
+                        :class="[
+                          'pi',
+                          skill.isOwned ? 'pi-check-circle' : 'pi-circle',
+                        ]"
+                      />
+                      <span>{{
+                        skill.isOwned ? 'チェック済み' : '未チェック'
+                      }}</span>
+                    </div>
+                    <img
+                      v-if="skill.image"
+                      :src="skill.imageThumb || skill.image"
+                      alt=""
+                      loading="lazy"
+                      class="skill-catalog-card__image"
+                    />
+                    <div v-else class="skill-catalog-card__placeholder">
+                      No image
+                    </div>
+                  </div>
+                  <div class="skill-catalog-card__body">
+                    <div class="skill-catalog-card__name">
+                      {{ skill.name }}
+                    </div>
+                    <div class="skill-catalog-card__attributes">
+                      <span
+                        v-tooltip.bottom="
+                          `装備種別: ${skill.equipmentType || '未設定'}`
+                        "
+                        class="skill-catalog-card__attribute"
+                        :class="getEquipmentTypeClass(skill.equipmentType)"
+                      >
+                        {{ skill.equipmentType || '未設定' }}
+                      </span>
+                      <span
+                        v-tooltip.bottom="
+                          `自然属性: ${skill.element || '未設定'}`
+                        "
+                        class="skill-catalog-card__attribute"
+                        :class="getElementClass(skill.element)"
+                      >
+                        {{ skill.element || '未設定' }}
+                      </span>
+                    </div>
+                    <div class="skill-catalog-card__skill-name">
+                      {{ skill.skillName || '未設定' }}
+                    </div>
+                    <div
+                      class="skill-catalog-card__tap-hint"
+                      :class="{
+                        'skill-catalog-card__tap-hint--owned': skill.isOwned,
+                      }"
+                    >
+                      <i class="pi pi-chevron-right" aria-hidden="true" />
+                      <span>{{
+                        skill.isOwned
+                          ? 'もう一度タップで解除'
+                          : 'タップでチェック'
+                      }}</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <div
+                v-if="filteredSkillCatalogRows.length > skillCatalogPageSize"
+                class="skill-checker__pagination"
               >
-                &gt;
-              </button>
-              <button
-                type="button"
-                class="skill-checker__pager-button"
-                :disabled="skillCatalogPage >= skillCatalogTotalPages - 1"
-                @click="updateSkillCatalogPage(skillCatalogTotalPages - 1)"
-              >
-                &gt;&gt;
-              </button>
+                <p class="skill-checker__help">
+                  {{ filteredSkillCatalogRows.length }} 件を
+                  {{ skillCatalogPageSize }} 件ずつ表示しています。
+                </p>
+                <div class="skill-checker__pager-status">
+                  {{ skillCatalogPage + 1 }} / {{ skillCatalogTotalPages }}
+                </div>
+                <div class="skill-checker__pager-mobile">
+                  <button
+                    type="button"
+                    class="skill-checker__pager-button"
+                    :disabled="skillCatalogPage === 0"
+                    @click="updateSkillCatalogPage(0)"
+                  >
+                    &lt;&lt;
+                  </button>
+                  <button
+                    type="button"
+                    class="skill-checker__pager-button"
+                    :disabled="skillCatalogPage === 0"
+                    @click="updateSkillCatalogPage(skillCatalogPage - 1)"
+                  >
+                    &lt;
+                  </button>
+                  <div
+                    class="skill-checker__pager-status skill-checker__pager-status--mobile"
+                  >
+                    {{ skillCatalogPage + 1 }} / {{ skillCatalogTotalPages }}
+                  </div>
+                  <button
+                    type="button"
+                    class="skill-checker__pager-button"
+                    :disabled="skillCatalogPage >= skillCatalogTotalPages - 1"
+                    @click="updateSkillCatalogPage(skillCatalogPage + 1)"
+                  >
+                    &gt;
+                  </button>
+                  <button
+                    type="button"
+                    class="skill-checker__pager-button"
+                    :disabled="skillCatalogPage >= skillCatalogTotalPages - 1"
+                    @click="updateSkillCatalogPage(skillCatalogTotalPages - 1)"
+                  >
+                    &gt;&gt;
+                  </button>
+                </div>
+                <Paginator
+                  class="skill-checker__paginator"
+                  :first="skillCatalogPage * skillCatalogPageSize"
+                  :rows="skillCatalogPageSize"
+                  :totalRecords="filteredSkillCatalogRows.length"
+                  template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+                  @page="setSkillCatalogPage"
+                />
+              </div>
             </div>
-            <Paginator
-              class="skill-checker__paginator"
-              :first="skillCatalogPage * skillCatalogPageSize"
-              :rows="skillCatalogPageSize"
-              :totalRecords="filteredSkillCatalogRows.length"
-              template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-              @page="setSkillCatalogPage"
-            />
-          </div>
-        </div>
 
-        <div v-if="ownedSkillRows.length === 0" class="user-workspace-empty">
-          まだ所持スキルは選ばれていません。上の一覧から持っているスキルをチェックしてください。
-        </div>
+            <div
+              v-if="ownedSkillRows.length === 0"
+              class="user-workspace-empty"
+            >
+              まだ所持スキルは選ばれていません。上の一覧から持っているスキルをチェックしてください。
+            </div>
 
-        <div v-else class="owned-skill-list">
-          <RMUserWorkspaceOwnedSkillList
-            :ownedSkillRows="ownedSkillRows"
-            show-header
-            @remove-skill="emit('remove-skill', $event)"
-          />
-        </div>
+            <div v-else class="owned-skill-list">
+              <RMUserWorkspaceOwnedSkillList
+                :ownedSkillRows="ownedSkillRows"
+                showHeader
+                @removeSkill="emit('remove-skill', $event)"
+              />
+            </div>
           </template>
         </RMSectionEdit>
       </div>

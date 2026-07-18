@@ -1,5 +1,6 @@
-import { SkillMaster } from '@rm/types'
-import { CsvRecord, normalizeCsvWhitespace } from './csv'
+import type { SkillMaster } from '@rm/types'
+import type { CsvRecord} from './csv'
+import { normalizeCsvWhitespace } from './csv'
 import {
   extractCharacterNameFromSkillName,
   normalizeSkillMasterAttackType,
@@ -7,7 +8,7 @@ import {
   normalizeSkillMasterEquipmentType,
   normalizeSkillMasterNumber,
   normalizeSkillMasterRarity,
-  normalizeSkillMasterSkillType,
+  normalizeSkillMasterSkillType
 } from './skillMasterSchema'
 
 export type SkillMasterImportPayload = Pick<
@@ -28,6 +29,7 @@ export type SkillMasterImportPayload = Pick<
   | 'skillName'
   | 'effect'
   | 'image'
+  | 'imageThumb'
 > & {
   rowNumber: number
 }
@@ -65,7 +67,10 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
     const rowNumber = record.__rowNumber
     const id = normalizeCsvWhitespace(record.id)
     const name = normalizeCsvWhitespace(record.name)
-    const hasCharacterName = Object.prototype.hasOwnProperty.call(record, 'characterName')
+    const hasCharacterName = Object.prototype.hasOwnProperty.call(
+      record,
+      'characterName'
+    )
     const rawElement = record.element
     const rawEquipmentType = record.equipmentType
     const rawSkillType = record.skillType
@@ -74,15 +79,37 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
     const hasCost = Object.prototype.hasOwnProperty.call(record, 'cost')
     const hasSp = Object.prototype.hasOwnProperty.call(record, 'sp')
     const hasElement = Object.prototype.hasOwnProperty.call(record, 'element')
-    const hasEquipmentType = Object.prototype.hasOwnProperty.call(record, 'equipmentType')
-    const hasSkillType = Object.prototype.hasOwnProperty.call(record, 'skillType')
-    const hasAttackType = Object.prototype.hasOwnProperty.call(record, 'attackType')
-    const hasBreakGauge = Object.prototype.hasOwnProperty.call(record, 'breakGauge')
-    const hasSwitchGauge = Object.prototype.hasOwnProperty.call(record, 'switchGauge')
+    const hasEquipmentType = Object.prototype.hasOwnProperty.call(
+      record,
+      'equipmentType'
+    )
+    const hasSkillType = Object.prototype.hasOwnProperty.call(
+      record,
+      'skillType'
+    )
+    const hasAttackType = Object.prototype.hasOwnProperty.call(
+      record,
+      'attackType'
+    )
+    const hasBreakGauge = Object.prototype.hasOwnProperty.call(
+      record,
+      'breakGauge'
+    )
+    const hasSwitchGauge = Object.prototype.hasOwnProperty.call(
+      record,
+      'switchGauge'
+    )
     const hasCooldown = Object.prototype.hasOwnProperty.call(record, 'cooldown')
-    const hasSkillName = Object.prototype.hasOwnProperty.call(record, 'skillName')
+    const hasSkillName = Object.prototype.hasOwnProperty.call(
+      record,
+      'skillName'
+    )
     const hasEffect = Object.prototype.hasOwnProperty.call(record, 'effect')
     const hasImage = Object.prototype.hasOwnProperty.call(record, 'image')
+    const hasImageThumb = Object.prototype.hasOwnProperty.call(
+      record,
+      'imageThumb'
+    )
 
     if (
       !id ||
@@ -116,7 +143,10 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
       const isAbility = equipmentType === 'アビリティ'
       const element = isAbility
         ? ''
-        : normalizeRequiredTextField(normalizeSkillMasterElement(rawElement), 'element')
+        : normalizeRequiredTextField(
+            normalizeSkillMasterElement(rawElement),
+            'element'
+          )
       const skillType = isAbility
         ? normalizeSkillMasterSkillType(rawSkillType || 'アビリティ')
         : normalizeSkillMasterSkillType(rawSkillType)
@@ -127,13 +157,19 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
       const cost = normalizeSkillMasterNumber(record.cost)
       const sp = normalizeSkillMasterNumber(record.sp)
       const characterName =
-        normalizeCsvWhitespace(record.characterName) || extractCharacterNameFromSkillName(name)
+        normalizeCsvWhitespace(record.characterName) ||
+        extractCharacterNameFromSkillName(name)
       const breakGauge = normalizeSkillMasterNumber(record.breakGauge)
       const switchGauge = normalizeSkillMasterNumber(record.switchGauge)
       const cooldown = normalizeSkillMasterNumber(record.cooldown)
       const skillName = normalizeCsvWhitespace(record.skillName)
       const effect = normalizeCsvWhitespace(record.effect)
       const image = normalizeRequiredTextField(record.image, 'image')
+      // imageThumb is an optional column: older skill-master files predate the
+      // thumbnail pipeline, so fall back to an empty string when absent.
+      const imageThumb = hasImageThumb
+        ? normalizeCsvWhitespace(record.imageThumb)
+        : ''
 
       if (!isAbility && !skillName) {
         throw new Error('skillName is required for non-ability rows.')
@@ -185,16 +221,21 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
         skillName,
         effect,
         image,
+        imageThumb
       })
     } catch (error) {
       errors.push(
-        `Row ${rowNumber}: ${error instanceof Error ? error.message : String(error)}`
+        `Row ${rowNumber}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       )
     }
   })
 
   if (duplicateIds.size > 0) {
-    errors.push(`Duplicate skill IDs detected: ${Array.from(duplicateIds).join(', ')}`)
+    errors.push(
+      `Duplicate skill IDs detected: ${Array.from(duplicateIds).join(', ')}`
+    )
   }
 
   return {
@@ -206,8 +247,8 @@ export function normalizeSkillMasterCsvRecords(records: CsvRecord[]) {
       normalizedElementCount,
       normalizedEquipmentTypeCount,
       normalizedSkillTypeCount,
-      normalizedAttackTypeCount,
-    } satisfies SkillMasterImportStats,
+      normalizedAttackTypeCount
+    } satisfies SkillMasterImportStats
   }
 }
 
@@ -236,7 +277,8 @@ export function getSkillMasterImportChangeType(
     existing.cooldown === payload.cooldown &&
     existing.skillName === payload.skillName &&
     existing.effect === payload.effect &&
-    existing.image === payload.image
+    existing.image === payload.image &&
+    existing.imageThumb === payload.imageThumb
   ) {
     return 'unchanged'
   }

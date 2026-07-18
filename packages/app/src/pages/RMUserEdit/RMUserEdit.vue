@@ -17,10 +17,10 @@ const onBack = () => {
 
 <template>
 	<RMUserWorkspace
-		:user-id="userId"
-		page-title="マイページ"
-		page-icon="pi pi-user"
-		back-label="戻る"
+		:userId="userId"
+		pageTitle="マイページ"
+		pageIcon="pi pi-user"
+		backLabel="戻る"
 		@back="onBack"
 	/>
 </template>

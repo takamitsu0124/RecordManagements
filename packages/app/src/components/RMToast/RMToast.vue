@@ -25,7 +25,7 @@ const props = defineProps({
   /**
    * トーストのアイコン
    */
-  isCheckCircle: { type: Boolean, default: true },
+  isCheckCircle: { type: Boolean, default: true }
 })
 //親コンポーネントからv-modelのBoolean値を元に表示、非表示を切り替える
 const toastMove = ref(false)
@@ -61,22 +61,28 @@ console.log('propstoasticon', props.isCheckCircle)
       <div>
         <Transition name="toast">
           <div
+            v-if="toastMove"
             style="z-index: 2000000"
             class="_toast"
             :class="{
               _toast_from_top: toastFromTop,
               _toast_from_bottom: !toastFromTop,
             }"
-            v-if="toastMove"
           >
             <!-- トーストアイコンを設定した場合それを優先。ない場合デフォルトでチェックサークル -->
 
             <img
+              v-if="isCheckCircle"
               src="~/assets/check_circle.svg"
               class="_check_circle"
-              v-if="isCheckCircle"
+              loading="lazy"
             />
-            <img src="~/assets/error.svg" class="_check_circle" v-else />
+            <img
+              v-else
+              src="~/assets/error.svg"
+              class="_check_circle"
+              loading="lazy"
+            />
             <div class="_toast_text">{{ toastText }}</div>
           </div>
         </Transition>

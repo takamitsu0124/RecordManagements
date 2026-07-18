@@ -28,7 +28,7 @@ export function useToast(payload: {
     severity,
     summary: payload.toastTitle,
     life,
-    group: payload.toastFromTop ? 'app-top' : 'app-bottom',
+    group: payload.toastFromTop ? 'app-top' : 'app-bottom'
   })
 
   return new Promise((resolve) => {

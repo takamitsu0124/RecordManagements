@@ -9,17 +9,17 @@ export type GuildScheduleMonthDay = {
 
 const monthFormatter = new Intl.DateTimeFormat('ja-JP', {
 	year: 'numeric',
-	month: 'long',
+	month: 'long'
 })
 
 const fullDateFormatter = new Intl.DateTimeFormat('ja-JP', {
 	month: 'numeric',
 	day: 'numeric',
-	weekday: 'short',
+	weekday: 'short'
 })
 
 const weekdayFormatter = new Intl.DateTimeFormat('ja-JP', {
-	weekday: 'short',
+	weekday: 'short'
 })
 
 export const createMonthDate = (date = new Date()) => {
@@ -83,7 +83,7 @@ export const getMonthDays = (monthDate: Date): GuildScheduleMonthDay[] => {
 			dayNumber: index + 1,
 			weekdayLabel: weekdayFormatter.format(date),
 			isToday: formatDateKey(date) === todayKey,
-			isWeekend: date.getDay() === 0 || date.getDay() === 6,
+			isWeekend: date.getDay() === 0 || date.getDay() === 6
 		}
 	})
 }

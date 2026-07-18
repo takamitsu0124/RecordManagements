@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { computed, PropType, useAttrs } from 'vue'
-import { PopupColorKinds } from './RMPopupFun'
+import type { PropType} from 'vue'
+import { computed, useAttrs } from 'vue'
+import type { PopupColorKinds } from './RMPopupFun'
 
 defineOptions({
-  inheritAttrs: false,
+  inheritAttrs: false
 })
 
 /** props定義 */
@@ -20,15 +21,15 @@ const props = defineProps({
   /**ポップアップ左テキストカラー */
   leftColor: {
     type: String as PropType<PopupColorKinds>,
-    default: 'primary',
+    default: 'primary'
   },
   /**ポップアップ右テキストカラー */
   rightColor: {
     type: String as PropType<PopupColorKinds>,
-    default: 'primary',
+    default: 'primary'
   },
   /**件数 */
-  subjectNum: { type: Number, default: 1 },
+  subjectNum: { type: Number, default: 1 }
 })
 const emit = defineEmits<{
   (e: 'onLeft'): void
@@ -41,33 +42,33 @@ const popupStatus = computed({
   get: () => props.modelValue,
   set: (value) => {
     emit('update:modelValue', value)
-  },
+  }
 })
 </script>
 
 <template>
   <Transition style="z-index: 1000000">
-    <div :class="['_AFC_outline', attrs.class]" v-if="popupStatus">
+    <div v-if="popupStatus" :class="['_AFC_outline', attrs.class]">
       <div class="_AFCButton_container">
         <div class="_popup_question">
-          <div class="_popup_sentence" v-html="question"></div>
+          <div class="_popup_sentence" v-html="question" />
           <div v-if="supplement" class="_question_notice" v-html="supplement" />
         </div>
         <div class="_AFC_buttons">
           <div
-            @click="emit('onLeft')"
+            v-if="leftText"
             :class="[
               '_popup_left_button',
               '_popup_buttons',
               `text-${leftColor}`,
             ]"
-            v-if="leftText"
+            @click="emit('onLeft')"
           >
             {{ leftText }}
           </div>
           <div
-            @click="emit('onRight')"
             :class="['_popup_buttons', `text-${rightColor}`]"
+            @click="emit('onRight')"
           >
             {{ rightText }}
           </div>

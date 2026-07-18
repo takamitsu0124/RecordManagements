@@ -42,19 +42,19 @@ scripts/skill-master/
 
 推奨フォルダ名は次の通りです。
 
-| 種別 | 推奨フォルダ名 |
-| --- | --- |
-| 片手直剣 | `sword` |
-| 細剣 | `rapier` |
-| 棍棒 | `club` |
-| 短剣 | `dagger` |
-| 斧 | `axe` |
-| 槍 | `spear` |
-| 弓 | `bow` |
-| 盾 | `shield` |
-| アビリティ | `ability` |
+| 種別                  | 推奨フォルダ名    |
+| --------------------- | ----------------- |
+| 片手直剣              | `sword`           |
+| 細剣                  | `rapier`          |
+| 棍棒                  | `club`            |
+| 短剣                  | `dagger`          |
+| 斧                    | `axe`             |
+| 槍                    | `spear`           |
+| 弓                    | `bow`             |
+| 盾                    | `shield`          |
+| アビリティ            | `ability`         |
 | バースト/フルバースト | `burst-fullburst` |
-| フリー | `free` |
+| フリー                | `free`            |
 
 `skill-master.csv` / `skill-master.json` の `image` 列には、Firebase Storage URL ではなく**ローカル画像への相対パス**または**ファイル名**を書きます。
 
@@ -81,6 +81,7 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
 - 必要なら `sword/link/...` のように**武器フォルダ配下でさらに細かく分けても**動作します
 - 実行後は `image` 列が Storage URL に置き換わった `.storage.csv` / `.storage.json` が出力されるので、その**出力ファイル**を `npm run skill-master:import` に渡してください
 - Storage 上の保存先は `skill_master_images/{prefix}/{skillId}/source.{ext}` です
+- アップロード先は Cloud CDN 配信用の公開専用バケット `skill-master-images-public` です（Issue #91/#92）
 - 対応拡張子の判定は `.png` / `.jpg` / `.jpeg` / `.webp` / `.gif` / `.svg` / `.avif` / `.bmp` です
 
 ### Input format
@@ -141,23 +142,23 @@ FIREBASE_AUTH_EMAIL=admin@example.com FIREBASE_AUTH_PASSWORD=secret npm run sche
 
 ### 旧 -> 新スキーマ対応表
 
-| Legacy source | New destination | Rule |
-| --- | --- | --- |
-| `user/{uid}.charaName` | `users/{uid}.displayName` | 既存 `users.displayName` を優先し、空なら legacy から補完 |
-| `user/{uid}.charaNameKana` | `users/{uid}.displayNameKana` | 既存 `users.displayNameKana` を優先し、空なら legacy から補完 |
-| `user/{uid}.contact.email` | `users/{uid}.email` | 既存 `users.email` を優先し、空なら legacy から補完 |
-| `user/{uid}.guildId` | `users/{uid}.guildId` | 既存 `users.guildId` を優先し、空なら legacy から補完。`guild` に存在しない ID は blocking error |
-| `user/{uid}.role` | `users/{uid}.role` | `管理者 -> admin`、それ以外は `member`。`guild_admin` は legacy から自動判定できないため `roleOverrides` で明示 |
-| `user/{uid}.affiliationDate` | `users/{uid}.affiliationDate` | 既存 `users.affiliationDate` を優先し、空なら legacy から補完 |
-| `user/{uid}.affiliationNum` | `users/{uid}.affiliationNum` | 既存 `users.affiliationNum` を優先。未設定相当なら legacy から補完 |
-| `user/{uid}.situation` | `users/{uid}.situation` | `現役 / 隠居 / 引退 / ''` のみ許可し、既存値を優先 |
-| `user/{uid}.gameStartDateAt` | `users/{uid}.gameStartDateAt` | 既存 `users.gameStartDateAt` を優先し、空なら legacy から補完 |
-| `user/{uid}.contact.phone` | `users/{uid}.phone` | 既存 `users.phone` を優先し、空なら legacy から補完 |
-| `user/{uid}.birthDateAt` | `users/{uid}.birthDateAt` | 既存 `users.birthDateAt` を優先し、空なら legacy から補完 |
-| `user/{uid}.imageUrls` / `skillRecord` 内画像参照 | `users/{uid}.imageUrls` | 既存 `users.imageUrls` を優先。空の場合だけ legacy `imageUrls`、さらに空なら `skillRecord` から平坦化して backfill |
-| `user/{uid}.skillRecord.*` | `user_skills/{uid}.ownedSkills[]` | 画像だけでは `skillId` を安全に推測できないため、mapping JSON で bucket ごとに `skill_master` ID を指定 |
-| `user/{uid}.proficiencyLevel.*` | `user_skills/{uid}.ownedSkills[].level` | `level` 明示値を優先。未指定時は `levelSource`、さらに未指定時は bucket と同名の熟練度を使用。該当なしは `0` |
-| `guild/{guildId}` | 既存 `guild` を継続利用 | 今回の migration では delete / rewrite しない。`users.guildId` の整合確認だけ行う |
+| Legacy source                                     | New destination                         | Rule                                                                                                               |
+| ------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `user/{uid}.charaName`                            | `users/{uid}.displayName`               | 既存 `users.displayName` を優先し、空なら legacy から補完                                                          |
+| `user/{uid}.charaNameKana`                        | `users/{uid}.displayNameKana`           | 既存 `users.displayNameKana` を優先し、空なら legacy から補完                                                      |
+| `user/{uid}.contact.email`                        | `users/{uid}.email`                     | 既存 `users.email` を優先し、空なら legacy から補完                                                                |
+| `user/{uid}.guildId`                              | `users/{uid}.guildId`                   | 既存 `users.guildId` を優先し、空なら legacy から補完。`guild` に存在しない ID は blocking error                   |
+| `user/{uid}.role`                                 | `users/{uid}.role`                      | `管理者 -> admin`、それ以外は `member`。`guild_admin` は legacy から自動判定できないため `roleOverrides` で明示    |
+| `user/{uid}.affiliationDate`                      | `users/{uid}.affiliationDate`           | 既存 `users.affiliationDate` を優先し、空なら legacy から補完                                                      |
+| `user/{uid}.affiliationNum`                       | `users/{uid}.affiliationNum`            | 既存 `users.affiliationNum` を優先。未設定相当なら legacy から補完                                                 |
+| `user/{uid}.situation`                            | `users/{uid}.situation`                 | `現役 / 隠居 / 引退 / ''` のみ許可し、既存値を優先                                                                 |
+| `user/{uid}.gameStartDateAt`                      | `users/{uid}.gameStartDateAt`           | 既存 `users.gameStartDateAt` を優先し、空なら legacy から補完                                                      |
+| `user/{uid}.contact.phone`                        | `users/{uid}.phone`                     | 既存 `users.phone` を優先し、空なら legacy から補完                                                                |
+| `user/{uid}.birthDateAt`                          | `users/{uid}.birthDateAt`               | 既存 `users.birthDateAt` を優先し、空なら legacy から補完                                                          |
+| `user/{uid}.imageUrls` / `skillRecord` 内画像参照 | `users/{uid}.imageUrls`                 | 既存 `users.imageUrls` を優先。空の場合だけ legacy `imageUrls`、さらに空なら `skillRecord` から平坦化して backfill |
+| `user/{uid}.skillRecord.*`                        | `user_skills/{uid}.ownedSkills[]`       | 画像だけでは `skillId` を安全に推測できないため、mapping JSON で bucket ごとに `skill_master` ID を指定            |
+| `user/{uid}.proficiencyLevel.*`                   | `user_skills/{uid}.ownedSkills[].level` | `level` 明示値を優先。未指定時は `levelSource`、さらに未指定時は bucket と同名の熟練度を使用。該当なしは `0`       |
+| `guild/{guildId}`                                 | 既存 `guild` を継続利用                 | 今回の migration では delete / rewrite しない。`users.guildId` の整合確認だけ行う                                  |
 
 ### ownedSkills 変換ルール
 
@@ -181,9 +182,7 @@ FIREBASE_AUTH_EMAIL=admin@example.com FIREBASE_AUTH_PASSWORD=secret npm run sche
         "weaponConnect": [
           { "skillId": "skill-dark-sword-connect-003", "levelSource": "sword" }
         ],
-        "ability": [
-          { "skillId": "skill-light-ability-001", "level": 0 }
-        ]
+        "ability": [{ "skillId": "skill-light-ability-001", "level": 0 }]
       }
     }
   }
@@ -249,18 +248,18 @@ Issue #78 に対応するため、イベントカレンダーは **Google Calend
 
 `guild_calendar_events` の主な項目:
 
-| 項目 | 型 | 用途 |
-| --- | --- | --- |
-| `id` | string | ドキュメント ID |
-| `guildId` | string | 所属ギルド単位の参照・権限制御 |
-| `title` | string | 予定タイトル |
-| `description` | string | 補足メモ |
-| `location` | string | 場所 |
-| `startAt` | timestamp | 開始日時 |
-| `endAt` | timestamp | 終了日時 |
-| `allDay` | boolean | 終日予定かどうか |
-| `createdAt` / `updatedAt` | timestamp | 監査用 |
-| `createdBy` / `updatedBy` | string | 操作ユーザー |
+| 項目                      | 型        | 用途                           |
+| ------------------------- | --------- | ------------------------------ |
+| `id`                      | string    | ドキュメント ID                |
+| `guildId`                 | string    | 所属ギルド単位の参照・権限制御 |
+| `title`                   | string    | 予定タイトル                   |
+| `description`             | string    | 補足メモ                       |
+| `location`                | string    | 場所                           |
+| `startAt`                 | timestamp | 開始日時                       |
+| `endAt`                   | timestamp | 終了日時                       |
+| `allDay`                  | boolean   | 終日予定かどうか               |
+| `createdAt` / `updatedAt` | timestamp | 監査用                         |
+| `createdBy` / `updatedBy` | string    | 操作ユーザー                   |
 
 補足:
 
@@ -269,8 +268,8 @@ Issue #78 に対応するため、イベントカレンダーは **Google Calend
 
 ### 権限方針
 
-| 対象 | 閲覧 | 編集 |
-| --- | --- | --- |
+| 対象                  | 閲覧                             | 編集                        |
+| --------------------- | -------------------------------- | --------------------------- |
 | guild shared calendar | `member`, `guild_admin`, `admin` | `guild_admin`, `admin` のみ |
 
 - 読み取りは `canReadGuildSchedule(guildId)` に準拠

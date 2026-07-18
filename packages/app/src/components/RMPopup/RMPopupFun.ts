@@ -1,4 +1,5 @@
-import { createApp, h, ref, Component } from 'vue'
+import type { Component } from 'vue'
+import { createApp, h, ref } from 'vue'
 import RMPopupFun from './RMPopupFun.vue'
 
 export type PopupColorKinds = 'primary' | 'black' | 'gray' | 'white' | 'red'
@@ -39,7 +40,7 @@ export function usePopupFun(payload: {
       onRightButtonClick: () => {
         if (payload.onRightButtonClick) payload.onRightButtonClick()
         unmount()
-      },
+      }
     }
   )
   const unmount = () => {
@@ -55,7 +56,7 @@ export function usePopupFun(payload: {
   const app = createApp({
     setup() {
       return () => componentVNode
-    },
+    }
   })
   app.mount(container)
   return { componentVNode, unmount }

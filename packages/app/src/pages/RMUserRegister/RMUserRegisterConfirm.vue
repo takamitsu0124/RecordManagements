@@ -11,7 +11,7 @@ import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 import {
   getRegisterErrorMessage,
   globalRegisterForm,
-  roleLabels,
+  roleLabels
 } from './register'
 
 const router = useRouter()
@@ -37,7 +37,7 @@ const registerSave = async () => {
           leftColor: 'black',
           onRightButtonClick: () => {
             console.log('閉じる')
-          },
+          }
         })
       }
     }

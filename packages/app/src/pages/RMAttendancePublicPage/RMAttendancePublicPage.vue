@@ -9,25 +9,25 @@ import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
 import type {
   AttendanceEvent,
-  AttendanceStatus,
+  AttendanceStatus
 } from '@rm/types'
 import {
   attendanceStatusDefinitions,
-  isAttendanceEventClosedForResponses,
+  isAttendanceEventClosedForResponses
 } from '@rm/types'
 import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
 import {
   fetchAttendanceEventByPublicToken,
-  submitAttendanceResponse,
+  submitAttendanceResponse
 } from 'src/services/attendanceData'
 import AttendanceSummaryTable from 'src/pages/RMAttendancePage/components/AttendanceSummaryTable.vue'
 import {
   buildAttendanceSummaryRows,
   formatAttendanceCandidateRange,
   formatAttendanceDateTime,
-  formatAttendanceStatusSymbol,
+  formatAttendanceStatusSymbol
 } from 'src/pages/RMAttendancePage/helpers'
 
 type DraftAnswer = {
@@ -67,8 +67,8 @@ const initializeDraftAnswers = (attendanceEvent: AttendanceEvent) => {
       candidate.id,
       {
         status: null,
-        note: '',
-      },
+        note: ''
+      }
     ])
   )
 }
@@ -141,10 +141,10 @@ const onSubmit = async () => {
           candidate.id,
           {
             status: answers.value[candidate.id].status,
-            note: answers.value[candidate.id].note,
-          },
+            note: answers.value[candidate.id].note
+          }
         ])
-      ),
+      )
     })
 
     notifySuccess('回答を送信しました。')

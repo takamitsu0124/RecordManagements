@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, PropType, ref } from 'vue'
+import type { PropType} from 'vue'
+import { computed, ref } from 'vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
 import Button from 'primevue/button'
-import { SizeTypes } from './size'
-import { IconTypes } from '../iconType'
+import type { SizeTypes } from './size'
+import type { IconTypes } from '../iconType'
 import RMIcon from '../RMIcon/RMIcon.vue'
 
 const props = defineProps({
@@ -35,7 +36,7 @@ const props = defineProps({
   autocomplete: { type: String, default: '' },
   rules: {
     type: Array as PropType<Array<(value: string) => true | string>>,
-    default: () => [],
+    default: () => []
   },
   inputmode: {
     type: String as PropType<
@@ -49,12 +50,12 @@ const props = defineProps({
       | 'decimal'
       | undefined
     >,
-    default: 'text',
+    default: 'text'
   },
   type: {
     type: String,
-    default: 'text',
-  },
+    default: 'text'
+  }
 })
 
 const emit = defineEmits<{
@@ -104,7 +105,7 @@ const inputModel = computed({
       return
     }
     emit('update:modelValue', value)
-  },
+  }
 })
 
 const parseDate = (value: string) => {
@@ -128,7 +129,7 @@ const dateModel = computed<Date | null>({
   get: () => parseDate(displayValue.value),
   set: (value) => {
     emit('update:modelValue', formatDate(value))
-  },
+  }
 })
 
 const validate = () => {

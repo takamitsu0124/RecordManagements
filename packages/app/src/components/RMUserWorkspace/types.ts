@@ -1,11 +1,12 @@
-import {
+import type {
   AppUser,
   OwnedSkill,
   SkillMaster,
   WeaponProficiencySkillProgress,
-  WeaponProficiencyLevels,
+  WeaponProficiencyLevels} from '@rm/types'
+import {
   defaultWeaponProficiencyLevels,
-  defaultWeaponProficiencySkillProgress,
+  defaultWeaponProficiencySkillProgress
 } from '@rm/types'
 
 export type OwnedSkillRow = OwnedSkill & {
@@ -18,6 +19,7 @@ export type OwnedSkillRow = OwnedSkill & {
   skillName: string
   effect: string
   image: string
+  imageThumb: string
   masterMissing: boolean
 }
 
@@ -64,5 +66,5 @@ export const defaultWorkspaceProfile = (): WorkspaceProfile => ({
   birthDateAt: null,
   imageUrls: [],
   weaponProficiencyLevels: defaultWeaponProficiencyLevels(),
-  weaponProficiencySkillProgress: defaultWeaponProficiencySkillProgress(),
+  weaponProficiencySkillProgress: defaultWeaponProficiencySkillProgress()
 })

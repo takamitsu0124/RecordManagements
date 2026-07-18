@@ -1,3 +1,7 @@
+<script setup lang="ts">
+// Main layout intentionally stays minimal.
+</script>
+
 <template>
   <div class="main-layout-shell">
     <router-view v-slot="{ Component, route }">
@@ -7,10 +11,6 @@
     </router-view>
   </div>
 </template>
-
-<script setup lang="ts">
-// Main layout intentionally stays minimal.
-</script>
 
 <style scoped>
 .main-layout-shell {

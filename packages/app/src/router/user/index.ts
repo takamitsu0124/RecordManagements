@@ -1,4 +1,4 @@
-import { RouteRecordRaw } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -9,10 +9,10 @@ const routes: RouteRecordRaw[] = [
 			name: 'RMUserEdit',
 			path: ':userId/edit',
 			component: () => import('src/pages/RMUserEdit/RMUserEdit.vue'),
-			meta: { pageTitle: 'マイページ' },
-		},
-    ],
-  },
-];
+			meta: { pageTitle: 'マイページ' }
+		}
+    ]
+  }
+]
 
-export default routes;
+export default routes

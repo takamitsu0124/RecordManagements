@@ -17,7 +17,7 @@ withDefaults(
     confirmLabel: '実行する',
     cancelLabel: 'キャンセル',
     severity: 'primary',
-    loading: false,
+    loading: false
   }
 )
 
