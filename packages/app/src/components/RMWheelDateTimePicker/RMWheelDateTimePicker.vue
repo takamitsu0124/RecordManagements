@@ -98,7 +98,7 @@ const openPicker = () => {
 
   isOpen.value = true
 
-  nextTick(() => {
+  void nextTick(() => {
     scrollColumnTo('year', Math.max(0, years.value.indexOf(draftYear.value)))
     scrollColumnTo('month', draftMonth.value - 1)
     scrollColumnTo('day', draftDay.value - 1)
@@ -160,7 +160,7 @@ watch([draftMonth, draftYear], () => {
 })
 
 watch(draftDay, (next) => {
-  nextTick(() => scrollColumnTo('day', next - 1, true))
+  void nextTick(() => scrollColumnTo('day', next - 1, true))
 })
 
 const onConfirm = () => {

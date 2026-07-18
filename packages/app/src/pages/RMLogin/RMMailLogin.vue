@@ -22,7 +22,7 @@ const signIn = async () => {
   await useSpinner(async () => {
     await mailLogin(auth, email.value, password.value, router, '/RMHome')
       .then(() => {
-        notifySuccess('ログインしました')
+        void notifySuccess('ログインしました')
         return router.push('/RMHome')
       })
       .catch((error) => {

@@ -3,6 +3,7 @@ export type CsvRecord = Record<string, string> & {
 }
 
 export function normalizeCsvWhitespace(value: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- CSVの生セル値(文字列/数値想定)を意図的に文字列化する汎用ヘルパー
   return String(value ?? '')
     .replace(/\u3000/g, ' ')
     .replace(/\s+/g, ' ')

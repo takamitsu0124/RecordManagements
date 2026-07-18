@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { PropType} from 'vue'
+import type { PropType } from 'vue'
 import { computed, useAttrs } from 'vue'
 import type { PopupColorKinds } from './RMPopupFun'
 
@@ -15,7 +15,7 @@ const props = defineProps({
   /**補足 */
   supplement: { type: String, default: '' },
   /**ポップアップ左テキスト */
-  leftText: { type: String },
+  leftText: { type: String, default: '' },
   /**ポップアップ右テキスト */
   rightText: { type: String, default: '右' },
   /**ポップアップ左テキストカラー */

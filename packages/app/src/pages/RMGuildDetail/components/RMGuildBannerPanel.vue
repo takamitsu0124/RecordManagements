@@ -42,7 +42,7 @@ const loadBanners = async () => {
         return bStart - aStart || a.id.localeCompare(b.id, 'ja')
       })
   } catch (error) {
-    notifyError('バナーの読み込みに失敗しました。')
+    void notifyError('バナーの読み込みに失敗しました。')
     console.error('Failed to fetch banners:', error)
   } finally {
     isLoading.value = false
@@ -54,7 +54,7 @@ const resetFilterDateToToday = () => {
 }
 
 onMounted(() => {
-  loadBanners()
+  void loadBanners()
 })
 </script>
 

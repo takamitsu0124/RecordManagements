@@ -47,19 +47,19 @@ const loadEvents = async () => {
 }
 
 const goToCreate = () => {
-  router.push({ name: 'RMAttendanceNew' })
+  void router.push({ name: 'RMAttendanceNew' })
 }
 
 const goToManage = (eventId: string) => {
-  router.push({ name: 'RMAttendanceManage', params: { eventId } })
+  void router.push({ name: 'RMAttendanceManage', params: { eventId } })
 }
 
 const copyPublicUrl = async (event: AttendanceEvent) => {
   try {
     await copyTextWithFallback(`${window.location.origin}/a/${event.publicToken}`)
-    notifySuccess('公開URLをコピーしました。')
+    void notifySuccess('公開URLをコピーしました。')
   } catch (error) {
-    notifyError('公開URLのコピーに失敗しました。')
+    void notifyError('公開URLのコピーに失敗しました。')
     console.error('Failed to copy attendance public url:', error)
   }
 }

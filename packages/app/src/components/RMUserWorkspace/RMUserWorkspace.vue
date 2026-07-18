@@ -489,7 +489,7 @@ const loadWorkspace = async () => {
 
 const addOwnedSkill = (skill: SkillMaster) => {
   if (ownedSkillIdSet.value.has(skill.id)) {
-    notifyInfo('そのスキルは既に追加されています。')
+    void notifyInfo('そのスキルは既に追加されています。')
     return
   }
 
@@ -692,9 +692,9 @@ const onSubmit = async () => {
       syncDateModels(nextUser)
       editingSection.value = null
       resetSkillFilters()
-      notifySuccess('保存しました。')
+      void notifySuccess('保存しました。')
     } catch (error) {
-      notifyError('保存に失敗しました。')
+      void notifyError('保存に失敗しました。')
       console.error('Failed to save user workspace:', error)
     }
   })

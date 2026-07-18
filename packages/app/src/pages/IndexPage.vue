@@ -8,9 +8,9 @@ import RMSpinner from 'src/components/RMSpinner/RMSpinner.vue'
 const router = useRouter()
 let unsubscribe: (() => void) | undefined
 
-const redirectToLandingPage = async () => {
-  unsubscribe = onAuthStateChanged(auth, async (user) => {
-    await router.replace({ name: user ? 'RMHome' : 'RMPreLogin' })
+const redirectToLandingPage = () => {
+  unsubscribe = onAuthStateChanged(auth, (user) => {
+    void router.replace({ name: user ? 'RMHome' : 'RMPreLogin' })
   })
 }
 

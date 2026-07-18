@@ -1,18 +1,26 @@
 class CreateDayOfTheWeek {
-  private readonly englishDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  private readonly englishDays = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat'
+  ]
 
   private readonly japaneseDays = ['日', '月', '火', '水', '木', '金', '土']
 
   /**
    * 英語の曜日を生成する
    */
-  createEnglishDayOfTheWeek = (weekNumber: number) => {
+  public createEnglishDayOfTheWeek = (weekNumber: number) => {
     return this.englishDays[weekNumber] ?? ''
   }
   /**
    * 日本語の曜日を生成する
    */
-  createJapaneseDayOfTheWeek = (weekNumber: number) => {
+  public createJapaneseDayOfTheWeek = (weekNumber: number) => {
     return this.japaneseDays[weekNumber] ?? ''
   }
   /**
@@ -21,7 +29,7 @@ class CreateDayOfTheWeek {
    * @param weekNumber 曜日の番号
    * @param internal 内部で使うかどうか
    */
-  createDayOfTheWeekChoose = (
+  public createDayOfTheWeekChoose = (
     lang: string,
     weekNumber: number,
     internal = false

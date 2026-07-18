@@ -139,7 +139,7 @@ const loadBanners = async () => {
         return bStart - aStart || a.id.localeCompare(b.id, 'ja')
       })
   } catch (error) {
-    notifyError('バナーマスターの読み込みに失敗しました。')
+    void notifyError('バナーマスターの読み込みに失敗しました。')
     console.error('Failed to fetch banner master:', error)
   } finally {
     isLoading.value = false
@@ -209,7 +209,7 @@ const validateForm = () => {
 const saveBannerMaster = async () => {
   errorMessage.value = validateForm()
   if (errorMessage.value) {
-    notifyError(errorMessage.value)
+    void notifyError(errorMessage.value)
     return
   }
 
@@ -239,16 +239,16 @@ const saveBannerMaster = async () => {
 
       if (isEditMode.value) {
         await dbBannerMasterModule.doc(payload.id).merge(payload)
-        notifySuccess('バナーマスターを更新しました。')
+        void notifySuccess('バナーマスターを更新しました。')
       } else {
         await dbBannerMasterModule.doc(payload.id).insert(payload)
-        notifySuccess('バナーマスターを登録しました。')
+        void notifySuccess('バナーマスターを登録しました。')
       }
 
       await loadBanners()
       closeEditor()
     } catch (error) {
-      notifyError('バナーマスターの保存に失敗しました。')
+      void notifyError('バナーマスターの保存に失敗しました。')
       console.error('Failed to save banner master:', error)
     }
   })

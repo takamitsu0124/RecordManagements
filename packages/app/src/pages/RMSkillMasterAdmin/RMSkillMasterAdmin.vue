@@ -394,7 +394,7 @@ const loadSkillMaster = async () => {
       .map((skill) => normalizeSkillMasterRecord(skill))
       .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
   } catch (error) {
-    notifyError('スキルマスターの読み込みに失敗しました。')
+    void notifyError('スキルマスターの読み込みに失敗しました。')
     console.error('Failed to fetch skill master:', error)
   } finally {
     isLoading.value = false
@@ -462,7 +462,7 @@ const validateForm = () => {
 const saveSkillMaster = async () => {
   errorMessage.value = validateForm()
   if (errorMessage.value) {
-    notifyError(errorMessage.value)
+    void notifyError(errorMessage.value)
     return
   }
 
@@ -521,10 +521,10 @@ const saveSkillMaster = async () => {
 
       if (isEditingExisting.value) {
         await dbSkillMasterModule.doc(payload.id).merge(payload)
-        notifySuccess('スキルマスターを更新しました。')
+        void notifySuccess('スキルマスターを更新しました。')
       } else {
         await dbSkillMasterModule.doc(payload.id).insert(payload)
-        notifySuccess('スキルマスターを登録しました。')
+        void notifySuccess('スキルマスターを登録しました。')
       }
 
       await loadSkillMaster()
@@ -537,7 +537,7 @@ const saveSkillMaster = async () => {
 
       closeEditor()
     } catch (error) {
-      notifyError('スキルマスターの保存に失敗しました。')
+      void notifyError('スキルマスターの保存に失敗しました。')
       console.error('Failed to save skill master:', error)
     }
   })
@@ -595,7 +595,7 @@ const onSkillCsvSelect = async (event: { files?: File[] }) => {
 
 const importSkillMasterCsv = async () => {
   if (skillCsvParseErrors.value.length > 0) {
-    notifyError('CSV のエラーを解消してから実行してください。')
+    void notifyError('CSV のエラーを解消してから実行してください。')
     return
   }
 
@@ -604,7 +604,7 @@ const importSkillMasterCsv = async () => {
   )
 
   if (rows.length === 0) {
-    notifySuccess('変更対象のスキルはありません。')
+    void notifySuccess('変更対象のスキルはありません。')
     return
   }
 
@@ -681,10 +681,10 @@ const importSkillMasterCsv = async () => {
       skillMasterTableRef.value.d_first = skillMasterPaginationState.value.first
     }
 
-    notifySuccess(`${successCount} 件のスキルを反映しました。`)
+    void notifySuccess(`${successCount} 件のスキルを反映しました。`)
   }
   if (errorCount > 0) {
-    notifyError(`${errorCount} 件のスキル反映に失敗しました。`)
+    void notifyError(`${errorCount} 件のスキル反映に失敗しました。`)
   }
 
   clearSkillCsvSelection(true)

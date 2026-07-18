@@ -45,11 +45,11 @@ const registerSave = async () => {
 
     try {
       await dbUserCreate(uid.value, registerInfo.value)
-      notifySuccess('ユーザー登録が完了しました')
+      void notifySuccess('ユーザー登録が完了しました')
       registerInfo.value = defaultRegisterInfo()
       await router.push({ name: 'RMHome' })
     } catch (error) {
-      notifyError('ユーザー登録に失敗しました。')
+      void notifyError('ユーザー登録に失敗しました。')
       console.error(error)
     }
   })

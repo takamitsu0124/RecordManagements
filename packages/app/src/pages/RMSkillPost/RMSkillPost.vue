@@ -29,7 +29,7 @@ const fallbackAppUser = computed<Partial<AppUser>>(() => ({
 
 const onBack = () => {
   if (typeof route.params.guildId === 'string' && route.params.guildId) {
-    router.push({
+    void router.push({
       name: 'RMGuildDetail',
       params: { guildId: route.params.guildId }
     })

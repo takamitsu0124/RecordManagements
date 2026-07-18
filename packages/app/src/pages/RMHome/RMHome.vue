@@ -17,24 +17,24 @@ import { notifyError } from 'src/composables/useAppNotifications'
 const router = useRouter()
 
 const registerGuild = () => {
-  router.push({ name: 'RMGuildRegister' })
+  void router.push({ name: 'RMGuildRegister' })
 }
 
 const registerUser = () => {
-  router.push({ name: 'RMUserRegister' })
+  void router.push({ name: 'RMUserRegister' })
 }
 
 const goToSkillMasterAdmin = () => {
-  router.push({ name: 'RMSkillMasterAdmin' })
+  void router.push({ name: 'RMSkillMasterAdmin' })
 }
 
 const selectGuild = () => {
   if (!globalLoginUserData.value.guildId) {
-    notifyError('所属ギルド情報が見つかりません。')
+    void notifyError('所属ギルド情報が見つかりません。')
     return
   }
 
-  router.push({
+  void router.push({
     name: 'RMGuildDetail',
     params: { guildId: globalLoginUserData.value.guildId }
   })
@@ -42,34 +42,34 @@ const selectGuild = () => {
 
 const goToUserEdit = () => {
   if (!globalLoginUserData.value.id) {
-    notifyError('ユーザー情報が見つかりません。')
+    void notifyError('ユーザー情報が見つかりません。')
     return
   }
 
-  router.push({
+  void router.push({
     name: 'RMUserEdit',
     params: { userId: globalLoginUserData.value.id }
   })
 }
 
 const goToCalendar = () => {
-  router.push({ name: 'RMCalendar' })
+  void router.push({ name: 'RMCalendar' })
 }
 
 const goToGuildSchedule = () => {
   if (!globalLoginUserData.value.guildId) {
-    notifyError('所属ギルド情報が見つかりません。')
+    void notifyError('所属ギルド情報が見つかりません。')
     return
   }
 
-  router.push({
+  void router.push({
     name: 'RMGuildSchedule',
     params: { guildId: globalLoginUserData.value.guildId }
   })
 }
 
 const goToAttendance = () => {
-  router.push({ name: 'RMAttendance' })
+  void router.push({ name: 'RMAttendance' })
 }
 
 const homeActions = computed(() => {

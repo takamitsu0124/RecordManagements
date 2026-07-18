@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { PropType} from 'vue'
+import type { PropType } from 'vue'
 import { computed } from 'vue'
 import Button from 'primevue/button'
 import RMIcon from '../RMIcon/RMIcon.vue'
@@ -15,7 +15,10 @@ const props = defineProps({
   label: { type: String, default: 'ページ遷移します' },
   letter: { type: String, default: '' },
   width: { type: String, default: '100%' },
-  buttonShape: { type: String as PropType<'round' | 'square' | 'ellipse'> },
+  buttonShape: {
+    type: String as PropType<'round' | 'square' | 'ellipse'>,
+    default: ''
+  },
   bgColor: { type: String, default: '' },
   letterColor: { type: String, default: 'white' },
   letterSize: { type: String, default: '18px' },
@@ -25,10 +28,14 @@ const props = defineProps({
   iconColor: { type: String, default: 'white' },
   iconSize: { type: String, default: '20px' },
   medalGarbageSize: { type: String, default: '30px' },
-  contentPosition: { type: String as PropType<'center' | 'between'> },
+  contentPosition: {
+    type: String as PropType<'center' | 'between'>,
+    default: ''
+  },
   isShadow: { type: Boolean, default: false },
   isMedalAndGarbageColor: {
-    type: String as PropType<'grey' | 'blue' | 'white'>
+    type: String as PropType<'grey' | 'blue' | 'white'>,
+    default: ''
   },
   isBorder: { type: Boolean, default: false },
   isDisable: { type: Boolean, default: false },

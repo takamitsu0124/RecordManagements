@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { PropType} from 'vue'
+import type { PropType } from 'vue'
 import { computed, useAttrs, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { activeMenu } from './RMHamburger'
@@ -81,20 +81,23 @@ const closeMenu = () => {
       <div class="_menu_panel_title">メニュー</div>
       <div class="_menu">
         <button
-          v-for="menu in visibleMenus"
-          :key="menu.name"
+          v-for="menuItem in visibleMenus"
+          :key="menuItem.name"
           type="button"
           :class="[
             '_menu_item',
             {
-              active: activeMenu === menu.name,
-              logout: menu.name === 'ログアウト',
+              active: activeMenu === menuItem.name,
+              logout: menuItem.name === 'ログアウト',
             },
           ]"
-          @click="spHandleClick(menu)"
+          @click="spHandleClick(menuItem)"
         >
-          <span>{{ menu.name }}</span>
-          <i v-if="menu.name !== 'ログアウト'" class="pi pi-chevron-right" />
+          <span>{{ menuItem.name }}</span>
+          <i
+            v-if="menuItem.name !== 'ログアウト'"
+            class="pi pi-chevron-right"
+          />
         </button>
       </div>
     </div>
@@ -102,17 +105,17 @@ const closeMenu = () => {
 
   <div :class="['_pc_menu', attrs.class]">
     <button
-      v-for="menu in visibleMenus"
-      :key="menu.name"
+      v-for="menuItem in visibleMenus"
+      :key="menuItem.name"
       type="button"
       class="_pc_menu_container"
       :class="{
-        active: activeMenu === menu.name,
-        logout: menu.name === 'ログアウト',
+        active: activeMenu === menuItem.name,
+        logout: menuItem.name === 'ログアウト',
       }"
-      @click="pcHandleClick(menu)"
+      @click="pcHandleClick(menuItem)"
     >
-      {{ menu.name }}
+      {{ menuItem.name }}
     </button>
   </div>
 </template>

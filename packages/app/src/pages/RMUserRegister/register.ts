@@ -1,10 +1,6 @@
-import type { AppRole} from '@rm/types'
+import type { AppRole } from '@rm/types'
 import { appRoles } from '@rm/types'
-import {
-  checkMailAddress,
-  checkPassword,
-  notEmpty
-} from '@rm/utils'
+import { checkMailAddress, checkPassword, notEmpty } from '@rm/utils'
 import { ref } from 'vue'
 
 /**
@@ -77,9 +73,13 @@ export function validateRegisterInfo(registerInfo: {
 
 export function getRegisterErrorMessage(error: unknown) {
   const errorCode =
-    typeof error === 'object' && error && 'code' in error
-      ? String(error.code)
-      : String(error)
+    typeof error === 'object' &&
+    error &&
+    'code' in error &&
+    typeof error.code === 'string'
+      ? error.code
+      : // eslint-disable-next-line @typescript-eslint/no-base-to-string -- codeが取得できない場合の汎用フォールバック
+        String(error)
 
   if (errorCode === 'auth/email-already-in-use') {
     return 'このメールアドレスは既に登録されています'

@@ -14,7 +14,7 @@ const goBack = () => {
     return
   }
 
-  router.push('/')
+  void router.push('/')
 }
 </script>
 

@@ -22,15 +22,15 @@ const logout = () => {
 }
 
 const menuClick = (currentMenu: { name: string; url: string }) => {
-  router.push({ path: currentMenu.url })
+  void router.push({ path: currentMenu.url })
 }
 
 const spinnerStart = () => {
-  useSpinner(async () => {
+  void useSpinner(async () => {
     await new Promise((resolve) =>
       setTimeout(() => {
         resolve('')
-        useToast({
+        void useToast({
           toastTitle: 'テスト',
           toastMovingTime: 3
         })
@@ -66,16 +66,31 @@ const popupStart = () => {
     />
     <div class="page_container">
       <div class="demo-actions">
-        <RMButton label="スピナーテスト" color="primary" width="220px" @click="spinnerStart" />
-        <RMButton label="ポップアップテスト" outline width="220px" @click="popupStart" />
+        <RMButton
+          label="スピナーテスト"
+          color="primary"
+          width="220px"
+          @click="spinnerStart"
+        />
+        <RMButton
+          label="ポップアップテスト"
+          outline
+          width="220px"
+          @click="popupStart"
+        />
       </div>
       <RMCard :cardShape="'roundM'" :shadowDirection="'allSide'" class="_test">
         <div class="demo-card-content">カードテスト</div>
       </RMCard>
       <RMInput v-model="inputModel" shadow date label="日付入力" />
-      <RMButton :buttonType="'standard'" :buttonShape="'round'" label="テスト" width="220px" />
+      <RMButton
+        :buttonType="'standard'"
+        :buttonShape="'round'"
+        label="テスト"
+        width="220px"
+      />
       <RMTab v-model="tabModel" />
-      <RMLogo margin_top="20px" margin_bottom="10px" />
+      <RMLogo marginTop="20px" marginBottom="10px" />
     </div>
   </div>
 </template>

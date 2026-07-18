@@ -46,7 +46,7 @@ const addCandidate = () => {
 
 const removeCandidate = (candidateId: string) => {
   if (candidates.value.length <= 1) {
-    notifyError('候補日時は1件以上必要です。')
+    void notifyError('候補日時は1件以上必要です。')
     return
   }
 
@@ -57,17 +57,17 @@ const removeCandidate = (candidateId: string) => {
 
 const onSubmit = async () => {
   if (!ownerUid.value) {
-    notifyError('ユーザー情報が見つかりません。')
+    void notifyError('ユーザー情報が見つかりません。')
     return
   }
 
   if (!title.value.trim()) {
-    notifyError('タイトルを入力してください。')
+    void notifyError('タイトルを入力してください。')
     return
   }
 
   if (candidates.value.length === 0) {
-    notifyError('候補日時を1件以上追加してください。')
+    void notifyError('候補日時を1件以上追加してください。')
     return
   }
 
@@ -83,12 +83,12 @@ const onSubmit = async () => {
   })
 
   if (hasInvalidCandidate) {
-    notifyError('候補日時の入力内容を確認してください。')
+    void notifyError('候補日時の入力内容を確認してください。')
     return
   }
 
   if (answerDeadlineAt.value && answerDeadlineAt.value.getTime() < Date.now()) {
-    notifyError('回答締切は現在時刻より後を指定してください。')
+    void notifyError('回答締切は現在時刻より後を指定してください。')
     return
   }
 
@@ -104,10 +104,10 @@ const onSubmit = async () => {
       answerDeadlineAt: answerDeadlineAt.value
     })
 
-    notifySuccess('出欠確認を作成しました。')
+    void notifySuccess('出欠確認を作成しました。')
     await router.push({ name: 'RMAttendanceManage', params: { eventId } })
   } catch (error) {
-    notifyError('出欠確認の作成に失敗しました。')
+    void notifyError('出欠確認の作成に失敗しました。')
     console.error('Failed to create attendance event:', error)
   } finally {
     isSaving.value = false

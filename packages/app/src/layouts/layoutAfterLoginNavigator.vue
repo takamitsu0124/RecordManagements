@@ -16,10 +16,10 @@ const isOpen = ref<boolean>(false)
 const logout = async () => {
   try {
     await signOut(auth)
-    notifySuccess('ログアウトしました。')
+    void notifySuccess('ログアウトしました。')
     await router.push({ name: 'RMPreLogin' })
   } catch (error) {
-    notifyError('ログアウトに失敗しました。')
+    void notifyError('ログアウトに失敗しました。')
     console.error('Logout failed:', error)
   }
 }
@@ -28,7 +28,7 @@ const menuClick = (currentMenu: { name: string; url: string; isShow: boolean }) 
   if (!currentMenu.url) {
     return
   }
-  router.push({ path: currentMenu.url })
+  void router.push({ path: currentMenu.url })
 }
 </script>
 

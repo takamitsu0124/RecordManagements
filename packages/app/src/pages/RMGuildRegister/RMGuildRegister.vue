@@ -19,7 +19,7 @@ const guildDescription = ref('')
 
 const onSubmit = async () => {
   if (!guildName.value.trim()) {
-    notifyError('ギルド名を入力してください。')
+    void notifyError('ギルド名を入力してください。')
     return
   }
 
@@ -55,25 +55,25 @@ const onSubmit = async () => {
           }
         }
 
-        notifySuccess('ギルドが正常に登録されました。')
-        router.push({
+        void notifySuccess('ギルドが正常に登録されました。')
+        void router.push({
           name: 'RMGuildDetail',
           params: { guildId: createdGuild.id }
         })
         return
       }
 
-      notifySuccess('ギルドが正常に登録されました。')
-      router.push({ name: 'RMHome' })
+      void notifySuccess('ギルドが正常に登録されました。')
+      void router.push({ name: 'RMHome' })
     } catch (error) {
-      notifyError('ギルドの登録に失敗しました。')
+      void notifyError('ギルドの登録に失敗しました。')
       console.error('Guild registration failed:', error)
     }
   })
 }
 
 const onCancel = () => {
-  router.push('/')
+  void router.push('/')
 }
 </script>
 
