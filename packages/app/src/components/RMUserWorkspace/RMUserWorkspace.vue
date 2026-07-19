@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import Card from 'primevue/card'
-import Dropdown from 'primevue/dropdown'
 import ProgressSpinner from 'primevue/progressspinner'
 import { dbUsersModule, dbUserSkillsModule } from '@rm/db'
 import type {
@@ -37,6 +36,7 @@ import RMEmptyState from 'src/components/RMEmptyState/RMEmptyState.vue'
 import RMInlineTabs from 'src/components/RMInlineTabs/RMInlineTabs.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import RMSectionEdit from 'src/components/RMSectionEdit/RMSectionEdit.vue'
+import RMWheelNumberPicker from 'src/components/RMWheelNumberPicker/RMWheelNumberPicker.vue'
 import { globalLoginUserData, hasAdmin } from 'src/boot/main'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import {
@@ -518,6 +518,23 @@ const updateWeaponProficiencyLevel = (
   })
 }
 
+const setAllWeaponProficiencyLevelsToMax = () => {
+  user.value = cloneUser({
+    ...user.value,
+    weaponProficiencyLevels: normalizeWeaponProficiencyLevels(
+      Object.fromEntries(
+        weaponProficiencyDefinitions.map((definition) => [
+          definition.key,
+          weaponProficiencyMaxLevel
+        ])
+      )
+    )
+  })
+  void notifyInfo(
+    '全ての熟練度Lvを最大値に設定しました。この後保存を忘れないでください。'
+  )
+}
+
 const toggleOwnedSkill = (skill: SkillMaster) => {
   if (ownedSkillIdSet.value.has(skill.id)) {
     removeOwnedSkill(skill.id)
@@ -832,6 +849,22 @@ const onSubmit = async () => {
                           weaponProficiencyLevelRangeLabel
                         }}から選択できます。
                       </div>
+                      <div class="user-workspace-focus-switch__level-actions">
+                        <RMButton
+                          label="全て最大値に設定"
+                          color="primary"
+                          outline
+                          width="200px"
+                          buttonHeight="40px"
+                          letterSize="14px"
+                          @click="setAllWeaponProficiencyLevelsToMax"
+                        />
+                        <div
+                          class="user-workspace-focus-switch__level-actions-note"
+                        >
+                          反映後は保存を忘れずに行ってください。
+                        </div>
+                      </div>
                       <div class="user-workspace-focus-switch__level-grid">
                         <div
                           v-for="field in weaponProficiencyFields"
@@ -841,13 +874,11 @@ const onSubmit = async () => {
                           <div class="user-workspace-field__label">
                             {{ field.label }}
                           </div>
-                          <Dropdown
+                          <RMWheelNumberPicker
                             :modelValue="field.value"
                             :options="weaponProficiencyLevelOptions"
-                            optionLabel="label"
-                            optionValue="value"
                             placeholder="Lvを選択"
-                            showClear
+                            dialogHeader="熟練度Lvを選択"
                             class="user-workspace-focus-switch__level-input"
                             @update:modelValue="
                               updateWeaponProficiencyLevel(field.key, $event)
@@ -917,6 +948,24 @@ const onSubmit = async () => {
   line-height: 1.6;
 }
 
+.user-workspace-focus-switch__level-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(75, 105, 130, 0.06);
+  border: 1px dashed rgba(75, 105, 130, 0.35);
+}
+
+.user-workspace-focus-switch__level-actions-note {
+  color: #b45309;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .user-workspace-focus-switch__level-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -927,8 +976,7 @@ const onSubmit = async () => {
   min-width: 0;
 }
 
-.user-workspace-focus-switch__level-input,
-.user-workspace-focus-switch__level-panel :deep(.p-dropdown) {
+.user-workspace-focus-switch__level-input {
   width: 100%;
 }
 
