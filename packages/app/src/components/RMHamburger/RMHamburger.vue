@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { PropType } from 'vue'
-import { computed, useAttrs, watch } from 'vue'
+import { computed, onBeforeUnmount, useAttrs, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { activeMenu } from './RMHamburger'
 
@@ -64,6 +64,16 @@ const pcHandleClick = (menu: {
 const closeMenu = () => {
   isOpen.value = false
 }
+
+// メニュー展開中はハンバーガーメニュー内のみスクロール可能にし、
+// 背後のページ本体がスクロールされないようにbodyのスクロールをロックする
+watch(isOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = ''
+})
 </script>
 
 <template>
@@ -185,18 +195,23 @@ const closeMenu = () => {
 	justify-content: flex-end
 	background: rgba(15, 23, 42, 0.24)
 	backdrop-filter: blur(10px)
+	overscroll-behavior: contain
 	z-index: 999
 
 ._menu_panel
 	width: min(88vw, 340px)
-	height: fit-content
+	max-height: 100%
+	align-self: flex-start
 	padding: 14px
 	border-radius: 22px
 	background: rgba(255, 255, 255, 0.96)
 	border: 1px solid rgba(203, 213, 225, 0.9)
 	box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16)
+	display: flex
+	flex-direction: column
 
 ._menu_panel_title
+	flex: 0 0 auto
 	margin-bottom: 10px
 	padding: 2px 4px 10px
 	font-size: 13px
@@ -206,6 +221,11 @@ const closeMenu = () => {
 ._menu
 	display: grid
 	gap: 8px
+	flex: 1 1 auto
+	min-height: 0
+	overflow-y: auto
+	overscroll-behavior: contain
+	-webkit-overflow-scrolling: touch
 
 ._menu_item
 	display: flex
