@@ -9,8 +9,8 @@
         <component :is="Component" :key="route.fullPath" />
       </Transition>
     </router-view>
+    <div v-show="false" id="recaptcha-container" />
   </div>
-  <div v-show="false" id="recaptcha-container" />
 </template>
 
 <style lang="sass" scoped>

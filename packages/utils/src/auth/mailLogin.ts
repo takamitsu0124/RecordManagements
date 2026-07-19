@@ -19,9 +19,8 @@ export const mailLogin = async (
       return
     }
 
-    if (router && redirectUrl) {
-      router.push(redirectUrl)
-    }
+    // ログイン成功後の遷移は呼び出し元(コンポーネント)が行うため、
+    // ここでは重複してnavigationを発生させない
     return
   } catch (e) {
     console.log(e)
