@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
+import twitterHeaderPhoto from 'assets/logo_transparent.png'
 
 const props = defineProps({
   marginTop: {
@@ -24,9 +25,7 @@ const marginTop = computed(() => `${props.marginTop}`)
 const marginBottom = computed(() => `${props.marginBottom}`)
 const serviceBottom = computed(() => `${props.serviceBottom}`)
 
-const appLogo = ref(
-  'https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Ftwitter_header_photo_2.png?alt=media&token=ee80dd4e-12dd-4143-8a59-bb3641b434c6'
-)
+const appLogo = ref(twitterHeaderPhoto)
 </script>
 
 <template>

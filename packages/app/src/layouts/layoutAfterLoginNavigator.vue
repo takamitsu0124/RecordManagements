@@ -6,11 +6,10 @@ import { ref } from 'vue'
 import { menu } from './index'
 import { useRouter } from 'vue-router'
 import { notifyError, notifySuccess } from 'src/composables/useAppNotifications'
+import homeBackground from 'assets/login.webp'
 
 const router = useRouter()
-const backgroundImg = ref<string>(
-  'url(https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Fhome_background2.png?alt=media&token=7123f3bf-11d6-42ec-903b-0a98659b63b3)'
-)
+const backgroundImg = ref<string>(`url(${homeBackground})`)
 const isOpen = ref<boolean>(false)
 
 const logout = async () => {

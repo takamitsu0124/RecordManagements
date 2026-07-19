@@ -4,10 +4,9 @@ import Card from 'primevue/card'
 import RMButton from 'src/components/RMButton/RMButton.vue'
 import RMPageHeader from 'src/components/RMPageHeader/RMPageHeader.vue'
 import { useRouter } from 'vue-router'
+import loginBackground from 'assets/login.webp'
 
-const bgImgPath = ref(
-  'url("https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Flogin.png?alt=media&token=51563fdb-39b2-40d3-bde2-e4ed88b675d2") no-repeat center'
-)
+const bgImgPath = ref(`url(${loginBackground}) no-repeat center`)
 
 const router = useRouter()
 </script>

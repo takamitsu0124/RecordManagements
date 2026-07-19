@@ -9,14 +9,13 @@ import { mailLogin } from '@rm/utils'
 import { useSpinner } from 'src/components/RMSpinner/RMSpinner'
 import { auth } from '@rm/db'
 import { notifySuccess } from 'src/composables/useAppNotifications'
+import loginBackground from 'assets/login.webp'
 
 const router = useRouter()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
-const bgImgPath = ref(
-  'url("https://firebasestorage.googleapis.com/v0/b/recordmanagements-756bf.appspot.com/o/login%2Flogin.png?alt=media&token=51563fdb-39b2-40d3-bde2-e4ed88b675d2") no-repeat center'
-)
+const bgImgPath = ref(`url(${loginBackground}) no-repeat center`)
 
 const signIn = async () => {
   await useSpinner(async () => {
