@@ -1,60 +1,60 @@
-import { DefaultType } from "./default";
-import { AppRole } from "./AppRole";
+import { DefaultType } from './default'
+import { AppRole } from './AppRole'
 import {
   WeaponProficiencySkillProgress,
-  defaultWeaponProficiencySkillProgress,
-} from "./WeaponProficiencySkill";
+  defaultWeaponProficiencySkillProgress
+} from './WeaponProficiencySkill'
 
 export const weaponProficiencyDefinitions = [
-  { key: "oneHandSword", label: "片手直剣" },
-  { key: "rapier", label: "細剣" },
-  { key: "club", label: "棍棒" },
-  { key: "dagger", label: "短剣" },
-  { key: "axe", label: "斧" },
-  { key: "spear", label: "槍" },
-  { key: "bow", label: "弓" },
-  { key: "shield", label: "盾" },
-] as const;
+  { key: 'oneHandSword', label: '片手直剣' },
+  { key: 'rapier', label: '細剣' },
+  { key: 'club', label: '棍棒' },
+  { key: 'dagger', label: '短剣' },
+  { key: 'axe', label: '斧' },
+  { key: 'spear', label: '槍' },
+  { key: 'bow', label: '弓' },
+  { key: 'shield', label: '盾' }
+] as const
 
 export type WeaponProficiencyKey =
-  (typeof weaponProficiencyDefinitions)[number]["key"];
+  (typeof weaponProficiencyDefinitions)[number]['key']
 
 export type WeaponProficiencyLevels = Record<
   WeaponProficiencyKey,
   number | null
->;
+>
 
-export type AttendanceFeatureVisibilityStatus = "visible" | "hidden";
+export type AttendanceFeatureVisibilityStatus = 'visible' | 'hidden'
 
-export const weaponProficiencyMinLevel = 1;
-export const weaponProficiencyMaxLevel = 105;
+export const weaponProficiencyMinLevel = 1
+export const weaponProficiencyMaxLevel = 110
 export const weaponProficiencyMaxTotalLevel =
-  weaponProficiencyDefinitions.length * weaponProficiencyMaxLevel;
+  weaponProficiencyDefinitions.length * weaponProficiencyMaxLevel
 
 export const weaponProficiencyLevelOptions = Array.from(
   { length: weaponProficiencyMaxLevel - weaponProficiencyMinLevel + 1 },
   (_, index) => {
-    const value = weaponProficiencyMinLevel + index;
+    const value = weaponProficiencyMinLevel + index
     return {
       label: `Lv.${value}`,
-      value,
-    };
+      value
+    }
   }
-);
+)
 
 const normalizeWeaponProficiencyLevel = (value: unknown): number | null => {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return null;
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null
   }
 
-  const normalizedValue = Math.round(value);
+  const normalizedValue = Math.round(value)
 
   if (normalizedValue < weaponProficiencyMinLevel) {
-    return null;
+    return null
   }
 
-  return Math.min(weaponProficiencyMaxLevel, normalizedValue);
-};
+  return Math.min(weaponProficiencyMaxLevel, normalizedValue)
+}
 
 export function defaultWeaponProficiencyLevels(): WeaponProficiencyLevels {
   return {
@@ -65,8 +65,8 @@ export function defaultWeaponProficiencyLevels(): WeaponProficiencyLevels {
     axe: null,
     spear: null,
     bow: null,
-    shield: null,
-  };
+    shield: null
+  }
 }
 
 export function normalizeWeaponProficiencyLevels(
@@ -80,99 +80,99 @@ export function normalizeWeaponProficiencyLevels(
     axe: normalizeWeaponProficiencyLevel(value?.axe),
     spear: normalizeWeaponProficiencyLevel(value?.spear),
     bow: normalizeWeaponProficiencyLevel(value?.bow),
-    shield: normalizeWeaponProficiencyLevel(value?.shield),
-  };
+    shield: normalizeWeaponProficiencyLevel(value?.shield)
+  }
 }
 
 export function summarizeWeaponProficiencyProgress(
   value?: Partial<Record<WeaponProficiencyKey, unknown>> | null
 ) {
-  const normalizedLevels = normalizeWeaponProficiencyLevels(value);
+  const normalizedLevels = normalizeWeaponProficiencyLevels(value)
 
   const registeredCount = weaponProficiencyDefinitions.filter(
     ({ key }) => normalizedLevels[key] !== null
-  ).length;
+  ).length
 
   const totalLevel = weaponProficiencyDefinitions.reduce(
     (total, { key }) => total + (normalizedLevels[key] ?? 0),
     0
-  );
+  )
 
   const progressRate =
     weaponProficiencyMaxTotalLevel > 0
       ? (totalLevel / weaponProficiencyMaxTotalLevel) * 100
-      : 0;
+      : 0
 
   return {
     registeredCount,
     totalLevel,
-    progressRate,
-  };
+    progressRate
+  }
 }
 
 export function normalizeAttendanceFeatureVisibilityStatus(
   value: unknown
 ): AttendanceFeatureVisibilityStatus {
-  return value === "visible" ? "visible" : "hidden";
+  return value === 'visible' ? 'visible' : 'hidden'
 }
 
 export type AppUser = {
   /** Auth UID */
-  uid: string;
+  uid: string
   /** Login email */
-  email: string;
+  email: string
   /** Display name */
-  displayName: string;
+  displayName: string
   /** Display name in Kana */
-  displayNameKana: string;
+  displayNameKana: string
   /** Belonging guild ID */
-  guildId: string;
+  guildId: string
   /** Belonging number inside guild */
-  affiliationNum: number;
+  affiliationNum: number
   /** Player situation */
-  situation: "現役" | "隠居" | "引退" | "";
+  situation: '現役' | '隠居' | '引退' | ''
   /** Guild affiliation date */
-  affiliationDate: Date | null;
+  affiliationDate: Date | null
   /** Game start date */
-  gameStartDateAt: Date | null;
+  gameStartDateAt: Date | null
   /** Birth date */
-  birthDateAt: Date | null;
+  birthDateAt: Date | null
   /** Contact phone */
-  phone: string;
+  phone: string
   /** Managed image URLs */
-  imageUrls: string[];
+  imageUrls: string[]
   /** Weapon proficiency skill levels */
-  weaponProficiencyLevels: WeaponProficiencyLevels;
+  weaponProficiencyLevels: WeaponProficiencyLevels
   /** Weapon proficiency skill unlock progress */
-  weaponProficiencySkillProgress: WeaponProficiencySkillProgress;
+  weaponProficiencySkillProgress: WeaponProficiencySkillProgress
   /** Attendance feature visibility */
-  attendanceFeatureVisibilityStatus: AttendanceFeatureVisibilityStatus;
+  attendanceFeatureVisibilityStatus: AttendanceFeatureVisibilityStatus
   /** Access role */
-  role: AppRole;
-} & DefaultType;
+  role: AppRole
+} & DefaultType
 
 export function defaultAppUser(): AppUser {
   return {
-    id: "",
+    id: '',
     createdAt: new Date(),
-    createdBy: "",
+    createdBy: '',
     updatedAt: new Date(),
-    updatedBy: "",
-    uid: "",
-    email: "",
-    displayName: "",
-    displayNameKana: "",
-    guildId: "",
+    updatedBy: '',
+    uid: '',
+    email: '',
+    displayName: '',
+    displayNameKana: '',
+    guildId: '',
     affiliationNum: 0,
-    situation: "現役",
+    situation: '現役',
     affiliationDate: null,
     gameStartDateAt: null,
     birthDateAt: null,
-    phone: "",
+    phone: '',
     imageUrls: [],
     weaponProficiencyLevels: defaultWeaponProficiencyLevels(),
     weaponProficiencySkillProgress: defaultWeaponProficiencySkillProgress(),
-    attendanceFeatureVisibilityStatus: "hidden",
-    role: "member",
-  };
+    attendanceFeatureVisibilityStatus: 'hidden',
+    role: 'member'
+  }
 }
