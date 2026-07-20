@@ -86,32 +86,34 @@ onBeforeUnmount(() => {
     <div class="_open_text">{{ isOpen ? '' : 'MENU' }}</div>
   </div>
 
-  <div v-if="isOpen" class="_menu_open" @click="closeMenu">
-    <div class="_menu_panel" @click.stop>
-      <div class="_menu_panel_title">メニュー</div>
-      <div class="_menu">
-        <button
-          v-for="menuItem in visibleMenus"
-          :key="menuItem.name"
-          type="button"
-          :class="[
-            '_menu_item',
-            {
-              active: activeMenu === menuItem.name,
-              logout: menuItem.name === 'ログアウト',
-            },
-          ]"
-          @click="spHandleClick(menuItem)"
-        >
-          <span>{{ menuItem.name }}</span>
-          <i
-            v-if="menuItem.name !== 'ログアウト'"
-            class="pi pi-chevron-right"
-          />
-        </button>
+  <Teleport to="body">
+    <div v-if="isOpen" class="_menu_open" @click="closeMenu">
+      <div class="_menu_panel" @click.stop>
+        <div class="_menu_panel_title">メニュー</div>
+        <div class="_menu">
+          <button
+            v-for="menuItem in visibleMenus"
+            :key="menuItem.name"
+            type="button"
+            :class="[
+              '_menu_item',
+              {
+                active: activeMenu === menuItem.name,
+                logout: menuItem.name === 'ログアウト',
+              },
+            ]"
+            @click="spHandleClick(menuItem)"
+          >
+            <span>{{ menuItem.name }}</span>
+            <i
+              v-if="menuItem.name !== 'ログアウト'"
+              class="pi pi-chevron-right"
+            />
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 
   <div :class="['_pc_menu', attrs.class]">
     <button
@@ -196,7 +198,7 @@ onBeforeUnmount(() => {
 	background: rgba(15, 23, 42, 0.24)
 	backdrop-filter: blur(10px)
 	overscroll-behavior: contain
-	z-index: 999
+	z-index: 1100
 
 ._menu_panel
 	width: min(88vw, 340px)
