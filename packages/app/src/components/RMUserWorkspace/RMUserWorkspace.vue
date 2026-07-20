@@ -124,9 +124,7 @@ const workspaceTabs = computed(() => {
     badge: ownedSkillRows.value.length
   })
 
-  if (isCompactMode.value) {
-    tabs.push({ key: 'level', label: '熟練度Lv' })
-  }
+  tabs.push({ key: 'level', label: '熟練度Lv' })
 
   tabs.push({ key: 'proficiency-skill', label: '武器熟練度スキル' })
 
